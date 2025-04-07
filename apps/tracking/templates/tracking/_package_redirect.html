@@ -1,0 +1,149 @@
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Package Redirect</h5>
+            </div>
+            <div class="card-body">
+                <!-- Info box -->
+                <div class="alert alert-danger" role="alert">
+                    <ul class="mb-0">
+                        <li>Please enable GPS if asked.  GPS allows the site to show closer delivery locations or faster routes.  International locations are also available.</li>
+                        <li>Notifications are required to receive new package updates. The original sender will not receive new updates.</li>
+                        <li>For your privacy the original sender will not be notified of the redirect.  The recipient will be responsible for any additional delivery charges incurred.</li>
+                    </ul>
+                </div>
+        
+                <div id="redirect-section">
+                    <p class="card-text">Provide your new delivery address and contact details below to redirect your package.</p>
+        
+                    <!-- ✅ Restore Token Input -->
+                    <div class="mb-3">
+                        <input type="text" id="redirect-token-input" class="form-control mb-2" placeholder="Enter your tracking token" required>
+                    </div>
+        
+                    <div class="mb-3">
+                        <input type="text" id="notifications" class="form-control mb-2" placeholder="Notification Contact (Phone)" required>
+                        <input type="text" id="street-address" class="form-control mb-2" placeholder="Street Address" required>
+                        <input type="text" id="city" class="form-control mb-2" placeholder="City" required>
+                        <input type="text" id="state" class="form-control mb-2" placeholder="State/Province" required>
+                        <input type="text" id="zip-code" class="form-control mb-2" placeholder="ZIP/Postal Code" required>
+                        <input type="text" id="country" class="form-control mb-2" placeholder="Country" required>
+                        <button id="redirect-button" class="btn btn-primary">Redirect Package</button>
+                        <div id="redirect-spinner" class="spinner-border text-primary ms-3" role="status" style="display: none;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <p class="mt-3" id="redirect-status"></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% block extra_js %}
+<script type="application/javascript">
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+
+    function getClientTimestamp() {
+        const now = new Date();
+        const offsetMinutes = now.getTimezoneOffset();
+        const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60).toString().padStart(2, '0');
+        const offsetMins = (Math.abs(offsetMinutes) % 60).toString().padStart(2, '0');
+        const offsetSign = offsetMinutes > 0 ? '-' : '+';
+        const offset = offsetSign + offsetHours + ':' + offsetMins;
+
+        return now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0') + 'T' +
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0') +
+            offset;
+    }
+
+    function showRedirectSpinner(show) {
+        const spinner = document.getElementById('redirect-spinner');
+        if (spinner) {
+            spinner.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const redirectButton = document.getElementById('redirect-button');
+        const tokenInput = document.getElementById('redirect-token-input');
+        const statusElement = document.getElementById('redirect-status');
+
+        const urlToken = getQueryParam('token');
+        if (tokenInput && urlToken) {
+            tokenInput.value = urlToken;
+        }
+
+        if (redirectButton) {
+            redirectButton.addEventListener('click', () => {
+                const token = tokenInput.value.trim();
+                if (!token) {
+                    statusElement.textContent = '❌ Please enter your tracking token.';
+                    return;
+                }
+
+                const clientTimestamp = getClientTimestamp();
+                const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+                const formData = new FormData();
+                formData.append('client_timestamp', clientTimestamp);
+                formData.append('client_timezone', clientTimeZone);
+                formData.append('http_method', 'POST');
+
+                // Collect form values
+                formData.append('notifications', document.getElementById('notifications').value.trim());
+                formData.append('street_address', document.getElementById('street-address').value.trim());
+                formData.append('city', document.getElementById('city').value.trim());
+                formData.append('state', document.getElementById('state').value.trim());
+                formData.append('zip_code', document.getElementById('zip-code').value.trim());
+                formData.append('country', document.getElementById('country').value.trim());
+
+                // Optional: Geolocation
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        formData.append('latitude', position.coords.latitude);
+                        formData.append('longitude', position.coords.longitude);
+                        sendRedirectRequest(token, formData, statusElement);
+                    }, () => {
+                        sendRedirectRequest(token, formData, statusElement);
+                    });
+                } else {
+                    sendRedirectRequest(token, formData, statusElement);
+                }
+            });
+        }
+    });
+
+    function sendRedirectRequest(token, formData, statusElement) {
+        showRedirectSpinner(true);
+        fetch(`/package_redirect/${token}/`, {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                statusElement.textContent = data.message;
+            } else {
+                statusElement.textContent = '❌ An error occurred while redirecting your package.';
+            }
+        })
+        .catch(() => {
+            statusElement.textContent = '❌ An unexpected error occurred.';
+        })
+        .finally(() => {
+            showRedirectSpinner(false);
+        });
+    }
+</script>
+{% endblock %}

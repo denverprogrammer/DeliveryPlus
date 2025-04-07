@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Agents List{% endblock %}
+
+{% block content %}
+<h2>Agents List</h2>
+<a href="{% url 'agent_add' %}" class="btn btn-primary mb-3">Add Agent</a>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for agent in agents %}
+        <tr>
+            <td>{{ agent.first_name }} {{ agent.last_name }}</td>
+            <td>{{ agent.email }}</td>
+            <td>{{ agent.status }}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'agent_edit' agent.id %}">Edit</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No agents found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

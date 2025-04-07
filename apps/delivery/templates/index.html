@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to DeliveryPlus{% endblock %}
+
+{% block content %}
+<div class="text-center mt-5">
+    <h1 class="display-4">Welcome to DeliveryPlus 🚚</h1>
+    <p class="lead">Track your deliveries and manage your agents efficiently.</p>
+    <a href="{% url 'login' %}" class="btn btn-primary btn-lg mt-3">Login to your Dashboard</a>
+</div>
+{% endblock %}

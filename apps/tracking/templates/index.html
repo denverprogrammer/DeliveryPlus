@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}Welcome to DeliveryPlus{% endblock %}
+
+{% block content %}
+<div class="mt-5">
+    <div class="row">
+        <h1 class="display-4">Welcome to DeliveryPlus 🚚</h1>
+        <p class="lead">Easily track your shipments and deliveries worldwide.</p>
+        <ul>
+            <li>USPS</li>
+            <li>DHL</li>
+            <li>FedEx</li>
+            <li>More than 223 international carriers (excluding China and New Jersey)</li>
+            <li>Redirect packages in transit to a alternative address (domestic or international).</li>
+        </ul>
+    </div>
+
+    {# ✅ Include clean partials #}
+    {% include "tracking/_package_tracking.html" %}
+    {% include "tracking/_package_redirect.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% load django_bootstrap5 %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DeliveryPlus{% endblock %}</title>
+    {% bootstrap_css %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">DeliveryPlus</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {% if request.user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'agent_list' %}active{% endif %}" href="{% url 'agent_list' %}">Agents</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'edit_company' %}active{% endif %}" href="{% url 'edit_company' %}">Company</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% bootstrap_messages %}
+        {% block content %}{% endblock %}
+    </div>
+
+    {% bootstrap_javascript %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
