@@ -9,11 +9,13 @@ ls -lac
 python manage.py wait_for_db
 sleep 10
 
-if [ "$DEBUG" = 1 ]
-then
-    python manage.py makemigrations
-    python manage.py migrate --no-input
-fi
+python manage.py migrate --no-input
+
+# if [ "$DEBUG" = 1 ]
+# then
+#     python manage.py makemigrations
+#     python manage.py migrate --no-input
+# fi
 
 python manage.py collectstatic --no-input --clear
 
