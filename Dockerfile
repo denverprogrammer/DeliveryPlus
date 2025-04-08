@@ -22,6 +22,6 @@ RUN mkdir -p /app/staticfiles && python manage.py collectstatic --noinput
 EXPOSE 8080
 
 # Start Gunicorn server on port 8080
-CMD ["gunicorn", "deliveryplus.wsgi:application", "--bind", "0.0.0.0:8080"]
-# ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+# CMD ["gunicorn", "deliveryplus.wsgi:application", "--bind", "0.0.0.0:8080"]
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
