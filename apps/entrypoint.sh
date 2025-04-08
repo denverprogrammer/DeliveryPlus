@@ -26,7 +26,7 @@ gunicorn config.asgi:application \
     --workers 3 \
     --timeout 120 \
     --log-level debug \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:8080 \
     --reload
 
 exec "$@"
