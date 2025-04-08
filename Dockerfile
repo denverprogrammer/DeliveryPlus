@@ -1,26 +1,26 @@
-# ✅ Dockerfile
+# Dockerfile.web
+
 FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    netcat gcc postgresql-client libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Install Python dependencies
 WORKDIR /app
+COPY pyproject.toml poetry.lock ./
+RUN pip install --upgrade pip && pip install poetry && poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
 
-# Install dependencies
-COPY pyproject.toml poetry.lock /app/
-RUN pip install --upgrade pip \
-    && pip install poetry \
-    && poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi
-
-# Copy project files
-COPY ./apps /app/
+# Copy application code
+COPY . .
 
 # Collect static files
-RUN mkdir -p /app/staticfiles
+RUN python manage.py collectstatic --noinput
 
-# Run application
-ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
+# Expose port 8080 (important!)
+EXPOSE 8080
+
+# Start Gunicorn server on port 8080
+CMD ["gunicorn", "deliveryplus.wsgi:application", "--bind", "0.0.0.0:8080"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
