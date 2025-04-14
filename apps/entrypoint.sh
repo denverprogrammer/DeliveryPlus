@@ -11,7 +11,8 @@ sleep 10
 
 if [ "$DEBUG" = 1 ]
 then
-    python manage.py makemigrations
+    python manage.py makemigrations delivery
+    python manage.py makemigrations tracking
     python manage.py migrate --no-input
 fi
 

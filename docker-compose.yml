@@ -16,8 +16,15 @@ services:
             DATABASE_PASSWORD: ${DATABASE_PASSWORD}
             DATABASE_HOST: ${DATABASE_HOST}
             DATABASE_PORT: ${DATABASE_PORT}
+            VPN_API_IO_KEY: ${VPN_API_IO_KEY}
+            USER_STACK_KEY: ${USER_STACK_KEY}
+            IP_STACK_KEY: ${IP_STACK_KEY}
+            TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+            TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+
         depends_on:
             - database
+            - redis
 
     nginx:
         image: nginx:1.23.2-alpine
@@ -42,27 +49,26 @@ services:
         volumes:
             - postgres_data:/var/lib/postgresql/data/
 
-    # adminer:
-    #     image: adminer
-    #     restart: always
-    #     ports:
-    #         - "8080:8080"
-    #     depends_on:
-    #         - database
+    redis:
+        image: redis:7.2
+        ports:
+            - "6379:6379"
+
+    redis-commander:
+        image: rediscommander/redis-commander:latest
+        environment:
+            - REDIS_HOSTS=local:redis:6379
+        ports:
+            - "8081:8081"
+
+    adminer:
+        image: adminer
+        restart: always
+        ports:
+            - "8080:8080"
+        depends_on:
+            - database
 
 volumes:
     postgres_data:
     static_volume:
-
-
-# redis:
-#     image: redis:7.2
-#     ports:
-#         - "6379:6379"
-
-# redis-commander:
-#     image: rediscommander/redis-commander:latest
-#     environment:
-#         - REDIS_HOSTS=local:redis:6379
-#     ports:
-#         - "8081:8081"

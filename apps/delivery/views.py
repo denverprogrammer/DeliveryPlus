@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.http import HttpResponseForbidden, HttpResponse
-from .models import Company, Agent, TrackingData
-from .forms import CompanyForm, AgentForm
+from tracking.models import Agent
+from delivery.forms import CompanyForm
+from tracking.forms import AgentForm
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.forms import AuthenticationForm
 
@@ -18,13 +19,13 @@ def edit_company_view(request):
     company = request.user.company  # Use the company from the logged-in user
     form = CompanyForm(request.POST or None, instance=company)
 
-    if request.method == "POST" and form.is_valid():
+    if request.method == 'POST' and form.is_valid():
         company = form.save()
         if request.user.company != company:
             request.user.company = company
             request.user.save()
 
-        return redirect("dashboard")
+        return redirect('dashboard')
 
     return render(request, 'delivery/edit_company.html', {'form': form, 'company': company})
 
@@ -63,17 +64,17 @@ def agent_edit_view(request, agent_id):
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect("dashboard")
+        return redirect('dashboard')
 
     form = AuthenticationForm(request, data=request.POST or None)
 
-    if request.method == "POST" and form.is_valid():
+    if request.method == 'POST' and form.is_valid():
         user = form.get_user()
         login(request, user)
 
-        return redirect("dashboard")
+        return redirect('dashboard')
 
-    return render(request, "delivery/login.html", {"form": form})
+    return render(request, 'delivery/login.html', {'form': form})
 
 def logout_view(request):
     logout(request)
@@ -81,4 +82,4 @@ def logout_view(request):
     return redirect('login')
 
 def home_page_view(request):
-    return render(request, "index.html")
+    return render(request, 'config/index.html')

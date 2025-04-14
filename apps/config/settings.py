@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-c*x)06v_%3c24350#*hmf55vtyvl&)8*fbyplvdf1*0wfp3hb2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.environ.get("DEBUG", default=0)))
 
-ALLOWED_HOSTS = list(filter(None, os.environ.get("ALLOWED_HOSTS", "").split(",")))
+ALLOWED_HOSTS = list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(',')))
 
 
 # Application definition
@@ -42,11 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.forms',
     'subadmin',
-    'tracking',
     'delivery',
+    'tracking',
 ]
 
 MIDDLEWARE = [
+    'config.middleware.tracking_payload.TrackingPayloadMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -61,7 +62,9 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'config' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -138,3 +141,13 @@ AUTH_USER_MODEL = "delivery.User"
 BOOTSTRAP5 = {
     "css_url": "https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/sandstone/bootstrap.min.css",
 }
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+VPN_API_IO_KEY:str = os.environ.get("VPN_API_IO_KEY", '')
+USER_STACK_KEY: str = os.environ.get("USER_STACK_KEY", '')
+IP_STACK_KEY:str = os.environ.get("IP_STACK_KEY", '')
+
+TWILIO_ACCOUNT_SID:str = os.environ.get("TWILIO_ACCOUNT_SID", '')
+TWILIO_AUTH_TOKEN:str = os.environ.get("TWILIO_AUTH_TOKEN", '')

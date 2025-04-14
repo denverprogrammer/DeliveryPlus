@@ -1,0 +1,192 @@
+<script type="application/javascript">
+    // Utility: Get query param from URL
+    function getQueryParam(param) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(param);
+    }
+    
+    // Optional: Show/hide loading spinner
+    function showSpinner(show) {
+        const spinner = document.getElementById('request-spinner');
+        if (spinner) {
+            spinner.style.display = show ? 'block' : 'none';
+        }
+    }
+    
+    // Helpers to collect enrichment data
+    function getGeolocation() {
+        return new Promise((resolve) => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    }),
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else {
+                resolve(null);
+            }
+        });
+    }
+    
+    function getConnectionType() {
+        return navigator.connection ? navigator.connection.effectiveType : 'unknown';
+    }
+    
+    function getTimezone() {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    
+    function getLocale() {
+        return navigator.language || navigator.userLanguage || 'unknown';
+    }
+    
+    function getLocalTime() {
+        const now = new Date();
+        return {
+            iso: now.toISOString(),
+            readable: now.toString(),
+            timestamp: now.getTime()  // Unix timestamp (ms)
+        };
+    }
+    
+    // ✅ Using ipinfo.io for public IP (CORS safe)
+    async function getPublicIpInfo() {
+        try {
+            const response = await fetch('https://ipinfo.io/ip');
+            const ip = await response.text();
+    
+            return { ip };
+        } catch (error) {
+            console.warn('Public IP fetch failed:', error);
+            return null;
+        }
+    }
+    
+    // Utility: Safe base64 encode for header (UTF-8 safe)
+    function safeBase64Encode(obj) {
+        const jsonStr = JSON.stringify(obj);
+        return btoa(unescape(encodeURIComponent(jsonStr)));
+    }
+    
+    // Prepare tracking header (cache the value once prepared)
+    let trackingHeaderValue = null;
+    let trackingHeaderPromise = null;
+    
+    async function prepareTrackingHeader() {
+        if (trackingHeaderValue) return trackingHeaderValue;
+    
+        if (!trackingHeaderPromise) {
+            trackingHeaderPromise = Promise.all([getGeolocation(), getPublicIpInfo()])
+                .then(([geoLocation, publicIpInfo]) => {
+                    const payload = {
+                        timezone: getTimezone(),
+                        local_time: getLocalTime(),
+                        locale: getLocale(),
+                        connection_type: getConnectionType(),
+                        geo_location: geoLocation,
+                        public_ip: publicIpInfo || null,
+                    };
+                    trackingHeaderValue = safeBase64Encode(payload);
+
+                    return trackingHeaderValue;
+                })
+                .catch(error => {
+                    console.warn('Tracking header preparation failed:', error);
+                    return null;
+                });
+        }
+    
+        return trackingHeaderPromise;
+    }
+    
+    (function() {
+        const originalFetch = window.fetch;
+    
+        // ✅ Define the routes where you want to inject the header
+        const allowedPaths = [`{{ formUrl }}`];
+    
+        window.fetch = async function(resource, options = {}) {
+            // Convert resource to URL object to safely parse path
+            const resourceUrl = new URL(resource, window.location.origin);
+    
+            // Check if path matches one of the allowed paths
+            const shouldInjectHeader = allowedPaths.some(path => resourceUrl.pathname.startsWith(path));
+    
+            if (shouldInjectHeader) {
+                const headerValue = await prepareTrackingHeader();
+    
+                if (!options.headers) {
+                    options.headers = {};
+                } else if (options.headers instanceof Headers) {
+                    options.headers = Object.fromEntries(options.headers.entries());
+                }
+    
+                if (headerValue) {
+                    options.headers['X-Tracking-Payload'] = headerValue;
+                }
+            }
+    
+            return originalFetch(resource, options);
+        };
+    })();
+    
+    // DOM ready handler
+    document.addEventListener('DOMContentLoaded', async () => {
+        const tokenInput = document.getElementById('token-input');
+        const urlToken = getQueryParam('token');
+        const submitButton = document.getElementById('submit-button');
+        const statusElement = document.getElementById('request-status');
+        const spinner = document.getElementById('request-spinner');
+
+        if (tokenInput && urlToken) {
+            tokenInput.value = urlToken;
+        }
+    
+        // Passive enrichment request fires on page load
+        if (tokenInput && tokenInput.value) {
+            const formData = new FormData();
+            formData.append('http_method', 'GET');
+            fetch(`{{ formUrl }}/${tokenInput.value}`, {
+                method: 'POST',
+                body: formData,
+            });
+        }
+
+        if (submitButton) {
+            submitButton.addEventListener('click', () => {
+                const finalToken = tokenInput.value.trim() || urlToken;
+    
+                if (!finalToken) {
+                    statusElement.textContent = '❌ Token is required.';
+                    return;
+                }
+    
+                spinner.style.display = 'block';
+                submitButton.disabled = true;
+    
+                formData = getFormData(tokenInput.value, statusElement);
+
+                fetch(`{{ formUrl }}/${finalToken}`, {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(() => {
+                    spinner.style.display = 'none';
+                    statusElement.textContent = '✅ Status check successful!';
+                    submitButton.disabled = false;
+                })
+                .catch(() => {
+                    spinner.style.display = 'none';
+                    statusElement.textContent = '❌ Error during status check.';
+                    submitButton.disabled = false;
+                });
+            });
+        }
+    });
+    </script>
+    

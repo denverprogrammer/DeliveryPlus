@@ -1,13 +1,30 @@
-# pyproject.toml
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+strict = true
+
+
+[tool.black]
+# indent = 4
+line-length = 100
+target-version = ["py312"]
+
+[tool.isort]
+known_first_party = ["apps"]
+profile = "black"
+
 [tool.poetry]
-name = "DeliveryPlus"
+name = "packageparcels"
 version = "0.1.0"
 description = "GPS & IP tracking website with notifications."
 authors = ["Josh Martin <denverprogrammer@gmail.com>"]
 package-mode = false 
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<4.0"
 django = "^5.0"
 django-environ = "^0.11.2"
 celery = "^5.3.4"
@@ -21,24 +38,48 @@ django-bootstrap5 = "^25.1"
 django-subadmin = "^3.2.4"
 psycopg2-binary = "^2.9.10"
 uvicorn = "^0.34.0"
-
+pydantic = "^2.11.3"
+twilio = "^9.5.2"
+django-ipware = "^7.0.1"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
-flake8 = "^7.0.0"
+black = ">=23.1.0"
+flake8 = ">=6.0.0"
+isort = ">=5.12.0"
+pylint = ">=2.16.3"
+pyright = ">=1.1.296"
+pytest = ">=7.2.1"
+pytest-cov = ">=3.0.0"
+toml-sort = ">=0.24.2"
 mypy = "^1.8.0"
-isort = "^5.13.2"
 
-[tool.mypy]
-plugins = ["mypy_django_plugin.main"]
-strict = true
+[tool.poetry.requires-plugins]
+poetry-plugin-shell = ">=1.0.1"
+poetry-plugin-sort = ">=0.3.0"
+poetry-plugin-export = ">=1.9.0"
 
-[tool.django-stubs]
-django_settings_module = "delivery.settings"
+[tool.poetry.scripts]
+toml-sort = 'toml_sort.cli:cli'
 
-[tool.black]
-line-length = 88
-indent = 4
+[tool.pylint."messages control"]
+disable = "all"
+enable = [
+    "empty-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+]
+ignore = ["__init__.py", "setup.py"]
+ignore-paths = ['.*/tests', '.poetry']
 
-[tool.isort]
-profile = "black"
+[tool.pyright]
+reportMissingTypeArgument = true  # Report generic classes used without type arguments
+strictListInference = true  # Use union types when inferring types of lists elements, instead of Any
+
+
+[tool.tomlsort]
+all = true
+ignore_case = true
+spaces_before_inline_comment = 2
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
