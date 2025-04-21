@@ -7,7 +7,7 @@ handler403 = "config.views.custom_permission_denied_view"
 
 urlpatterns = [
     path('mgmt/', include('mgmt.urls')),
+    path('tracking/', include('tracking.urls')),
     path('admin/', admin.site.urls),
-    path('tracking/', include("tracking.urls")),
     path('', views.home_page_view, name='home'),
 ]
