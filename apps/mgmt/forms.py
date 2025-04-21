@@ -1,6 +1,6 @@
 # tracker/forms.py
 from django import forms
-from .models import Company
+from mgmt.models import Company
 
 class CompanyForm(forms.ModelForm):
     class Meta:

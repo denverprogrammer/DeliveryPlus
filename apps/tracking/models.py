@@ -6,7 +6,7 @@ from tracking.common import AgentStatus
 
 class Campaign(models.Model):
     company = models.ForeignKey(
-        'delivery.Company',
+        'mgmt.Company',
         on_delete=models.CASCADE,
         related_name='campaigns',
         null=True,

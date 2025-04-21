@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("delivery", "0001_initial"),
+        ("mgmt", "0001_initial"),
     ]
 
     operations = [
@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="campaigns",
-                        to="delivery.company",
+                        to="mgmt.company",
                     ),
                 ),
             ],

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from subadmin import RootSubAdmin
 from tracking.admin import CampaignAdmin
-from delivery.models import Company, User
+from mgmt.models import Company, User
 
 
 @admin.register(Company)

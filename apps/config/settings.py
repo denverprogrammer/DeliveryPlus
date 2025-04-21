@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.forms',
     'subadmin',
-    'delivery',
+    'mgmt',
     'tracking',
 ]
 
@@ -136,7 +136,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = "delivery.User"
+AUTH_USER_MODEL = "mgmt.User"
 
 BOOTSTRAP5 = {
     "css_url": "https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/sandstone/bootstrap.min.css",
@@ -151,3 +151,7 @@ IP_STACK_KEY:str = os.environ.get("IP_STACK_KEY", '')
 
 TWILIO_ACCOUNT_SID:str = os.environ.get("TWILIO_ACCOUNT_SID", '')
 TWILIO_AUTH_TOKEN:str = os.environ.get("TWILIO_AUTH_TOKEN", '')
+
+# Auto-reload settings for development
+if DEBUG:
+    TEMPLATES[0]['OPTIONS']['debug'] = True

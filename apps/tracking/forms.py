@@ -7,6 +7,7 @@ class AgentForm(forms.ModelForm):
     class Meta:
         model = Agent
         fields = [
+            'campaign',
             'token',
             'first_name',
             'last_name',
@@ -14,6 +15,11 @@ class AgentForm(forms.ModelForm):
             'phone_number',
             'status',
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'campaign' in self.fields:
+            self.fields['campaign'].queryset = Campaign.objects.all()
 
 
 class CampaignAdminForm(forms.ModelForm):

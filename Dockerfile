@@ -2,7 +2,11 @@
 
 FROM python:3.11-slim
 
+# Python writes directly to stdout/stderr without buffering
 ENV PYTHONUNBUFFERED=1
+
+# Prevent Python from creating .pyc files in the container
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
