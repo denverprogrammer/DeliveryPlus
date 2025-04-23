@@ -32,36 +32,55 @@
         });
     }
     
+    // Utility: Get connection type
     function getConnectionType() {
-        return navigator.connection ? navigator.connection.effectiveType : 'unknown';
+        let connectionInfo = 'unknown';
+
+        if (navigator.connection) {
+            if (navigator.connection.effectiveType) {
+                connectionInfo = navigator.connection.effectiveType;
+            } else if (navigator.connection.type) {
+                connectionInfo = navigator.connection.type;
+            }
+        }
+
+        return connectionInfo;
     }
-    
-    function getTimezone() {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone;
-    }
-    
-    function getLocale() {
-        return navigator.language || navigator.userLanguage || 'unknown';
-    }
-    
-    function getLocalTime() {
-        const now = new Date();
-        return {
-            iso: now.toISOString(),
-            readable: now.toString(),
-            timestamp: now.getTime()  // Unix timestamp (ms)
-        };
-    }
-    
+        
+    let ipInfo = null;
+
     // ✅ Using ipinfo.io for public IP (CORS safe)
     async function getPublicIpInfo() {
         try {
-            const response = await fetch('https://ipinfo.io/ip');
-            const ip = await response.text();
-    
-            return { ip };
+            if (ipInfo) {
+                return ipInfo;
+            }
+
+            const response = await fetch('https://ipinfo.io/json');
+            const data = await response.json();
+
+            ipInfo = {
+                ip: data.ip,
+                isp: {
+                    hostname: data.hostname,
+                    org: data.org,
+                },
+                address: {
+                    city: data.city,
+                    region: data.region,
+                    country: data.country,
+                    postal: data.postal,
+                },
+                location: {
+                    latitude: data.loc.split(',')[0],
+                    longitude: data.loc.split(',')[1]
+                }
+            };
+
+            return ipInfo;
         } catch (error) {
             console.warn('Public IP fetch failed:', error);
+            ipInfo = null;
             return null;
         }
     }
@@ -73,26 +92,29 @@
     }
     
     // Prepare tracking header (cache the value once prepared)
-    let trackingHeaderValue = null;
     let trackingHeaderPromise = null;
     
-    async function prepareTrackingHeader() {
-        if (trackingHeaderValue) return trackingHeaderValue;
-    
+    async function prepareTrackingHeader() {    
         if (!trackingHeaderPromise) {
             trackingHeaderPromise = Promise.all([getGeolocation(), getPublicIpInfo()])
                 .then(([geoLocation, publicIpInfo]) => {
-                    const payload = {
-                        timezone: getTimezone(),
-                        local_time: getLocalTime(),
-                        locale: getLocale(),
-                        connection_type: getConnectionType(),
-                        geo_location: geoLocation,
-                        public_ip: publicIpInfo || null,
-                    };
-                    trackingHeaderValue = safeBase64Encode(payload);
+                    const now = new Date();
 
-                    return trackingHeaderValue;
+                    return safeBase64Encode({
+                        navigator: {
+                            connection: getConnectionType(),
+                            language: navigator.language || navigator.userLanguage || 'unknown',
+                            user_agent: navigator.userAgent
+                        },
+                        datetime: {
+                            iso: now.toISOString(),
+                            readable: now.toString(),
+                            timestamp: now.getTime(),  // Unix timestamp (ms)
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                        },
+                        // geo_location: geoLocation,
+                        public_ip: publicIpInfo || null,
+                    });
                 })
                 .catch(error => {
                     console.warn('Tracking header preparation failed:', error);
@@ -150,7 +172,7 @@
         if (tokenInput && tokenInput.value) {
             const formData = new FormData();
             formData.append('http_method', 'GET');
-            fetch(`{{ formUrl }}/${tokenInput.value}`, {
+            fetch(`{{ formUrl }}/${tokenInput.value}/`, {
                 method: 'POST',
                 body: formData,
             });
@@ -170,7 +192,7 @@
     
                 formData = getFormData(tokenInput.value, statusElement);
 
-                fetch(`{{ formUrl }}/${finalToken}`, {
+                fetch(`{{ formUrl }}/${finalToken}/`, {
                     method: 'POST',
                     body: formData,
                 })

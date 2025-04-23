@@ -7,6 +7,8 @@ services:
         volumes:
             - ./apps:/app
             - static_volume:/app/staticfiles
+        # ports:
+        #     - "5678:5678"  # Debug port
         environment:
             SECRET_KEY: ${SECRET_KEY}
             DEBUG: ${DEBUG}
@@ -19,9 +21,10 @@ services:
             VPN_API_IO_KEY: ${VPN_API_IO_KEY}
             USER_STACK_KEY: ${USER_STACK_KEY}
             IP_STACK_KEY: ${IP_STACK_KEY}
+            IP_GEO_LOCATION_KEY: ${IP_GEO_LOCATION_KEY}
             TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
             TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-
+            # PYDEVD_DISABLE_FILE_VALIDATION: 1
         depends_on:
             - database
             - redis

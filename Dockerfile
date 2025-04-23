@@ -24,8 +24,9 @@ COPY ./apps /app/
 # Collect static files
 RUN mkdir -p /app/staticfiles && python manage.py collectstatic --noinput
 
-# Expose port 8080 (important!)
+# Expose ports for web and debugger
 EXPOSE 8080
+EXPOSE 5678
 
 # Start Gunicorn server on port 8080
 # CMD ["gunicorn", "packageparcels.wsgi:application", "--bind", "0.0.0.0:8080"]

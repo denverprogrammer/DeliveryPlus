@@ -148,6 +148,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 VPN_API_IO_KEY:str = os.environ.get("VPN_API_IO_KEY", '')
 USER_STACK_KEY: str = os.environ.get("USER_STACK_KEY", '')
 IP_STACK_KEY:str = os.environ.get("IP_STACK_KEY", '')
+IP_GEO_LOCATION_KEY:str = os.environ.get("IP_GEO_LOCATION_KEY", '')
 
 TWILIO_ACCOUNT_SID:str = os.environ.get("TWILIO_ACCOUNT_SID", '')
 TWILIO_AUTH_TOKEN:str = os.environ.get("TWILIO_AUTH_TOKEN", '')

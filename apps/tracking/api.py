@@ -23,31 +23,6 @@ from pydantic import BaseModel
 from typing import Optional
 
 
-class OSInfo(BaseModel):
-    name: Optional[str]
-    code: Optional[str]
-    version: Optional[str]
-
-
-class DeviceInfo(BaseModel):
-    type: Optional[str]
-    brand: Optional[str]
-    name: Optional[str]
-
-
-class BrowserInfo(BaseModel):
-    name: Optional[str]
-    version: Optional[str]
-
-
-class UserStackResponse(BaseModel):
-    user_agent: Optional[str]
-    os: Optional[OSInfo]
-    device: Optional[DeviceInfo]
-    browser: Optional[BrowserInfo]
-    crawler: Optional[bool]
-
-
 class BaseApiClient(ABC):
     def __init__(self, redis_db: int, redis_prefix: str):
         self.redis_client = redis.Redis(host='redis', port=6379, db=redis_db, decode_responses=True)
@@ -72,6 +47,10 @@ class BaseApiClient(ABC):
         pass
 
 
+##########################
+#  IP Stack API models  ##
+##########################
+
 class IpStackResponse(BaseModel):
     ip: str
     continent_name: Optional[str]
@@ -82,7 +61,6 @@ class IpStackResponse(BaseModel):
     latitude: Optional[float]
     longitude: Optional[float]
     type: Optional[str]  # ipv4 or ipv6
-
 
 class IpStackApiClient(BaseApiClient):
     BASE_URL = 'http://api.ipstack.com/'
@@ -117,11 +95,14 @@ class IpStackApiClient(BaseApiClient):
             return None
 
 
+##############################
+#  TwilioLookup API models  ##
+##############################
+
 class CallerName(BaseModel):
     caller_name: Optional[str]
     caller_type: Optional[str]
     error_code: Optional[int]
-
 
 class CarrierInfo(BaseModel):
     mobile_country_code: Optional[str]
@@ -129,7 +110,6 @@ class CarrierInfo(BaseModel):
     name: Optional[str]
     type: Optional[str]
     error_code: Optional[int]
-
 
 class TwilioLookupResponse(BaseModel):
     caller_name: Optional[CallerName]
@@ -140,6 +120,10 @@ class TwilioLookupResponse(BaseModel):
     add_ons: Optional[Dict[str, Any]]
     url: Optional[str]
 
+
+##############################
+#  TwilioLookup API models  ##
+##############################
 
 class VPNApiClient:
     BASE_URL = 'https://vpnapi.io/api/'
@@ -214,6 +198,50 @@ class TwilioApiClient(BaseApiClient):
             raise e
 
 
+###########################
+#  UserStack API models  ##
+###########################
+
+class OSInfo(BaseModel):
+    name: Optional[str]
+    code: Optional[str]
+    url: Optional[str]
+    family: Optional[str]
+    family_code: Optional[str]
+    family_vendor: Optional[str]
+    icon: Optional[str]
+    icon_large: Optional[str]
+
+class DeviceInfo(BaseModel):
+    is_mobile_device: Optional[bool]
+    type: Optional[str]
+    brand: Optional[str]
+    brand_code: Optional[str]
+    brand_url: Optional[str]
+    name: Optional[str]
+
+class BrowserInfo(BaseModel):
+    name: Optional[str]
+    version: Optional[str]
+    version_major: Optional[str]
+    engine: Optional[str]
+
+class CrawlerInfo(BaseModel):
+    is_crawler: Optional[bool]
+    category: Optional[str]
+    last_seen: Optional[str]
+
+class UserStackResponse(BaseModel):
+    ua: str
+    type: Optional[str]
+    brand: Optional[str]
+    name: Optional[str]
+    url: Optional[str]
+    os: Optional[OSInfo]
+    device: Optional[DeviceInfo]
+    browser: Optional[BrowserInfo]
+    crawler: Optional[CrawlerInfo]
+
 class UserStackApiClient(BaseApiClient):
     BASE_URL = 'http://api.userstack.com/detect'
 
@@ -222,12 +250,12 @@ class UserStackApiClient(BaseApiClient):
         super().__init__(redis_db=3, redis_prefix='user_agent')
         self.api_key = api_key
 
-    def get_data(self, identifier: str) -> Optional[dict[str, Any]]:
+    def get_data(self, identifier: str) -> Optional[UserStackResponse]:
         try:
             # Step 1: Check cache first
             cache_data = self.get_cache_data(identifier)
             if cache_data:
-                return cache_data
+                return UserStackResponse(**cache_data)
 
             # Step 2: Query Userstack API
             response = requests.get(
@@ -239,7 +267,6 @@ class UserStackApiClient(BaseApiClient):
                 timeout=5
             )
             response.raise_for_status()
-
             response_data = response.json()
 
             # Optional: Validate using Pydantic
@@ -247,15 +274,122 @@ class UserStackApiClient(BaseApiClient):
                 validated_data = UserStackResponse(**response_data)
             except Exception as parse_error:
                 print(f'Warning: Failed to parse UserStack response: {parse_error}')
-                validated_data = response_data  # Fallback to raw
+                validated_data = None
 
             # Step 3: Cache the response
             self.put_cache_data(identifier, response_data)
 
-            return response_data
+            return validated_data
 
         except requests.RequestException as e:
             print(f'Error querying UserStack API: {e}')
+            return None
+        except Exception as e:
+            print(f'Unexpected error: {e}')
+            return None
+
+
+############################
+#  IP Geolocation models  ##
+############################
+
+class CurrencyInfo(BaseModel):
+    code: Optional[str]
+    name: Optional[str]
+    symbol: Optional[str]
+
+class DSTInfo(BaseModel):
+    utc_time: Optional[str]
+    duration: Optional[str]
+    gap: Optional[bool]
+    dateTimeAfter: Optional[str]
+    dateTimeBefore: Optional[str]
+    overlap: Optional[bool]
+
+class TimeZoneInfo(BaseModel):
+    name: Optional[str]
+    offset: Optional[int]
+    offset_with_dst: Optional[int]
+    current_time: Optional[str]
+    current_time_unix: Optional[float]
+    is_dst: Optional[bool]
+    dst_savings: Optional[int]
+    dst_exists: Optional[bool]
+    dst_start: Optional[DSTInfo]
+    dst_end: Optional[DSTInfo]
+
+class IPGeolocationResponse(BaseModel):
+    ip: str
+    continent_code: Optional[str]
+    continent_name: Optional[str]
+    country_code2: Optional[str]
+    country_code3: Optional[str]
+    country_name: Optional[str]
+    country_name_official: Optional[str]
+    country_capital: Optional[str]
+    state_prov: Optional[str]
+    state_code: Optional[str]
+    district: Optional[str]
+    city: Optional[str]
+    zipcode: Optional[str]
+    latitude: Optional[str]
+    longitude: Optional[str]
+    is_eu: Optional[bool]
+    calling_code: Optional[str]
+    country_tld: Optional[str]
+    languages: Optional[str]
+    country_flag: Optional[str]
+    country_emoji: Optional[str]
+    geoname_id: Optional[str]
+    isp: Optional[str]
+    connection_type: Optional[str]
+    organization: Optional[str]
+    currency: Optional[CurrencyInfo]
+    time_zone: Optional[TimeZoneInfo]
+
+class IPGeolocationApiClient(BaseApiClient):
+    BASE_URL = 'https://api.ipgeolocation.io/ipgeo'
+
+    def __init__(self, api_key: str):
+        super().__init__(redis_db=4, redis_prefix='ip_geolocation')
+        self.api_key = api_key
+
+    def get_data(self, identifier: str) -> Optional[IPGeolocationResponse]:
+        """Get IP geolocation data from the API."""
+        try:
+            # Check cache first
+            cache_data = self.get_cache_data(identifier)
+            if cache_data:
+                return IPGeolocationResponse(**cache_data)
+
+            # Query API
+            response = requests.get(
+                self.BASE_URL,
+                params={
+                    'apiKey': self.api_key,
+                    'ip': identifier,
+                    'output': 'json'
+                },
+                timeout=5
+            )
+
+            response.raise_for_status()
+            response_data = response.json()
+
+            # Optional: Validate using Pydantic
+            try:
+                validated_data = IPGeolocationResponse(**response_data)
+            except Exception as parse_error:
+                print(f'Warning: Failed to parse IPGeolocation response: {parse_error}')
+                validated_data = None
+
+            # Step 3: Cache the response
+            self.put_cache_data(identifier, response_data)
+
+            return validated_data
+
+        except requests.RequestException as e:
+            print(f'Error querying IPGeolocation API: {e}')
             return None
         except Exception as e:
             print(f'Unexpected error: {e}')
