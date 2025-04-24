@@ -1,7 +1,7 @@
 from __future__ import annotations
 from django.db import models
 from django.utils import timezone
-
+import json
 from tracking.common import AgentStatus, TrackingType
 
 
@@ -100,27 +100,11 @@ class TrackingData(models.Model):
         null=True,
         blank=True
     )
-    user_agent = models.TextField(null=True, blank=True)
-    user_agent_source = models.CharField(
-        max_length=10,
-        choices=TrackingType.choices(),
-        null=True,
-        blank=True
-    )
+    os = models.CharField(max_length=100, null=True, blank=True)
+    browser = models.CharField(max_length=100, null=True, blank=True)
+    platform = models.CharField(max_length=100, null=True, blank=True)
     locale = models.CharField(max_length=10, null=True, blank=True)
-    locale_source = models.CharField(
-        max_length=10,
-        choices=TrackingType.choices(),
-        null=True,
-        blank=True
-    )
     client_time = models.DateTimeField(null=True, blank=True)
-    time_source = models.CharField(
-        max_length=10,
-        choices=TrackingType.choices(),
-        null=True,
-        blank=True
-    )
     client_timezone = models.CharField(max_length=50, null=True, blank=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)

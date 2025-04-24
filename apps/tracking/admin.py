@@ -7,17 +7,7 @@ from tracking.models import TrackingData, Agent, Campaign
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from django.utils.safestring import mark_safe
-
-
-def parse_client_timestamp(datetime_str, timezone_str):
-    try:
-        client_tz = ZoneInfo(timezone_str) if timezone_str else ZoneInfo('UTC')
-        dt_object = datetime.fromisoformat(datetime_str)
-
-        return dt_object.astimezone(client_tz)
-    except ValueError as e:
-        print(f'Error parsing datetime string: {e}')
-        return None
+from typing import Optional
 
 
 class TrackingDataInline(admin.TabularInline): # type: ignore
@@ -34,6 +24,7 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+
         return qs.order_by('-server_timestamp')
     
     fields = (
@@ -42,106 +33,211 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
         'http_method',
         'ip_address',
         'ip_source',
-        'user_agent',
-        'user_agent_source',
+        'os',
+        'browser',
+        'platform',
         'locale',
-        'locale_source',
         'client_time',
-        'time_source',
         'client_timezone',
         'latitude',
         'longitude',
         'location_source',
         'warnings',
-        'data_icons'
+        'metadata'
     )
     readonly_fields = (
         'server_timestamp',
         'ip_address',
         'ip_source',
-        'user_agent',
-        'user_agent_source',
+        'os',
+        'browser',
+        'platform',
         'locale',
-        'locale_source',
         'client_time',
-        'time_source',
         'client_timezone',
         'latitude',
         'longitude',
         'location_source',
         'warnings',
-        'data_icons'
+        'metadata'
     )
     search_fields = ('http_method',)
     list_filter = ('http_method',)
     list_per_page = 20
 
-    def warnings(self, obj):
+    def check_ip_mismatch(self, obj: TrackingData) -> Optional[str]:
+        if not obj.ip_data:
+            return None
+
+        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
+        server_ip = ip_data.get('server_ip', {}).get('address')
+        header_ip = ip_data.get('header_ip', {}).get('address')
+        
+        if server_ip and header_ip and server_ip != header_ip:
+            return format_html(
+                '<span class="warning-icon" title="IP Address Mismatch: Server IP ({}) differs from Client IP ({})">🌐</span>',
+                server_ip,
+                header_ip
+            )
+
+        return None
+
+    def check_vpn(self, obj: TrackingData) -> Optional[str]:
+        if not obj.ip_data:
+            return None
+        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
+
+        if ip_data.get('info', {}).get('security', {}).get('is_vpn'):
+            return format_html(
+                '<span class="warning-icon" title="VPN/Proxy Detected">🔒</span>'
+            )
+
+        return None
+
+    def check_crawler(self, obj: TrackingData) -> Optional[str]:
+        if not obj.user_agent_data:
+            return None
+
+        ua_data = json.loads(obj.user_agent_data) if isinstance(obj.user_agent_data, str) else obj.user_agent_data
+
+        if ua_data.get('info', {}).get('crawler', {}).get('is_crawler'):
+            return format_html(
+                '<span class="warning-icon" title="Crawler/Bot Detected">🤖</span>'
+            )
+
+        return None
+
+    def check_user_agent_mismatch(self, obj: TrackingData) -> Optional[str]:
+        if not obj.user_agent_data:
+            return None
+
+        ua_data = json.loads(obj.user_agent_data) if isinstance(obj.user_agent_data, str) else obj.user_agent_data
+
+        if ua_data.get('server_user_agent') != ua_data.get('header_user_agent'):
+            return format_html(
+                '<span class="warning-icon" title="User Agent Mismatch: Server and Client user agents differ">🔄</span>'
+            )
+
+        return None
+
+    def check_timezone_mismatch(self, obj: TrackingData) -> Optional[str]:
+        if not obj.headers_data and obj.ip_data:
+            return None
+
+        header_timezone = obj.headers_data.get('datetime', {}).get('timezone')
+        ip_timezone = obj.ip_data.get('info', {}).get('timezone').get('name')
+
+        if header_timezone != ip_timezone:
+            return format_html(
+                '<span class="warning-icon" title="Non-UTC Timezone: {}">⏰</span>',
+                obj.client_timezone
+            )
+
+        return None
+
+    def check_security(self, obj: TrackingData) -> Optional[str]:
+        if not obj.ip_data:
+            return None
+        
+        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
+        security = ip_data.get('info', {}).get('security', {})
+        
+        warnings = []
+        if security.get('vpn'):
+            warnings.append('VPN')
+        if security.get('proxy'):
+            warnings.append('Proxy')
+        if security.get('tor'):
+            warnings.append('Tor')
+        if security.get('relay'):
+            warnings.append('Relay')
+        if security.get('hosting'):
+            warnings.append('Hosting')
+        
+        if warnings:
+            return format_html(
+                '<span class="warning-icon" title="Security Issues: {}">🔒</span>',
+                ', '.join(warnings)
+            )
+        return None
+
+    def warnings(self, obj: TrackingData):
         warnings = []
         
         # Check for IP address mismatch
-        if obj.ip_data:
-            server_ip = obj.ip_data.get('server_ip', {}).get('address')
-            header_ip = obj.ip_data.get('header_ip', {}).get('address')
-            
-            if server_ip and header_ip and server_ip != header_ip:
-                warning_html = format_html(
-                    '<span class="warning-icon" title="IP Address Mismatch: Server IP ({}) differs from Client IP ({})">⚠️</span>',
-                    server_ip,
-                    header_ip
-                )
-                warnings.append(warning_html)
+        if warning := self.check_ip_mismatch(obj):
+            warnings.append(warning)
+
+        # Check for VPN/Proxy
+        if warning := self.check_vpn(obj):
+            warnings.append(warning)
+
+        # Check for security issues
+        if warning := self.check_security(obj):
+            warnings.append(warning)
+
+        # Check for suspicious browser
+        if warning := self.check_crawler(obj):
+            warnings.append(warning)
+
+        # Check for user agent mismatch
+        if warning := self.check_user_agent_mismatch(obj):
+            warnings.append(warning)
+
+        # Check for timezone mismatch
+        if warning := self.check_timezone_mismatch(obj):
+            warnings.append(warning)
         
         return mark_safe(' '.join(warnings)) if warnings else '-'
     
     warnings.short_description = 'Warnings'
 
-    def data_icons(self, obj):
+    def metadata(self, obj):
         icons = []
         
         # Headers Data Icon
         if obj.headers_data:
             headers_html = format_html(
-                '<span class="data-icon" title="{}">📋</span>',
-                json.dumps(obj.headers_data, indent=2)
+                '<span class="metadata-icon" title="{}">📋</span>',
+                json.dumps(json.loads(obj.headers_data), indent=4, ensure_ascii=False)
             )
             icons.append(headers_html)
         
         # IP Data Icon
         if obj.ip_data:
             ip_html = format_html(
-                '<span class="data-icon" title="{}">🌐</span>',
-                json.dumps(obj.ip_data, indent=2)
+                '<span class="metadata-icon" title="{}">🌐</span>',
+                json.dumps(json.loads(obj.ip_data), indent=4, ensure_ascii=False)
             )
             icons.append(ip_html)
         
         # User Agent Data Icon
         if obj.user_agent_data:
             ua_html = format_html(
-                '<span class="data-icon" title="{}">🖥️</span>',
-                json.dumps(obj.user_agent_data, indent=2)
+                '<span class="metadata-icon" title="{}">🖥️</span>',
+                json.dumps(json.loads(obj.user_agent_data), indent=4, ensure_ascii=False)
             )
             icons.append(ua_html)
         
         # Form Data Icon
         if obj.form_data:
             form_html = format_html(
-                '<span class="data-icon" title="{}">📝</span>',
-                json.dumps(json.loads(obj.form_data), indent=2)
+                '<span class="metadata-icon" title="{}">📝</span>',
+                json.dumps(json.loads(obj.form_data), indent=4, ensure_ascii=False)
             )
             icons.append(form_html)
         
         return mark_safe(' '.join(icons))
     
-    data_icons.short_description = 'Data'
+    metadata.short_description = 'Metadata'
     
     class Media:
         css = {
             'all': (
-                '.data-icon { cursor: help; margin-right: 5px; }',
-                '.data-icon:hover { opacity: 0.7; }',
-                '.warning-icon { cursor: help; margin-right: 5px; color: #ff9800; }',
-                '.warning-icon:hover { opacity: 0.7; }',
+                '.metadata-icon { margin-right: 5px; }',
+                '.metadata-icon:hover { cursor: pointer; opacity: 0.7; }',
+                '.warning-icon { margin-right: 5px; color: #ff9800; }',
+                '.warning-icon:hover { cursor: pointer; opacity: 0.7; }',
             )
         }
 

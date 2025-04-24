@@ -1,7 +1,7 @@
 from datetime import timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import requests
-from typing import Optional
+from typing import Optional, Dict, Any
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 import pprint
@@ -47,9 +47,9 @@ class BaseApiClient(ABC):
         pass
 
 
-##########################
-#  IP Stack API models  ##
-##########################
+######################
+#  IP Stack models  ##
+######################
 
 class IpStackResponse(BaseModel):
     ip: str
@@ -95,9 +95,9 @@ class IpStackApiClient(BaseApiClient):
             return None
 
 
-##############################
-#  TwilioLookup API models  ##
-##############################
+##########################
+#  TwilioLookup models  ##
+##########################
 
 class CallerName(BaseModel):
     caller_name: Optional[str]
@@ -119,46 +119,6 @@ class TwilioLookupResponse(BaseModel):
     carrier: Optional[CarrierInfo]
     add_ons: Optional[Dict[str, Any]]
     url: Optional[str]
-
-
-##############################
-#  TwilioLookup API models  ##
-##############################
-
-class VPNApiClient:
-    BASE_URL = 'https://vpnapi.io/api/'
-
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-
-    def get_vpn_data(self, ip_address: str) -> Optional[str]:
-        print(f'Testing ip_address: {ip_address}')
-        print(f'Testing api key: {self.api_key}')
-        
-        url = f'{self.BASE_URL}{ip_address}'
-        params = {'key': self.api_key}
-
-        try:
-            response = requests.get(url, params=params, timeout=5)
-            response.raise_for_status()
-            response_data = response.json()
-            
-            print(f'api response: {response_data}')
-            
-            return response_data
-            
-            # vpn_data = IpData(**response_data)
-
-            # return vpn_data
-
-        except requests.RequestException as e:
-            print(f'Error querying VPN API: {e}')
-            return None
-
-        except Exception as e:
-            print(f'Error parsing VPN API.io response: {e}')
-            return None
-
 
 class TwilioApiClient(BaseApiClient):
     def __init__(self, account_sid: str, auth_token: str):
@@ -198,9 +158,9 @@ class TwilioApiClient(BaseApiClient):
             raise e
 
 
-###########################
-#  UserStack API models  ##
-###########################
+#######################
+#  UserStack models  ##
+#######################
 
 class OSInfo(BaseModel):
     name: Optional[str]
@@ -351,6 +311,7 @@ class IPGeolocationApiClient(BaseApiClient):
     BASE_URL = 'https://api.ipgeolocation.io/ipgeo'
 
     def __init__(self, api_key: str):
+        # Use separate Redis DB for ip geolocation cache
         super().__init__(redis_db=4, redis_prefix='ip_geolocation')
         self.api_key = api_key
 
@@ -359,6 +320,7 @@ class IPGeolocationApiClient(BaseApiClient):
         try:
             # Check cache first
             cache_data = self.get_cache_data(identifier)
+
             if cache_data:
                 return IPGeolocationResponse(**cache_data)
 
@@ -394,3 +356,72 @@ class IPGeolocationApiClient(BaseApiClient):
         except Exception as e:
             print(f'Unexpected error: {e}')
             return None
+
+
+#####################
+#  VPN API models  ##
+#####################
+
+class SecurityInfo(BaseModel):
+    vpn: bool = False
+    proxy: bool = False
+    tor: bool = False
+    relay: bool = False
+    hosting: bool = False
+
+class VpnApiResponse(BaseModel):
+    ip: str
+    security: SecurityInfo = Field(default_factory=SecurityInfo)
+
+class VpnApiClient(BaseApiClient):
+    BASE_URL = 'https://vpnapi.io/api'
+
+    def __init__(self, api_key: str):
+        # Use separate Redis DB for vpn cache
+        super().__init__(redis_db=5, redis_prefix='vpn')
+        self.api_key = api_key
+
+    def get_data(self, identifier: str) -> Optional[VpnApiResponse]:
+        print(f'Testing ip_address: {identifier}')
+        print(f'Testing api key: {self.api_key}')
+
+        try:
+            # Check cache first
+            cache_data = self.get_cache_data(identifier)
+
+            if cache_data:
+                print(f"cache response data: {cache_data}")
+                return VpnApiResponse(**cache_data)
+
+            # Query API
+            response = requests.get(
+                f'{self.BASE_URL}/{identifier}',
+                params={'key': self.api_key},
+                timeout=5
+            )
+
+            response.raise_for_status()
+            response_data = response.json()
+
+            print(f"response data: {response_data}")
+
+            # Optional: Validate using Pydantic
+            try:
+                validated_data = VpnApiResponse(**response_data)
+            except Exception as parse_error:
+                print(f'Warning: Failed to parse VPN API response: {parse_error}')
+                validated_data = None
+
+            # Step 3: Cache the response
+            self.put_cache_data(identifier, response_data)
+
+            return validated_data
+
+        except requests.RequestException as e:
+            print(f'Error querying VPN API: {e}')
+            return None
+
+        except Exception as e:
+            print(f'Error parsing VPN API.io response: {e}')
+            return None
+

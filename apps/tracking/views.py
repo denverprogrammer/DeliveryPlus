@@ -1,7 +1,7 @@
 import base64
 import json
 from config import settings
-from tracking.api import IPGeolocationApiClient, IPGeolocationResponse, TwilioApiClient, UserStackApiClient, UserStackResponse
+from tracking.api import IPGeolocationApiClient, IPGeolocationResponse, SecurityInfo, TwilioApiClient, UserStackApiClient, UserStackResponse, VpnApiClient
 from tracking.models import Campaign, TrackingData, Agent
 from tracking.common import TrackingType
 from django.utils.timezone import localtime, now
@@ -26,6 +26,10 @@ class IpData(BaseModel):
     selected_ip: Optional[str] = None
     source: Optional[str] = None
     info: Optional[IPGeolocationResponse] = None
+    security: Optional[SecurityInfo] = None
+
+    def to_json(self) -> str:
+        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
 
 class UserAgentData(BaseModel):
     server_user_agent: str
@@ -33,6 +37,21 @@ class UserAgentData(BaseModel):
     selected_user_agent: Optional[str] = None
     source: Optional[str] = None
     info: Optional[UserStackResponse] = None
+
+    def get_os_name(self) -> Optional[str]:
+        return self.info.os.name if self.info and self.info.os else None
+
+    def get_browser_name(self) -> Optional[str]:
+        return self.info.browser.name if self.info and self.info.browser else None
+
+    def get_platform_type(self) -> Optional[str]:
+        return self.info.device.type if self.info and self.info.device else None
+
+    def has_user_agent_mismatch(self) -> bool:
+        return self.server_user_agent != self.header_user_agent
+
+    def to_json(self) -> str:
+        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
 
 class LocaleData(BaseModel):
     server_locale: str
@@ -93,6 +112,9 @@ class TrackingHeaderData(BaseModel):
     navigator: NavigatorInfo = Field(default_factory=NavigatorInfo)
     datetime: DateTimeInfo
     public_ip: Optional[HeaderIpInfo] = None
+
+    def to_json(self) -> str:
+        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
 
 
 def get_server_ip(request) -> str:
@@ -185,6 +207,11 @@ def get_ip_data(request: HttpRequest, headers_data: TrackingHeaderData) -> IpDat
         # Get IP data from IPGeolocation
         ipGeolocationClient = IPGeolocationApiClient(settings.IP_GEO_LOCATION_KEY)
         ip_data.info = ipGeolocationClient.get_data(selected_ip)
+
+        vpnClient = VpnApiClient(settings.VPN_API_IO_KEY)
+        vpnData = vpnClient.get_data(selected_ip)
+        ip_data.security = vpnData.security
+        print(f"vpn data: {vpnData}")
 
     return ip_data
 
@@ -371,21 +398,20 @@ def track_view(request: HttpRequest, token: Optional[str] = None) -> HttpRespons
             http_method=http_method,
             ip_address=ip_data.selected_ip,
             ip_source=ip_data.source,
-            user_agent=user_agent_data.selected_user_agent,
-            user_agent_source=user_agent_data.source,
+            os=user_agent_data.get_os_name(),
+            browser=user_agent_data.get_browser_name(),
+            platform=user_agent_data.get_platform_type(),
             locale=locale_data.selected_locale,
-            locale_source=locale_data.source,
             client_time=time_data.info,
-            time_source=time_data.source,
             client_timezone=time_data.selected_timezone,
             latitude=location_data.selected_location.latitude,
             longitude=location_data.selected_location.longitude,
             location_source=location_data.source,
-            tracking_data=json.dumps(headers_data.model_dump(), indent=2, sort_keys=True, ensure_ascii=True),
-            ip_data=json.dumps(ip_data.model_dump(), indent=2, sort_keys=True, ensure_ascii=True),
-            user_agent_data=json.dumps(user_agent_data.model_dump(), indent=2, sort_keys=True, ensure_ascii=True),
-            headers_data=json.dumps(headers_data.model_dump(), indent=2, sort_keys=True, ensure_ascii=True),
-            form_data=json.dumps(request.POST, indent=2, sort_keys=True, ensure_ascii=True)
+            tracking_data=headers_data.to_json(),
+            ip_data=ip_data.to_json(),
+            user_agent_data=user_agent_data.to_json(),
+            headers_data=headers_data.to_json(),
+            form_data=json.dumps(request.POST, sort_keys=True, ensure_ascii=True)
         )
 
         return JsonResponse({
