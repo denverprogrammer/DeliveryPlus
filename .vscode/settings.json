@@ -1,0 +1,69 @@
+{
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=100",
+        "--extend-ignore=E203,W503"
+    ],
+    "python.linting.pylintArgs": [
+        "--max-line-length=100",
+        "--disable=C0111,C0103,C0330,C0326,W0311,W0603,R0903,R0913,R0914,R0915"
+    ],
+    "python.linting.mypyArgs": [
+        "--strict",
+        "--ignore-missing-imports",
+        "--disallow-untyped-defs",
+        "--disallow-incomplete-defs",
+        "--check-untyped-defs",
+        "--disallow-untyped-decorators",
+        "--no-implicit-optional",
+        "--warn-redundant-casts",
+        "--warn-unused-ignores",
+        "--warn-no-return",
+        "--warn-unreachable",
+        "--strict-optional",
+        "--strict-equality"
+    ],
+    "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportGeneralTypeIssues": "warning",
+        "reportOptionalMemberAccess": "warning",
+        "reportOptionalSubscript": "warning",
+        "reportOptionalCall": "warning",
+        "reportOptionalIterable": "warning",
+        "reportOptionalContextManager": "warning",
+        "reportOptionalOperand": "warning"
+    },
+    "python.analysis.ignore": [
+        "**/migrations/**",
+        "**/__init__.py",
+        "**/setup.py"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportGeneralTypeIssues": "warning",
+        "reportOptionalMemberAccess": "warning",
+        "reportOptionalSubscript": "warning",
+        "reportOptionalCall": "warning",
+        "reportOptionalIterable": "warning",
+        "reportOptionalContextManager": "warning",
+        "reportOptionalOperand": "warning"
+    },
+    "python.analysis.ignore": [
+        "**/migrations/**",
+        "**/__init__.py",
+        "**/setup.py"
+    ]
+}

@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
-import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -72,6 +71,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'debug': DEBUG is True,
         },
     },
 ]
@@ -152,7 +152,3 @@ IP_GEO_LOCATION_KEY:str = os.environ.get("IP_GEO_LOCATION_KEY", '')
 
 TWILIO_ACCOUNT_SID:str = os.environ.get("TWILIO_ACCOUNT_SID", '')
 TWILIO_AUTH_TOKEN:str = os.environ.get("TWILIO_AUTH_TOKEN", '')
-
-# Auto-reload settings for development
-if DEBUG:
-    TEMPLATES[0]['OPTIONS']['debug'] = True

@@ -1,32 +1,26 @@
 import json
-from django.contrib import admin, messages
+from django.contrib import admin
+from typing import Optional, Any, Dict, List
 from django.utils.html import format_html
-from subadmin import SubAdmin
+from django.utils.safestring import mark_safe
+from django.http import HttpRequest
+from subadmin import SubAdmin  # type: ignore
 from tracking.forms import CampaignAdminForm
 from tracking.models import TrackingData, Agent, Campaign
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from django.utils.safestring import mark_safe
-from typing import Optional
 
 
-class TrackingDataInline(admin.TabularInline): # type: ignore
+def parse_json_data(data: Any) -> Dict[str, Any]:
+    """Parse JSON data from string or dict."""
+    if isinstance(data, str):
+        return json.loads(data)
+    return data
+
+
+class TrackingDataInline(admin.TabularInline):  # type: ignore
     model = TrackingData
     extra = 0
     show_change_link = False
     can_delete = False
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-
-        return qs.order_by('-server_timestamp')
-    
     fields = (
         'id', 
         'server_timestamp', 
@@ -45,31 +39,26 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
         'warnings',
         'metadata'
     )
-    readonly_fields = (
-        'server_timestamp',
-        'ip_address',
-        'ip_source',
-        'os',
-        'browser',
-        'platform',
-        'locale',
-        'client_time',
-        'client_timezone',
-        'latitude',
-        'longitude',
-        'location_source',
-        'warnings',
-        'metadata'
-    )
+    readonly_fields = fields
     search_fields = ('http_method',)
     list_filter = ('http_method',)
     list_per_page = 20
 
+    def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
+    # def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
+    #     return cast(QuerySet[TrackingData], super().get_queryset(request).order_by('-server_timestamp'))
+    
     def check_ip_mismatch(self, obj: TrackingData) -> Optional[str]:
+        """Check for IP address mismatches between server and client."""
         if not obj.ip_data:
             return None
 
-        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
+        ip_data = parse_json_data(obj.ip_data)
         server_ip = ip_data.get('server_ip', {}).get('address')
         header_ip = ip_data.get('header_ip', {}).get('address')
         
@@ -79,80 +68,77 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
                 server_ip,
                 header_ip
             )
-
         return None
 
     def check_vpn(self, obj: TrackingData) -> Optional[str]:
+        """Check for VPN/proxy usage."""
         if not obj.ip_data:
             return None
-        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
 
+        ip_data = parse_json_data(obj.ip_data)
         if ip_data.get('info', {}).get('security', {}).get('is_vpn'):
             return format_html(
                 '<span class="warning-icon" title="VPN/Proxy Detected">🔒</span>'
             )
-
         return None
 
     def check_crawler(self, obj: TrackingData) -> Optional[str]:
+        """Check for crawler/bot detection."""
         if not obj.user_agent_data:
             return None
 
-        ua_data = json.loads(obj.user_agent_data) if isinstance(obj.user_agent_data, str) else obj.user_agent_data
-
+        ua_data = parse_json_data(obj.user_agent_data)
         if ua_data.get('info', {}).get('crawler', {}).get('is_crawler'):
             return format_html(
                 '<span class="warning-icon" title="Crawler/Bot Detected">🤖</span>'
             )
-
         return None
 
     def check_user_agent_mismatch(self, obj: TrackingData) -> Optional[str]:
+        """Check for user agent mismatches."""
         if not obj.user_agent_data:
             return None
 
-        ua_data = json.loads(obj.user_agent_data) if isinstance(obj.user_agent_data, str) else obj.user_agent_data
-
+        ua_data = parse_json_data(obj.user_agent_data)
         if ua_data.get('server_user_agent') != ua_data.get('header_user_agent'):
             return format_html(
                 '<span class="warning-icon" title="User Agent Mismatch: Server and Client user agents differ">🔄</span>'
             )
-
         return None
 
     def check_timezone_mismatch(self, obj: TrackingData) -> Optional[str]:
-        if not obj.headers_data and obj.ip_data:
+        """Check for timezone mismatches."""
+        if not obj.headers_data or not obj.ip_data:
             return None
 
-        header_timezone = obj.headers_data.get('datetime', {}).get('timezone')
-        ip_timezone = obj.ip_data.get('info', {}).get('timezone').get('name')
+        header_timezone: Optional[str] = obj.headers_data.get('datetime', {}).get('timezone') if obj.headers_data else None
+        ip_timezone: Optional[str] = obj.ip_data.get('info', {}).get('timezone', {}).get('name') if obj.ip_data else None
 
         if header_timezone != ip_timezone:
             return format_html(
                 '<span class="warning-icon" title="Non-UTC Timezone: {}">⏰</span>',
                 obj.client_timezone
             )
-
         return None
 
     def check_security(self, obj: TrackingData) -> Optional[str]:
+        """Check for security issues."""
         if not obj.ip_data:
             return None
         
-        ip_data = json.loads(obj.ip_data) if isinstance(obj.ip_data, str) else obj.ip_data
+        ip_data = parse_json_data(obj.ip_data)
         security = ip_data.get('info', {}).get('security', {})
         
-        warnings = []
-        if security.get('vpn'):
-            warnings.append('VPN')
-        if security.get('proxy'):
-            warnings.append('Proxy')
-        if security.get('tor'):
-            warnings.append('Tor')
-        if security.get('relay'):
-            warnings.append('Relay')
-        if security.get('hosting'):
-            warnings.append('Hosting')
+        warnings: List[str] = []
+        for key, label in {
+            'vpn': 'VPN',
+            'proxy': 'Proxy',
+            'tor': 'Tor',
+            'relay': 'Relay',
+            'hosting': 'Hosting'
+        }.items():
+            if security.get(key):
+                warnings.append(label)
         
         if warnings:
             return format_html(
@@ -161,75 +147,47 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
             )
         return None
 
-    def warnings(self, obj: TrackingData):
-        warnings = []
+    def warnings(self, obj: TrackingData) -> str:
+        """Collect all warnings for the tracking data."""
+        warning_checks = [
+            self.check_ip_mismatch,
+            self.check_vpn,
+            self.check_security,
+            self.check_crawler,
+            self.check_user_agent_mismatch,
+            self.check_timezone_mismatch
+        ]
         
-        # Check for IP address mismatch
-        if warning := self.check_ip_mismatch(obj):
-            warnings.append(warning)
-
-        # Check for VPN/Proxy
-        if warning := self.check_vpn(obj):
-            warnings.append(warning)
-
-        # Check for security issues
-        if warning := self.check_security(obj):
-            warnings.append(warning)
-
-        # Check for suspicious browser
-        if warning := self.check_crawler(obj):
-            warnings.append(warning)
-
-        # Check for user agent mismatch
-        if warning := self.check_user_agent_mismatch(obj):
-            warnings.append(warning)
-
-        # Check for timezone mismatch
-        if warning := self.check_timezone_mismatch(obj):
-            warnings.append(warning)
+        warnings: List[str] = []
+        for check in warning_checks:
+            if warning := check(obj):
+                warnings.append(warning)
         
         return mark_safe(' '.join(warnings)) if warnings else '-'
     
-    warnings.short_description = 'Warnings'
+    warnings.short_description = 'Warnings'  # type: ignore
 
-    def metadata(self, obj):
-        icons = []
+    def metadata(self, obj: TrackingData) -> str:
+        """Display metadata icons with tooltips."""
+        metadata_fields = {
+            'headers_data': ('📋', 'Headers Data'),
+            'ip_data': ('🌐', 'IP Data'),
+            'user_agent_data': ('🖥️', 'User Agent Data'),
+            'form_data': ('📝', 'Form Data')
+        }
         
-        # Headers Data Icon
-        if obj.headers_data:
-            headers_html = format_html(
-                '<span class="metadata-icon" title="{}">📋</span>',
-                json.dumps(json.loads(obj.headers_data), indent=4, ensure_ascii=False)
-            )
-            icons.append(headers_html)
-        
-        # IP Data Icon
-        if obj.ip_data:
-            ip_html = format_html(
-                '<span class="metadata-icon" title="{}">🌐</span>',
-                json.dumps(json.loads(obj.ip_data), indent=4, ensure_ascii=False)
-            )
-            icons.append(ip_html)
-        
-        # User Agent Data Icon
-        if obj.user_agent_data:
-            ua_html = format_html(
-                '<span class="metadata-icon" title="{}">🖥️</span>',
-                json.dumps(json.loads(obj.user_agent_data), indent=4, ensure_ascii=False)
-            )
-            icons.append(ua_html)
-        
-        # Form Data Icon
-        if obj.form_data:
-            form_html = format_html(
-                '<span class="metadata-icon" title="{}">📝</span>',
-                json.dumps(json.loads(obj.form_data), indent=4, ensure_ascii=False)
-            )
-            icons.append(form_html)
+        icons: List[str] = []
+        for field, (icon, _) in metadata_fields.items():
+            if data := getattr(obj, field):
+                icons.append(format_html(
+                    '<span class="metadata-icon" title="{}">{}</span>',
+                    json.dumps(parse_json_data(data), indent=4, ensure_ascii=False),
+                    icon
+                ))
         
         return mark_safe(' '.join(icons))
     
-    metadata.short_description = 'Metadata'
+    metadata.short_description = 'Metadata'  # type: ignore
     
     class Media:
         css = {
@@ -243,7 +201,7 @@ class TrackingDataInline(admin.TabularInline): # type: ignore
 
 
 class AgentAdmin(SubAdmin):
-    model=Agent
+    model = Agent
     fieldsets = (
         (None, {'fields': ('first_name', 'last_name', 'status')}),
         ('Contact', {'fields': ('token', 'email', 'phone_number')}),
@@ -253,11 +211,11 @@ class AgentAdmin(SubAdmin):
     list_filter = ('status',)
     search_fields = ('first_name', 'last_name', 'email', 'phone_number')
     ordering = ('first_name',)
-    inlines=[TrackingDataInline]
+    inlines = [TrackingDataInline]
 
 
 class CampaignAdmin(SubAdmin):
-    model=Campaign
+    model = Campaign
     form = CampaignAdminForm
     fieldsets = (
         (None, {'fields': ('name', 'description')}),
@@ -270,4 +228,4 @@ class CampaignAdmin(SubAdmin):
             ('time_tracking', 'time_precedence')
         )}),
     )
-    subadmins=[AgentAdmin]
+    subadmins = [AgentAdmin]

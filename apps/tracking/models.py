@@ -1,7 +1,5 @@
 from __future__ import annotations
 from django.db import models
-from django.utils import timezone
-import json
 from tracking.common import AgentStatus, TrackingType
 
 
@@ -90,7 +88,7 @@ class Agent(models.Model):
 
 
 class TrackingData(models.Model):
-    agent = models.ForeignKey('Agent', related_name='tracking', on_delete=models.CASCADE)
+    agent = models.ForeignKey(Agent, related_name='tracking', on_delete=models.CASCADE)
     http_method = models.CharField(max_length=10)
     server_timestamp = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)

@@ -1,6 +1,7 @@
 from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
+from typing import Any
 
 
 class AgentForm(forms.ModelForm):
@@ -16,7 +17,7 @@ class AgentForm(forms.ModelForm):
             'status',
         ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if 'campaign' in self.fields:
             self.fields['campaign'].queryset = Campaign.objects.all()
@@ -59,20 +60,20 @@ class CampaignAdminForm(forms.ModelForm):
         fields = '__all__'
 
     # Clean methods to ensure JSON is stored properly
-    def clean_publishing_type(self):
+    def clean_publishing_type(self) -> list[str]:
         return self.cleaned_data['publishing_type'] or []
 
-    def clean_ip_tracking(self):
+    def clean_ip_tracking(self) -> list[str]:
         return self.cleaned_data['ip_tracking'] or []
 
-    def clean_location_tracking(self):
+    def clean_location_tracking(self) -> list[str]:
         return self.cleaned_data['location_tracking'] or []
 
-    def clean_locale_tracking(self):
+    def clean_locale_tracking(self) -> list[str]:
         return self.cleaned_data['locale_tracking'] or []
 
-    def clean_browser_tracking(self):
+    def clean_browser_tracking(self) -> list[str]:
         return self.cleaned_data['browser_tracking'] or []
 
-    def clean_time_tracking(self):
+    def clean_time_tracking(self) -> list[str]:
         return self.cleaned_data['time_tracking'] or []

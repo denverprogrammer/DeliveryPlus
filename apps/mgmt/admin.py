@@ -1,5 +1,5 @@
 from django.contrib import admin
-from subadmin import RootSubAdmin
+from subadmin import RootSubAdmin  # type: ignore
 from tracking.admin import CampaignAdmin
 from mgmt.models import Company, User
 
