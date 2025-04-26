@@ -41,7 +41,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         'latitude',
         'longitude',
         'location_source',
-        'metadata'
+        'details'
     )
     readonly_fields = fields
     search_fields = ('http_method',)
@@ -160,22 +160,18 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
             return format_html( '{}', ', '.join(warnings))
         return None
 
-    def metadata(self, obj: TrackingData) -> str:
-        """Display metadata icons with tooltips."""       
+    def details(self, obj: TrackingData) -> str:
+        """Display metadata icons with tooltips."""
         # Render the modal template
-
-        warning_checks = [
-            self.check_ip_mismatch,
-            self.check_security,
-            self.check_crawler,
-            self.check_user_agent_mismatch,
-            self.check_timezone_mismatch
+        checks = [
+            self.check_ip_mismatch(obj),
+            self.check_security(obj),
+            self.check_crawler(obj),
+            self.check_user_agent_mismatch(obj),
+            self.check_timezone_mismatch(obj)
         ]
         
-        warnings: List[str] = []
-        for check in warning_checks:
-            if warning := check(obj):
-                warnings.append(warning)
+        warnings = [warning for warning in checks if warning]
 
         modal_html = render_to_string(
             'admin/tracking/trackingdata/metadata_modal.html',
@@ -191,7 +187,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         
         return format_html('{}', mark_safe(modal_html))
     
-    metadata.short_description = 'Metadata'  # type: ignore
+    details.short_description = 'Details'  # type: ignore
     
     class Media:
         css = {

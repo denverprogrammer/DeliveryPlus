@@ -9,25 +9,37 @@
 
 <div id="metadata-modal-{{ obj.pk }}" class="white-popup mfp-hide">
     <div class="modal-header">
-        <h5 class="modal-title">Tracking Metadata</h5>
+        <h5 class="modal-title">Tracking Details</h5>
         <button type="button" class="mfp-close">&times;</button>
     </div>
     <div class="modal-body">
         <div id="tabbed-changeform-tabs" class="tabbed-changeform-tabs">
+            {% if warnings %}
+            <button id="tablink-warnings-{{ obj.pk }}" class="tabbed-changeform-tablink active" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'warnings-{{ obj.pk }}')">📋 Warnings</button>
+            {% endif %}
             {% if headers_data %}
             <button id="tablink-headers-{{ obj.pk }}" class="tabbed-changeform-tablink active" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'headers-{{ obj.pk }}')">📋 Headers</button>
             {% endif %}
             {% if ip_data %}
-            <button id="tablink-ip-{{ obj.pk }}" class="tabbed-changeform-tablink {% if not headers_data %}active{% endif %}" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'ip-{{ obj.pk }}')">🌐 IP</button>
+            <button id="tablink-ip-{{ obj.pk }}" class="tabbed-changeform-tablink {% if not headers_data %}active{% endif %}" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'ip-{{ obj.pk }}')">🌐 IP Address</button>
             {% endif %}
             {% if user_agent_data %}
             <button id="tablink-ua-{{ obj.pk }}" class="tabbed-changeform-tablink {% if not headers_data and not ip_data %}active{% endif %}" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'ua-{{ obj.pk }}')">🖥️ User Agent</button>
             {% endif %}
             {% if form_data %}
-            <button id="tablink-form-{{ obj.pk }}" class="tabbed-changeform-tablink {% if not headers_data and not ip_data and not user_agent_data %}active{% endif %}" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'form-{{ obj.pk }}')">📝 Form</button>
+            <button id="tablink-form-{{ obj.pk }}" class="tabbed-changeform-tablink {% if not headers_data and not ip_data and not user_agent_data %}active{% endif %}" onclick="AdminInterface.tabbedChangeForm.openTab(event, 'form-{{ obj.pk }}')">📝 Form Data</button>
             {% endif %}
         </div>
 
+        {% if warnings %}
+        <div id="tabcontent-warnings-{{ obj.pk }}" class="tabbed-changeform-tabcontent active">
+            <ul>
+                {% for warning in warnings %}
+                <li>{{ warning }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
         {% if headers_data %}
         <div id="tabcontent-headers-{{ obj.pk }}" class="tabbed-changeform-tabcontent active">
             <pre class="metadata-content">{{ headers_data|pprint }}</pre>
