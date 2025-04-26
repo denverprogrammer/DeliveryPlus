@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, TypeVar, Generic
+from typing import Any, Dict, Optional, TypeVar, Generic, List
 from pydantic import BaseModel, Field
 from datetime import datetime
 import json
@@ -235,6 +235,11 @@ class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
             return self.info.security.relay
         return False    
     
+    def getLocales(self) -> Optional[List[str]]:
+        if self.info and self.info.languages:
+            return self.info.languages.split(',')
+        return None
+    
     def getHeaderIpAddress(self) -> Optional[str]:
         if self.header and self.header.address:
             return self.header.address
@@ -248,6 +253,11 @@ class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
     def getSelectedAddress(self) -> Optional[str]:
         if self.selected:
             return self.selected.address
+        return None
+    
+    def getSelectedCountry(self) -> Optional[str]:
+        if self.info and self.info.country_code2:
+            return self.info.country_code2
         return None
 
 

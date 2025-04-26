@@ -61,7 +61,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         """Check for IP address mismatches between server and client."""
         if not obj.ip_data:
             return None
-        
+
         _ip_data = getattr(obj, '_ip_data', None)
 
         if not _ip_data:
@@ -73,9 +73,34 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         
         if server_ip != header_ip:
             return format_html(
-                '<span class="warning-icon" title="IP Address Mismatch: Server IP ({}) differs from Client IP ({})">🌐</span>',
+                '<div class="warning-message">IP Address Mismatch: Server IP ({}) differs from Header IP ({})</div>',
                 server_ip,
                 header_ip
+            )
+        return None
+
+    def check_country_mismatch(self, obj: TrackingData) -> Optional[str]:
+        """Check for country mismatches between server and client."""
+        if not obj.ip_data and obj.headers_data:
+            return None
+        
+        _ip_data = getattr(obj, '_ip_data', None)
+        _headers_data = getattr(obj, '_headers_data', None)
+
+        if not _ip_data or not _headers_data:
+            _ip_data = parse_json_data(obj.ip_data, IpData)
+            _headers_data = parse_json_data(obj.headers_data, HeaderData)
+            setattr(obj, '_ip_data', _ip_data)
+            setattr(obj, '_headers_data', _headers_data)
+        
+        server_country = _ip_data.getSelectedCountry()
+        header_country = _headers_data.getHeaderCountry()
+        
+        if server_country and header_country and server_country != header_country:
+            return format_html(
+                '<div class="warning-message">Country Mismatch: Server country ({}) differs from Header country ({})</div>',
+                server_country,
+                header_country
             )
         return None
 
@@ -92,7 +117,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if _user_agent_data.is_crawler():
             return format_html(
-                '<span class="warning-icon" title="Crawler/Bot Detected">🤖</span>'
+                '<div class="warning-message">Crawler/Bot Detected</div>'
             )
         return None
 
@@ -109,7 +134,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if _user_agent_data.header != _user_agent_data.server:
             return format_html(
-                '<span class="warning-icon" title="User Agent Mismatch: Server and Client user agents differ">🔄</span>'
+                '<div class="warning-message">User Agent Mismatch: Server and Client user agents differ</div>'
             )
         return None
 
@@ -131,12 +156,38 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if header_timezone != ip_timezone:
             return format_html(
-                '<span class="warning-icon" title="Non-UTC Timezone: {}">⏰</span>',
-                obj.client_timezone
+                '<div class="warning-message">Timezone Mismatch: Header timezone ({}) differs from IP timezone ({})</div>',
+                header_timezone,
+                ip_timezone
             )
         return None
 
-    def check_security(self, obj: TrackingData) -> Optional[str]:
+    def check_locale_mismatch(self, obj: TrackingData) -> Optional[str]:
+        """Check for locale mismatches between server and client."""
+        if not obj.ip_data and obj.headers_data:
+            return None
+        
+        _ip_data = getattr(obj, '_ip_data', None)
+        _headers_data = getattr(obj, '_headers_data', None)
+
+        if not _ip_data or not _headers_data:
+            _ip_data = parse_json_data(obj.ip_data, IpData)
+            _headers_data = parse_json_data(obj.headers_data, HeaderData)
+            setattr(obj, '_ip_data', _ip_data)
+            setattr(obj, '_headers_data', _headers_data)
+        
+        server_locale: Optional[List[str]] = _ip_data.getLocales()
+        header_locale: Optional[str] = _headers_data.getLocale()
+        
+        if server_locale and header_locale and server_locale[0] != header_locale:
+            return format_html(
+                '<div class="warning-message">Locale Mismatch: Server locale ({}) differs from Browser locale ({})</div>',
+                server_locale[0],
+                header_locale
+            )
+        return None
+
+    def check_security(self, obj: TrackingData) -> Optional[List[str]]:
         """Check for security issues."""
         if not obj.ip_data:
             return None
@@ -154,23 +205,24 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
             'relay': _ip_data.isRelay()
         }.items():
             if label:
-                warnings.append(f'<span class="warning-icon" title="{ key } detected">🔒</span>')
+                warnings.append(format_html('<div class="warning-message">{} detected</div>', key.title()))
         
-        if warnings:
-            return format_html( '{}', ', '.join(warnings))
-        return None
+        return warnings if warnings else None
 
     def details(self, obj: TrackingData) -> str:
-        """Display metadata icons with tooltips."""
+        """Display warnings and metadata."""
         # Render the modal template
         checks = [
             self.check_ip_mismatch(obj),
-            self.check_security(obj),
+            self.check_country_mismatch(obj),
+            self.check_locale_mismatch(obj),
             self.check_crawler(obj),
             self.check_user_agent_mismatch(obj),
             self.check_timezone_mismatch(obj)
         ]
-        
+        security: Optional[List[str]] = self.check_security(obj)
+        if security:
+            checks.extend(security)
         warnings = [warning for warning in checks if warning]
 
         modal_html = render_to_string(

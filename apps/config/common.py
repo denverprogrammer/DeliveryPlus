@@ -75,6 +75,12 @@ class HeaderData(BaseModel):
     def getTimezone(self) -> Optional[str]:
         return self.datetime.timezone if self.datetime else None
     
+    def getLocale(self) -> Optional[str]:
+        return self.navigator.language if self.navigator else None
+    
+    def getHeaderCountry(self) -> Optional[str]:
+        return self.public_ip.address.country if self.public_ip and self.public_ip.address else None
+    
     def getTimestamp(self) -> int:
         if self.datetime.timestamp:
             return int(self.datetime.timestamp)
