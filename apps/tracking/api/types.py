@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, TypeVar, Generic
 from pydantic import BaseModel, Field
 from datetime import datetime
 import json
+
 from config.common import IpAddressInfo, LocationInfo
 
 
@@ -101,7 +102,6 @@ class SecurityInfo(BaseModel):
     proxy: bool = False
     tor: bool = False
     relay: bool = False
-    hosting: bool = False
 
 
 class CurrencyInfo(BaseModel):
@@ -215,6 +215,36 @@ class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
 
         return location.longitude if location else None
     
+    def isVpn(self) -> bool:
+        if self.info and self.info.security:
+            return self.info.security.vpn
+        return False
+        
+    def isTor(self) -> bool:
+        if self.info and self.info.security:
+            return self.info.security.tor
+        return False
+    
+    def isProxy(self) -> bool:
+        if self.info and self.info.security:
+            return self.info.security.proxy
+        return False
+    
+    def isRelay(self) -> bool:
+        if self.info and self.info.security:
+            return self.info.security.relay
+        return False    
+    
+    def getHeaderIpAddress(self) -> Optional[str]:
+        if self.header and self.header.address:
+            return self.header.address
+        return None
+    
+    def getServerIpAddress(self) -> Optional[str]:
+        if self.server and self.server.address:
+            return self.server.address
+        return None
+    
     def getSelectedAddress(self) -> Optional[str]:
         if self.selected:
             return self.selected.address
@@ -227,6 +257,9 @@ class UserAgentData(GenericBaseModel[str, UserStackResponse]):
 
     def get_browser_name(self) -> Optional[str]:
         return self.info.browser.name if self.info and self.info.browser else None
+    
+    def is_crawler(self) -> Optional[bool]:
+        return self.info.crawler.is_crawler if self.info and self.info.crawler else None
 
     def get_platform_type(self) -> Optional[str]:
         return self.info.device.type if self.info and self.info.device else None

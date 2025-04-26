@@ -1,6 +1,8 @@
 from __future__ import annotations
 from django.db import models
 from tracking.common import AgentStatus, TrackingType
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 
 
 class Campaign(models.Model):
@@ -87,6 +89,23 @@ class Agent(models.Model):
         return f'{self.first_name or ""} {self.last_name or ""}'.strip() or self.token
 
 
+class IPData(BaseModel):
+    server_ip: Optional[Dict[str, str]] = Field(default_factory=dict)
+    header_ip: Optional[Dict[str, str]] = Field(default_factory=dict)
+    info: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class UserAgentData(BaseModel):
+    server_user_agent: Optional[str] = None
+    header_user_agent: Optional[str] = None
+    info: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+class HeadersData(BaseModel):
+    datetime: Optional[Dict[str, str]] = Field(default_factory=dict)
+    headers: Optional[Dict[str, str]] = Field(default_factory=dict)
+
+class FormData(BaseModel):
+    data: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
 class TrackingData(models.Model):
     agent = models.ForeignKey(Agent, related_name='tracking', on_delete=models.CASCADE)
     http_method = models.CharField(max_length=10)
@@ -119,6 +138,11 @@ class TrackingData(models.Model):
     form_data = models.JSONField(null=True, blank=True)
     
     # phone_data = models.JSONField(null=True, blank=True)
+
+    ip_data_model = IPData
+    user_agent_data_model = UserAgentData
+    headers_data_model = HeadersData
+    form_data_model = FormData
 
     def __str__(self):
         return f'{self.agent} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'

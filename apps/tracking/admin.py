@@ -1,20 +1,24 @@
 import json
 from django.contrib import admin
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, List, TypeVar
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest
 from django.template.loader import render_to_string
 from subadmin import SubAdmin  # type: ignore
+from config.common import HeaderData
+from tracking.api.types import IpData, UserAgentData
 from tracking.forms import CampaignAdminForm
 from tracking.models import TrackingData, Agent, Campaign
+from pydantic import BaseModel
 
+T = TypeVar('T', bound=BaseModel)
 
-def parse_json_data(data: Any) -> Dict[str, Any]:
-    """Parse JSON data from string or dict."""
+def parse_json_data(data: Any, model: type[T]) -> T:
+    """Parse JSON data from string or dict into a Pydantic model."""
     if isinstance(data, str):
-        return json.loads(data)
-    return data
+        return model.model_validate_json(data)
+    return model.model_validate(data)
 
 
 class TrackingDataInline(admin.TabularInline):  # type: ignore
@@ -37,7 +41,6 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         'latitude',
         'longitude',
         'location_source',
-        'warnings',
         'metadata'
     )
     readonly_fields = fields
@@ -58,12 +61,17 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         """Check for IP address mismatches between server and client."""
         if not obj.ip_data:
             return None
-
-        ip_data = parse_json_data(obj.ip_data)
-        server_ip = ip_data.get('server_ip', {}).get('address')
-        header_ip = ip_data.get('header_ip', {}).get('address')
         
-        if server_ip and header_ip and server_ip != header_ip:
+        _ip_data = getattr(obj, '_ip_data', None)
+
+        if not _ip_data:
+            _ip_data = parse_json_data(obj.ip_data, IpData)
+            setattr(obj, '_ip_data', _ip_data)
+        
+        server_ip = _ip_data.getServerIpAddress()
+        header_ip = _ip_data.getHeaderIpAddress()
+        
+        if server_ip != header_ip:
             return format_html(
                 '<span class="warning-icon" title="IP Address Mismatch: Server IP ({}) differs from Client IP ({})">🌐</span>',
                 server_ip,
@@ -71,25 +79,18 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
             )
         return None
 
-    def check_vpn(self, obj: TrackingData) -> Optional[str]:
-        """Check for VPN/proxy usage."""
-        if not obj.ip_data:
-            return None
-
-        ip_data = parse_json_data(obj.ip_data)
-        if ip_data.get('info', {}).get('security', {}).get('is_vpn'):
-            return format_html(
-                '<span class="warning-icon" title="VPN/Proxy Detected">🔒</span>'
-            )
-        return None
-
     def check_crawler(self, obj: TrackingData) -> Optional[str]:
         """Check for crawler/bot detection."""
         if not obj.user_agent_data:
             return None
+        
+        _user_agent_data = getattr(obj, '_user_agent_data', None)
 
-        ua_data = parse_json_data(obj.user_agent_data)
-        if ua_data.get('info', {}).get('crawler', {}).get('is_crawler'):
+        if not _user_agent_data:
+            _user_agent_data = parse_json_data(obj.user_agent_data, UserAgentData)
+            setattr(obj, '_user_agent_data', _user_agent_data)
+
+        if _user_agent_data.is_crawler():
             return format_html(
                 '<span class="warning-icon" title="Crawler/Bot Detected">🤖</span>'
             )
@@ -99,9 +100,14 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         """Check for user agent mismatches."""
         if not obj.user_agent_data:
             return None
+        
+        _user_agent_data = getattr(obj, '_user_agent_data', None)
 
-        ua_data = parse_json_data(obj.user_agent_data)
-        if ua_data.get('server_user_agent') != ua_data.get('header_user_agent'):
+        if not _user_agent_data:
+            _user_agent_data = parse_json_data(obj.user_agent_data, UserAgentData)
+            setattr(obj, '_user_agent_data', _user_agent_data)
+
+        if _user_agent_data.header != _user_agent_data.server:
             return format_html(
                 '<span class="warning-icon" title="User Agent Mismatch: Server and Client user agents differ">🔄</span>'
             )
@@ -109,11 +115,19 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_timezone_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for timezone mismatches."""
-        if not obj.headers_data or not obj.ip_data:
+        if not obj.ip_data and obj.headers_data:
             return None
+        
+        _ip_data = getattr(obj, '_ip_data', None)
+        _headers_data = getattr(obj, '_headers_data', None)
 
-        header_timezone: Optional[str] = obj.headers_data.get('datetime', {}).get('timezone') if obj.headers_data else None
-        ip_timezone: Optional[str] = obj.ip_data.get('info', {}).get('timezone', {}).get('name') if obj.ip_data else None
+        if not _ip_data or not _headers_data:
+            _ip_data = parse_json_data(obj.ip_data, IpData)
+            _headers_data = parse_json_data(obj.headers_data, HeaderData)
+            setattr(obj, '_ip_data', _ip_data)
+            setattr(obj, '_headers_data', _headers_data)
+        header_timezone: Optional[str] = _headers_data.getTimezone()
+        ip_timezone: Optional[str] = _ip_data.getTimezone()
 
         if header_timezone != ip_timezone:
             return format_html(
@@ -126,33 +140,32 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         """Check for security issues."""
         if not obj.ip_data:
             return None
-        
-        ip_data = parse_json_data(obj.ip_data)
-        security = ip_data.get('info', {}).get('security', {})
-        
+        _ip_data = getattr(obj, '_ip_data', None)
+
+        if not _ip_data:
+            _ip_data = parse_json_data(obj.ip_data, IpData)
+            setattr(obj, '_ip_data', _ip_data)
+
         warnings: List[str] = []
         for key, label in {
-            'vpn': 'VPN',
-            'proxy': 'Proxy',
-            'tor': 'Tor',
-            'relay': 'Relay',
-            'hosting': 'Hosting'
+            'vpn': _ip_data.isVpn(),
+            'proxy': _ip_data.isProxy(),
+            'tor': _ip_data.isTor(),
+            'relay': _ip_data.isRelay()
         }.items():
-            if security.get(key):
-                warnings.append(label)
+            if label:
+                warnings.append(f'<span class="warning-icon" title="{ key } detected">🔒</span>')
         
         if warnings:
-            return format_html(
-                '<span class="warning-icon" title="Security Issues: {}">🔒</span>',
-                ', '.join(warnings)
-            )
+            return format_html( '{}', ', '.join(warnings))
         return None
 
-    def warnings(self, obj: TrackingData) -> str:
-        """Collect all warnings for the tracking data."""
+    def metadata(self, obj: TrackingData) -> str:
+        """Display metadata icons with tooltips."""       
+        # Render the modal template
+
         warning_checks = [
             self.check_ip_mismatch,
-            self.check_vpn,
             self.check_security,
             self.check_crawler,
             self.check_user_agent_mismatch,
@@ -163,14 +176,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         for check in warning_checks:
             if warning := check(obj):
                 warnings.append(warning)
-        
-        return mark_safe(' '.join(warnings)) if warnings else '-'
-    
-    warnings.short_description = 'Warnings'  # type: ignore
 
-    def metadata(self, obj: TrackingData) -> str:
-        """Display metadata icons with tooltips."""       
-        # Render the modal template
         modal_html = render_to_string(
             'admin/tracking/trackingdata/metadata_modal.html',
             {
@@ -179,6 +185,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
                 'ip_data': json.loads(obj.ip_data) if obj.ip_data else None,
                 'user_agent_data': json.loads(obj.user_agent_data) if obj.user_agent_data else None,
                 'form_data': json.loads(obj.form_data) if obj.form_data else None,
+                'warnings': warnings
             }
         )
         
