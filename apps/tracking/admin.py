@@ -4,6 +4,7 @@ from typing import Optional, Any, Dict, List
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest
+from django.template.loader import render_to_string
 from subadmin import SubAdmin  # type: ignore
 from tracking.forms import CampaignAdminForm
 from tracking.models import TrackingData, Agent, Campaign
@@ -168,36 +169,40 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     warnings.short_description = 'Warnings'  # type: ignore
 
     def metadata(self, obj: TrackingData) -> str:
-        """Display metadata icons with tooltips."""
-        metadata_fields = {
-            'headers_data': ('📋', 'Headers Data'),
-            'ip_data': ('🌐', 'IP Data'),
-            'user_agent_data': ('🖥️', 'User Agent Data'),
-            'form_data': ('📝', 'Form Data')
-        }
+        """Display metadata icons with tooltips."""       
+        # Render the modal template
+        modal_html = render_to_string(
+            'admin/tracking/trackingdata/metadata_modal.html',
+            {
+                'obj': obj,
+                'headers_data': json.loads(obj.headers_data) if obj.headers_data else None,
+                'ip_data': json.loads(obj.ip_data) if obj.ip_data else None,
+                'user_agent_data': json.loads(obj.user_agent_data) if obj.user_agent_data else None,
+                'form_data': json.loads(obj.form_data) if obj.form_data else None,
+            }
+        )
         
-        icons: List[str] = []
-        for field, (icon, _) in metadata_fields.items():
-            if data := getattr(obj, field):
-                icons.append(format_html(
-                    '<span class="metadata-icon" title="{}">{}</span>',
-                    json.dumps(parse_json_data(data), indent=4, ensure_ascii=False),
-                    icon
-                ))
-        
-        return mark_safe(' '.join(icons))
+        return format_html('{}', mark_safe(modal_html))
     
     metadata.short_description = 'Metadata'  # type: ignore
     
     class Media:
         css = {
             'all': (
+                'admin_interface/magnific-popup/magnific-popup.css',
+                'admin_interface/tabbed-changeform/tabbed-changeform.css',
                 '.metadata-icon { margin-right: 5px; }',
                 '.metadata-icon:hover { cursor: pointer; opacity: 0.7; }',
                 '.warning-icon { margin-right: 5px; color: #ff9800; }',
                 '.warning-icon:hover { cursor: pointer; opacity: 0.7; }',
             )
         }
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'admin_interface/magnific-popup/jquery.magnific-popup.min.js',
+            'admin_interface/magnific-popup/magnific-popup-init.js',
+            'admin_interface/tabbed-changeform/tabbed-changeform.js',
+        )
 
 
 class AgentAdmin(SubAdmin):
