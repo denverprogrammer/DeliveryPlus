@@ -34,7 +34,11 @@
         {% if warnings %}
         <div id="tabcontent-warnings-{{ obj.pk }}" class="tabbed-changeform-tabcontent active">
             <div class="metadata-content warnings-content">
-                {{ warnings|safe }}
+                <ul>
+                    {% for item in warnings %}
+                    <li>{{ item|safe }}</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
         {% endif %}

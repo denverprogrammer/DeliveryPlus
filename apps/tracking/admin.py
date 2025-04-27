@@ -73,7 +73,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         
         if server_ip != header_ip:
             return format_html(
-                '<div class="warning-message">IP Address Mismatch: Server IP ({}) differs from Header IP ({})</div>',
+                '<span>IP Address Mismatch: Server IP ({}) differs from Header IP ({})</span>',
                 server_ip,
                 header_ip
             )
@@ -98,7 +98,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         
         if server_country and header_country and server_country != header_country:
             return format_html(
-                '<div class="warning-message">Country Mismatch: Server country ({}) differs from Header country ({})</div>',
+                '<span>Country Mismatch: Server country ({}) differs from Header country ({})</span>',
                 server_country,
                 header_country
             )
@@ -117,7 +117,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if _user_agent_data.is_crawler():
             return format_html(
-                '<div class="warning-message">Crawler/Bot Detected</div>'
+                '<span>Crawler/Bot Detected</span>'
             )
         return None
 
@@ -134,7 +134,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if _user_agent_data.header != _user_agent_data.server:
             return format_html(
-                '<div class="warning-message">User Agent Mismatch: Server and Client user agents differ</div>'
+                '<span>User Agent Mismatch: Server and Client user agents differ</span>'
             )
         return None
 
@@ -156,7 +156,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
         if header_timezone != ip_timezone:
             return format_html(
-                '<div class="warning-message">Timezone Mismatch: Header timezone ({}) differs from IP timezone ({})</div>',
+                '<span>Timezone Mismatch: Header timezone ({}) differs from IP timezone ({})</span>',
                 header_timezone,
                 ip_timezone
             )
@@ -181,7 +181,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         
         if server_locale and header_locale and server_locale[0] != header_locale:
             return format_html(
-                '<div class="warning-message">Locale Mismatch: Server locale ({}) differs from Browser locale ({})</div>',
+                '<span>Locale Mismatch: Server locale ({}) differs from Browser locale ({})</span>',
                 server_locale[0],
                 header_locale
             )
@@ -205,7 +205,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
             'relay': _ip_data.isRelay()
         }.items():
             if label:
-                warnings.append(format_html('<div class="warning-message">{} detected</div>', key.title()))
+                warnings.append(format_html('<span>{} detected</span>', key.title()))
         
         return warnings if warnings else None
 
