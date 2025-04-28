@@ -1,8 +1,9 @@
 from __future__ import annotations
 from django.db import models
 from tracking.common import AgentStatus, TrackingType
-from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
+from tracking.api.types import IpData, UserAgentData
+from config.common import HeaderData
 
 
 class Campaign(models.Model):
@@ -84,27 +85,10 @@ class Agent(models.Model):
         choices=AgentStatus.choices(),
         default=AgentStatus.ACTIVE.value
     )
-    
+
     def __str__(self):
         return f'{self.first_name or ""} {self.last_name or ""}'.strip() or self.token
 
-
-class IPData(BaseModel):
-    server_ip: Optional[Dict[str, str]] = Field(default_factory=dict)
-    header_ip: Optional[Dict[str, str]] = Field(default_factory=dict)
-    info: Optional[Dict[str, Any]] = Field(default_factory=dict)
-
-class UserAgentData(BaseModel):
-    server_user_agent: Optional[str] = None
-    header_user_agent: Optional[str] = None
-    info: Optional[Dict[str, Any]] = Field(default_factory=dict)
-
-class HeadersData(BaseModel):
-    datetime: Optional[Dict[str, str]] = Field(default_factory=dict)
-    headers: Optional[Dict[str, str]] = Field(default_factory=dict)
-
-class FormData(BaseModel):
-    data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 class TrackingData(models.Model):
     agent = models.ForeignKey(Agent, related_name='tracking', on_delete=models.CASCADE)
@@ -131,18 +115,50 @@ class TrackingData(models.Model):
         null=True,
         blank=True
     )
-    ip_data = models.JSONField(null=True, blank=True)
-    user_agent_data = models.JSONField(null=True, blank=True)
-    headers_data = models.JSONField(null=True, blank=True)
-    tracking_data = models.JSONField(null=True, blank=True)
-    form_data = models.JSONField(null=True, blank=True)
+    _ip_data = models.JSONField(null=True, blank=True, db_column='ip_data')
+    _user_agent_data = models.JSONField(null=True, blank=True, db_column='user_agent_data')
+    _header_data  = models.JSONField(null=True, blank=True, db_column='header_data ')
+    _form_data = models.JSONField(null=True, blank=True, db_column='form_data')
     
     # phone_data = models.JSONField(null=True, blank=True)
 
-    ip_data_model = IPData
-    user_agent_data_model = UserAgentData
-    headers_data_model = HeadersData
-    form_data_model = FormData
+    @property
+    def ip_data(self) -> Optional[IpData]:
+        if not self._ip_data:
+            return None
+        return IpData.model_validate(self._ip_data)
+
+    @ip_data.setter
+    def ip_data(self, value: Optional[IpData]):
+        self._ip_data = value.model_dump() if value else None
+
+    @property
+    def user_agent_data(self) -> Optional[UserAgentData]:
+        if not self._user_agent_data:
+            return None
+        return UserAgentData.model_validate(self._user_agent_data)
+
+    @user_agent_data.setter
+    def user_agent_data(self, value: Optional[UserAgentData]):
+        self._user_agent_data = value.model_dump() if value else None
+
+    @property
+    def header_data (self) -> Optional[HeaderData]:
+        if not self._header_data :
+            return None
+        return HeaderData.model_validate(self._header_data)
+
+    @header_data .setter
+    def header_data (self, value: Optional[HeaderData]):
+        self._header_data  = value.model_dump() if value else None
+
+    @property
+    def form_data(self) -> Optional[Dict[str, Any]]:
+        return self._form_data
+
+    @form_data.setter
+    def form_data(self, value: Optional[Dict[str, Any]]):
+        self._form_data = value
 
     def __str__(self):
         return f'{self.agent} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'

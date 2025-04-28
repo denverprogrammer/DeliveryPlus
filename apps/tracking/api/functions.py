@@ -9,11 +9,11 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 
-def get_ip_data(request: HttpRequest, headers_data: HeaderData) -> IpData:
+def get_ip_data(request: HttpRequest, header_data : HeaderData) -> IpData:
     """Extract and process IP data from request and headers."""
     # Get IP from headers (ipinfo.io)
-    header_info: Optional[IpAddressInfo] = headers_data.getHeaderIpAddress()
-    server_info: Optional[IpAddressInfo] = headers_data.getClientIpAddress(request)
+    header_info: Optional[IpAddressInfo] = header_data .getHeaderIpAddress()
+    server_info: Optional[IpAddressInfo] = header_data .getClientIpAddress(request)
     
     # Store both IPs in the data
     ip_data = IpData(server=server_info, header=header_info, selected=None, source=None, info=None)
@@ -41,11 +41,11 @@ def get_ip_data(request: HttpRequest, headers_data: HeaderData) -> IpData:
     return ip_data
 
 
-def get_user_agent_data(request: HttpRequest, headers_data: HeaderData) -> UserAgentData:
+def get_user_agent_data(request: HttpRequest, header_data : HeaderData) -> UserAgentData:
     """Extract and process user agent data from request."""
     # Get user agent from different sources
     server_user_agent: str = request.META.get('HTTP_USER_AGENT', '')
-    header_user_agent: str = headers_data.navigator.user_agent
+    header_user_agent: str = header_data .navigator.user_agent
     
     # Store both user agents in the data
     user_agent_data = UserAgentData(
@@ -72,11 +72,11 @@ def get_user_agent_data(request: HttpRequest, headers_data: HeaderData) -> UserA
     return user_agent_data
 
 
-def get_locale_data(request: HttpRequest, headers_data: HeaderData) -> LocaleData:
+def get_locale_data(request: HttpRequest, header_data : HeaderData) -> LocaleData:
     """Extract and process locale data from request and headers."""
     # Get locale from different sources
     server_locale: str = request.META.get('HTTP_ACCEPT_LANGUAGE', ',').split(',')[0]
-    header_locale: str = headers_data.navigator.language
+    header_locale: str = header_data .navigator.language
     
     # Store both locales in the data
     locale_data = LocaleData(
@@ -99,11 +99,11 @@ def get_locale_data(request: HttpRequest, headers_data: HeaderData) -> LocaleDat
     return locale_data
 
 
-def get_time_data(headers_data: HeaderData, ip_data: IpData) -> TimeData:
+def get_time_data(header_data : HeaderData, ip_data: IpData) -> TimeData:
     """Extract and process time and timezone data from request, headers, and IP data."""
     # Get timezone
-    timestamp: int = headers_data.getTimestamp()
-    header_timezone: Optional[str] = headers_data.getTimezone()
+    timestamp: int = header_data .getTimestamp()
+    header_timezone: Optional[str] = header_data .getTimezone()
     ip_timezone: Optional[str] = ip_data.getTimezone()
     
     # Store time data
@@ -129,10 +129,10 @@ def get_time_data(headers_data: HeaderData, ip_data: IpData) -> TimeData:
     return time_data
 
 
-def get_location_data(headers_data: HeaderData, ip_data: IpData) -> LocationData:
+def get_location_data(header_data : HeaderData, ip_data: IpData) -> LocationData:
     """Extract and process location data from request, headers, and IP data."""
 
-    header_location: Optional[LocationInfo] = headers_data.getLocation()
+    header_location: Optional[LocationInfo] = header_data .getLocation()
     ip_location: Optional[LocationInfo] = ip_data.getLocation()
     
     # Store both locations in the data

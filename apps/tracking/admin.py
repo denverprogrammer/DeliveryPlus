@@ -1,24 +1,12 @@
-import json
 from django.contrib import admin
-from typing import Optional, Any, List, TypeVar
+from typing import Optional, Any, List, Dict
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.http import HttpRequest
 from django.template.loader import render_to_string
 from subadmin import SubAdmin  # type: ignore
-from config.common import HeaderData
-from tracking.api.types import IpData, UserAgentData
 from tracking.forms import CampaignAdminForm
 from tracking.models import TrackingData, Agent, Campaign
-from pydantic import BaseModel
-
-T = TypeVar('T', bound=BaseModel)
-
-def parse_json_data(data: Any, model: type[T]) -> T:
-    """Parse JSON data from string or dict into a Pydantic model."""
-    if isinstance(data, str):
-        return model.model_validate_json(data)
-    return model.model_validate(data)
 
 
 class TrackingDataInline(admin.TabularInline):  # type: ignore
@@ -59,19 +47,15 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     
     def check_ip_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for IP address mismatches between server and client."""
-        if not obj.ip_data:
+        ip_data = obj.ip_data
+        
+        if not ip_data:
             return None
 
-        _ip_data = getattr(obj, '_ip_data', None)
-
-        if not _ip_data:
-            _ip_data = parse_json_data(obj.ip_data, IpData)
-            setattr(obj, '_ip_data', _ip_data)
+        server_ip = ip_data.getServerIpAddress()
+        header_ip = ip_data.getHeaderIpAddress()
         
-        server_ip = _ip_data.getServerIpAddress()
-        header_ip = _ip_data.getHeaderIpAddress()
-        
-        if server_ip != header_ip:
+        if server_ip and header_ip and server_ip != header_ip:
             return format_html(
                 '<span>IP Address Mismatch: Server IP ({}) differs from Header IP ({})</span>',
                 server_ip,
@@ -81,20 +65,14 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_country_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for country mismatches between server and client."""
-        if not obj.ip_data and obj.headers_data:
-            return None
-        
-        _ip_data = getattr(obj, '_ip_data', None)
-        _headers_data = getattr(obj, '_headers_data', None)
+        ip_data = obj.ip_data
+        header_data = obj.header_data 
 
-        if not _ip_data or not _headers_data:
-            _ip_data = parse_json_data(obj.ip_data, IpData)
-            _headers_data = parse_json_data(obj.headers_data, HeaderData)
-            setattr(obj, '_ip_data', _ip_data)
-            setattr(obj, '_headers_data', _headers_data)
-        
-        server_country = _ip_data.getSelectedCountry()
-        header_country = _headers_data.getHeaderCountry()
+        if not ip_data or not header_data:
+            return None
+
+        server_country = ip_data.getSelectedCountry()
+        header_country = header_data.getHeaderCountry()
         
         if server_country and header_country and server_country != header_country:
             return format_html(
@@ -106,16 +84,12 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_crawler(self, obj: TrackingData) -> Optional[str]:
         """Check for crawler/bot detection."""
-        if not obj.user_agent_data:
+        user_agent_data = obj.user_agent_data
+
+        if not user_agent_data:
             return None
-        
-        _user_agent_data = getattr(obj, '_user_agent_data', None)
 
-        if not _user_agent_data:
-            _user_agent_data = parse_json_data(obj.user_agent_data, UserAgentData)
-            setattr(obj, '_user_agent_data', _user_agent_data)
-
-        if _user_agent_data.is_crawler():
+        if user_agent_data.is_crawler():
             return format_html(
                 '<span>Crawler/Bot Detected</span>'
             )
@@ -123,16 +97,12 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_user_agent_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for user agent mismatches."""
-        if not obj.user_agent_data:
+        user_agent_data = obj.user_agent_data
+
+        if not user_agent_data:
             return None
-        
-        _user_agent_data = getattr(obj, '_user_agent_data', None)
 
-        if not _user_agent_data:
-            _user_agent_data = parse_json_data(obj.user_agent_data, UserAgentData)
-            setattr(obj, '_user_agent_data', _user_agent_data)
-
-        if _user_agent_data.header != _user_agent_data.server:
+        if user_agent_data.header != user_agent_data.server:
             return format_html(
                 '<span>User Agent Mismatch: Server and Client user agents differ</span>'
             )
@@ -140,19 +110,14 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_timezone_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for timezone mismatches."""
-        if not obj.ip_data and obj.headers_data:
-            return None
-        
-        _ip_data = getattr(obj, '_ip_data', None)
-        _headers_data = getattr(obj, '_headers_data', None)
+        ip_data = obj.ip_data
+        header_data = obj.header_data 
 
-        if not _ip_data or not _headers_data:
-            _ip_data = parse_json_data(obj.ip_data, IpData)
-            _headers_data = parse_json_data(obj.headers_data, HeaderData)
-            setattr(obj, '_ip_data', _ip_data)
-            setattr(obj, '_headers_data', _headers_data)
-        header_timezone: Optional[str] = _headers_data.getTimezone()
-        ip_timezone: Optional[str] = _ip_data.getTimezone()
+        if not ip_data or not header_data:
+            return None
+
+        header_timezone = header_data.getTimezone()
+        ip_timezone = ip_data.getTimezone()
 
         if header_timezone != ip_timezone:
             return format_html(
@@ -164,20 +129,14 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_locale_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for locale mismatches between server and client."""
-        if not obj.ip_data and obj.headers_data:
+        ip_data = obj.ip_data
+        header_data = obj.header_data 
+
+        if not ip_data or not header_data:
             return None
         
-        _ip_data = getattr(obj, '_ip_data', None)
-        _headers_data = getattr(obj, '_headers_data', None)
-
-        if not _ip_data or not _headers_data:
-            _ip_data = parse_json_data(obj.ip_data, IpData)
-            _headers_data = parse_json_data(obj.headers_data, HeaderData)
-            setattr(obj, '_ip_data', _ip_data)
-            setattr(obj, '_headers_data', _headers_data)
-        
-        server_locale: Optional[List[str]] = _ip_data.getLocales()
-        header_locale: Optional[str] = _headers_data.getLocale()
+        server_locale = ip_data.getLocales()
+        header_locale = header_data.getLocale()
         
         if server_locale and header_locale and server_locale[0] != header_locale:
             return format_html(
@@ -189,21 +148,19 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def check_security(self, obj: TrackingData) -> Optional[List[str]]:
         """Check for security issues."""
-        if not obj.ip_data:
-            return None
-        _ip_data = getattr(obj, '_ip_data', None)
+        ip_data = obj.ip_data
 
-        if not _ip_data:
-            _ip_data = parse_json_data(obj.ip_data, IpData)
-            setattr(obj, '_ip_data', _ip_data)
+        if not ip_data:
+            return None
 
         warnings: List[str] = []
-        for key, label in {
-            'vpn': _ip_data.isVpn(),
-            'proxy': _ip_data.isProxy(),
-            'tor': _ip_data.isTor(),
-            'relay': _ip_data.isRelay()
-        }.items():
+        security: Dict[str, bool] = {
+            'vpn': ip_data.isVpn(),
+            'proxy': ip_data.isProxy(),
+            'tor': ip_data.isTor(),
+            'relay': ip_data.isRelay()
+        }
+        for key, label in security.items():
             if label:
                 warnings.append(format_html('<span>{} detected</span>', key.title()))
         
@@ -212,7 +169,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     def details(self, obj: TrackingData) -> str:
         """Display warnings and metadata."""
         # Render the modal template
-        checks = [
+        checks: List[str|None] = [
             self.check_ip_mismatch(obj),
             self.check_country_mismatch(obj),
             self.check_locale_mismatch(obj),
@@ -229,10 +186,10 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
             'admin/tracking/trackingdata/metadata_modal.html',
             {
                 'obj': obj,
-                'headers_data': json.loads(obj.headers_data) if obj.headers_data else None,
-                'ip_data': json.loads(obj.ip_data) if obj.ip_data else None,
-                'user_agent_data': json.loads(obj.user_agent_data) if obj.user_agent_data else None,
-                'form_data': json.loads(obj.form_data) if obj.form_data else None,
+                'header_data ': obj.header_data .model_dump() if obj.header_data  else None,
+                'ip_data': obj.ip_data.model_dump() if obj.ip_data else None,
+                'user_agent_data': obj.user_agent_data.model_dump() if obj.user_agent_data else None,
+                'form_data': obj.form_data,
                 'warnings': warnings
             }
         )

@@ -24,14 +24,14 @@ class TrackingPayloadMiddleware:
                 payload: HeaderData = HeaderData(**json.loads(decoded_str))
 
                 # Step 3: Attach to request
-                setattr(request, 'headers_data', payload)
+                setattr(request, 'header_data ', payload)
             # except (ValueError, json.JSONDecodeError, base64.binascii.Error) as e:
             except (ValueError, json.JSONDecodeError) as e:
                 logger.warning(f"Invalid tracking payload: {e}")
-                setattr(request, 'headers_data', None)
+                setattr(request, 'header_data ', None)
         else:
             # No header found
-            setattr(request, 'headers_data', None)
+            setattr(request, 'header_data ', None)
 
         response = self.get_response(request)
         return response
