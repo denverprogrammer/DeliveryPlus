@@ -1,21 +1,22 @@
 from django.contrib import admin
 from typing import Optional, Any, List, Dict
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
+# from django.utils.safestring import mark_safe
 from django.http import HttpRequest
-from django.template.loader import render_to_string
+from django.urls import reverse
 from subadmin import SubAdmin  # type: ignore
 from tracking.forms import CampaignAdminForm
 from tracking.models import TrackingData, Agent, Campaign
+from django.db.models import JSONField
+from django_json_widget.widgets import JSONEditorWidget # type: ignore
 
-
-class TrackingDataInline(admin.TabularInline):  # type: ignore
+@admin.register(TrackingData)
+class TrackingDataAdmin(admin.ModelAdmin):  # type: ignore
     model = TrackingData
     extra = 0
     show_change_link = False
     can_delete = False
     fields = (
-        'id', 
         'server_timestamp', 
         'http_method',
         'ip_address',
@@ -29,22 +30,25 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         'latitude',
         'longitude',
         'location_source',
-        'details'
+        '_ip_data',
+        '_user_agent_data',
+        '_header_data',
+        '_form_data'
     )
     readonly_fields = fields
-    search_fields = ('http_method',)
-    list_filter = ('http_method',)
-    list_per_page = 20
+    formfield_overrides = {
+        JSONField: {'widget': JSONEditorWidget},
+    }
 
-    def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+    def has_add_permission(self, request: HttpRequest, obj: Optional[TrackingData] = None) -> bool:
         return False
 
-    def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+    def has_change_permission(self, request: HttpRequest, obj: Optional[TrackingData] = None) -> bool:
         return False
-
-    # def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
-    #     return cast(QuerySet[TrackingData], super().get_queryset(request).order_by('-server_timestamp'))
     
+    def has_list_view(self, request: HttpRequest, obj: Optional[TrackingData] = None) -> bool:
+        return False
+
     def check_ip_mismatch(self, obj: TrackingData) -> Optional[str]:
         """Check for IP address mismatches between server and client."""
         ip_data = obj.ip_data
@@ -149,7 +153,6 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     def check_security(self, obj: TrackingData) -> Optional[List[str]]:
         """Check for security issues."""
         ip_data = obj.ip_data
-
         if not ip_data:
             return None
 
@@ -169,52 +172,61 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     def details(self, obj: TrackingData) -> str:
         """Display warnings and metadata."""
         # Render the modal template
-        checks: List[str|None] = [
-            self.check_ip_mismatch(obj),
-            self.check_country_mismatch(obj),
-            self.check_locale_mismatch(obj),
-            self.check_crawler(obj),
-            self.check_user_agent_mismatch(obj),
-            self.check_timezone_mismatch(obj)
-        ]
-        security: Optional[List[str]] = self.check_security(obj)
-        if security:
-            checks.extend(security)
-        warnings = [warning for warning in checks if warning]
+        # checks: List[str|None] = [
+        #     self.check_ip_mismatch(obj),
+        #     self.check_country_mismatch(obj),
+        #     self.check_locale_mismatch(obj),
+        #     self.check_crawler(obj),
+        #     self.check_user_agent_mismatch(obj),
+        #     self.check_timezone_mismatch(obj)
+        # ]
+        # security: Optional[List[str]] = self.check_security(obj)
+        # if security:
+        #     checks.extend(security)
+        # warnings = [warning for warning in checks if warning]
+        return ''
 
-        modal_html = render_to_string(
-            'admin/tracking/trackingdata/metadata_modal.html',
-            {
-                'obj': obj,
-                'header_data ': obj.header_data .model_dump() if obj.header_data  else None,
-                'ip_data': obj.ip_data.model_dump() if obj.ip_data else None,
-                'user_agent_data': obj.user_agent_data.model_dump() if obj.user_agent_data else None,
-                'form_data': obj.form_data,
-                'warnings': warnings
-            }
-        )
-        
-        return format_html('{}', mark_safe(modal_html))
-    
-    details.short_description = 'Details'  # type: ignore
-    
-    class Media:
-        css = {
-            'all': (
-                'admin_interface/magnific-popup/magnific-popup.css',
-                'admin_interface/tabbed-changeform/tabbed-changeform.css',
-                '.metadata-icon { margin-right: 5px; }',
-                '.metadata-icon:hover { cursor: pointer; opacity: 0.7; }',
-                '.warning-icon { margin-right: 5px; color: #ff9800; }',
-                '.warning-icon:hover { cursor: pointer; opacity: 0.7; }',
-            )
-        }
-        js = (
-            'admin/js/vendor/jquery/jquery.min.js',
-            'admin_interface/magnific-popup/jquery.magnific-popup.min.js',
-            'admin_interface/magnific-popup/magnific-popup-init.js',
-            'admin_interface/tabbed-changeform/tabbed-changeform.js',
-        )
+
+class TrackingDataInline(admin.TabularInline):  # type: ignore
+    model = TrackingData
+    extra = 0
+    can_delete = False
+    fields = (
+        'server_timestamp', 
+        'http_method',
+        'ip_address',
+        'ip_source',
+        'os',
+        'browser',
+        'platform',
+        'locale',
+        'client_time',
+        'client_timezone',
+        'latitude',
+        'longitude',
+        'location_source',
+        'view_details'
+    )
+    readonly_fields = fields
+    search_fields = ('http_method',)
+    list_filter = ('http_method',)
+    list_per_page = 20
+
+    def view_details(self, obj: TrackingData) -> str:
+        """Display a link to view the details in a modal."""
+        url = reverse('admin:tracking_trackingdata_change', args=[obj.pk])
+        url = f"{url}?_popup=1"
+        return format_html('<a href="{}">View Details</a>', url)
+    view_details.short_description = 'Details'  # type: ignore
+
+    def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
+    def get_queryset(self, request: HttpRequest):
+        return super().get_queryset(request).select_related('agent')
 
 
 class AgentAdmin(SubAdmin):

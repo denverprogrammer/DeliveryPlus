@@ -878,6 +878,22 @@ files = [
 Pillow = ">=9.0.0"
 
 [[package]]
+name = "django-debug-toolbar"
+version = "4.4.6"
+description = "A configurable set of panels that display various debug information about the current request/response."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "django_debug_toolbar-4.4.6-py3-none-any.whl", hash = "sha256:3beb671c9ec44ffb817fad2780667f172bd1c067dbcabad6268ce39a81335f45"},
+    {file = "django_debug_toolbar-4.4.6.tar.gz", hash = "sha256:36e421cb908c2f0675e07f9f41e3d1d8618dc386392ec82d23bcfcd5d29c7044"},
+]
+
+[package.dependencies]
+django = ">=4.2.9"
+sqlparse = ">=0.2"
+
+[[package]]
 name = "django-environ"
 version = "0.11.2"
 description = "A package that allows you to utilize 12factor inspired environment variables to configure your Django application."
@@ -924,6 +940,17 @@ files = [
 
 [package.dependencies]
 python-ipware = ">=2.0.3"
+
+[[package]]
+name = "django-json-widget"
+version = "2.0.1"
+description = "Django json widget is an alternative widget that makes it easy to edit the jsonfield field of django."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-json-widget-2.0.1.tar.gz", hash = "sha256:adb4cab17fe5a04139037d7d84725369530ef35b912c3790d3a7b13f99351358"},
+]
 
 [[package]]
 name = "django-stubs"
@@ -2586,4 +2613,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "c61fedf9c21ba640ea58206eb28897441e40c3f94982fe7a07cce1c4061a53f9"
+content-hash = "70315ddf970dd072bfdee3539847d930246817af918c2bdd590094436e8c6163"

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from typing import Any
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -32,6 +33,7 @@ ALLOWED_HOSTS = list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'django_json_widget',
     'admin_interface',
     'colorfield',
     'django_bootstrap5',
@@ -45,7 +47,7 @@ INSTALLED_APPS = [
     'django_htmx',
     'subadmin',
     'mgmt',
-    'tracking',
+    'tracking'
 ]
 
 MIDDLEWARE = [
@@ -57,8 +59,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_htmx.middleware.HtmxMiddleware',
+    'django_htmx.middleware.HtmxMiddleware'
 ]
+
+if DEBUG:
+    INSTALLED_APPS.append('debug_toolbar')
+    MIDDLEWARE.append('debug_toolbar.middleware.DebugToolbarMiddleware')
 
 ROOT_URLCONF = 'config.urls'
 
@@ -159,3 +165,15 @@ IP_GEO_LOCATION_KEY:str = os.environ.get("IP_GEO_LOCATION_KEY", '')
 
 TWILIO_ACCOUNT_SID:str = os.environ.get("TWILIO_ACCOUNT_SID", '')
 TWILIO_AUTH_TOKEN:str = os.environ.get("TWILIO_AUTH_TOKEN", '')
+
+# Debug Toolbar settings
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
+
+def show_toolbar(_: Any) -> bool:
+    return bool(DEBUG)
+
+DEBUG_TOOLBAR_CONFIG: dict[str, Any] = {
+    'SHOW_TOOLBAR_CALLBACK': show_toolbar,
+}
