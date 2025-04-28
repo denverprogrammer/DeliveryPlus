@@ -953,6 +953,34 @@ files = [
 ]
 
 [[package]]
+name = "django-jsonfield"
+version = "1.4.1"
+description = "JSONField for django models"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-jsonfield-1.4.1.tar.gz", hash = "sha256:f789a0ea1f80b48aff7d6c36dd356ce125dbf1b7cd97a82d315607ac758f50ff"},
+    {file = "django_jsonfield-1.4.1-py2.py3-none-any.whl", hash = "sha256:ccb2fe623e1bf7799e49c593b0a89a85084ef8d3debbf26d92a54e27b5305d72"},
+]
+
+[package.dependencies]
+Django = ">=1.11"
+six = "*"
+
+[[package]]
+name = "django-jsonview"
+version = "2.0.0"
+description = "Always return JSON from your Django view."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django-jsonview-2.0.0.tar.gz", hash = "sha256:1871983f6c7ab0bec1bad3249b06ce64c47d3bed57cd190f87e5acaf65722ebb"},
+    {file = "django_jsonview-2.0.0-py2.py3-none-any.whl", hash = "sha256:77345393f8e8bb3279b9ba9fb2db687adfa74d41feab972521545d47103d321b"},
+]
+
+[[package]]
 name = "django-stubs"
 version = "4.2.7"
 description = "Mypy stubs for Django"
@@ -2613,4 +2641,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "70315ddf970dd072bfdee3539847d930246817af918c2bdd590094436e8c6163"
+content-hash = "b2e7d6bbc15a5a27450849473724725f06c53d1b3abd48c8e90a4441eb34adf3"

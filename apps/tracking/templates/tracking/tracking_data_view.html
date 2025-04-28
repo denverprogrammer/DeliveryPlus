@@ -1,0 +1,199 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .json-display {
+        background-color: #f5f5f5;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-x: auto;
+        margin-bottom: 20px;
+    }
+    .section {
+        margin-bottom: 30px;
+    }
+    .section-title {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #417690;
+    }
+    .field-label {
+        font-weight: bold;
+        color: #666;
+    }
+    .field-value {
+        margin-bottom: 10px;
+    }
+    .warning {
+        color: #ff9800;
+    }
+    .success {
+        color: #4caf50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>{{ title }}</h1>
+    
+    <div class="section">
+        <div class="section-title">Basic Information</div>
+        <div class="field-value">
+            <span class="field-label">Server Timestamp:</span> {{ tracking_data.server_timestamp }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">HTTP Method:</span> {{ tracking_data.http_method }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">IP Address:</span> {{ tracking_data.ip_address }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">IP Source:</span> {{ tracking_data.ip_source }}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Client Information</div>
+        <div class="field-value">
+            <span class="field-label">OS:</span> {{ tracking_data.os }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Browser:</span> {{ tracking_data.browser }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Platform:</span> {{ tracking_data.platform }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Locale:</span> {{ tracking_data.locale }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Client Time:</span> {{ tracking_data.client_time }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Client Timezone:</span> {{ tracking_data.client_timezone }}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Location Information</div>
+        <div class="field-value">
+            <span class="field-label">Latitude:</span> {{ tracking_data.latitude }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Longitude:</span> {{ tracking_data.longitude }}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Location Source:</span> {{ tracking_data.location_source }}
+        </div>
+        {% if tracking_data.latitude and tracking_data.longitude %}
+        <div class="field-value">
+            <iframe width="100%" height="300" frameborder="0" style="border: 1px solid #ccc" 
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q={{ tracking_data.latitude }},{{ tracking_data.longitude }}&zoom=12" 
+                    allowfullscreen></iframe>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Data Fields</div>
+        {% if ip_data %}
+        <div class="field-value">
+            <span class="field-label">IP Data:</span>
+            <div class="json-display">{{ ip_data }}</div>
+        </div>
+        {% endif %}
+        {% if user_agent_data %}
+        <div class="field-value">
+            <span class="field-label">User Agent Data:</span>
+            <div class="json-display">{{ user_agent_data }}</div>
+        </div>
+        {% endif %}
+        {% if header_data %}
+        <div class="field-value">
+            <span class="field-label">Header Data:</span>
+            <div class="json-display">{{ header_data }}</div>
+        </div>
+        {% endif %}
+        {% if form_data %}
+        <div class="field-value">
+            <span class="field-label">Form Data:</span>
+            <div class="json-display">{{ form_data }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Security Checks</div>
+        <div class="field-value">
+            <span class="field-label">IP Mismatch:</span>
+            {% if tracking_data.ip_mismatch %}
+            <span class="warning">{{ tracking_data.ip_mismatch }}</span>
+            {% else %}
+            <span class="success">✅ IP addresses match</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Country Mismatch:</span>
+            {% if tracking_data.country_mismatch %}
+            <span class="warning">{{ tracking_data.country_mismatch }}</span>
+            {% else %}
+            <span class="success">✅ Countries match</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">User Agent Mismatch:</span>
+            {% if tracking_data.user_agent_mismatch %}
+            <span class="warning">{{ tracking_data.user_agent_mismatch }}</span>
+            {% else %}
+            <span class="success">✅ User agents match</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Timezone Mismatch:</span>
+            {% if tracking_data.timezone_mismatch %}
+            <span class="warning">{{ tracking_data.timezone_mismatch }}</span>
+            {% else %}
+            <span class="success">✅ Timezones match</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Locale Mismatch:</span>
+            {% if tracking_data.locale_mismatch %}
+            <span class="warning">{{ tracking_data.locale_mismatch }}</span>
+            {% else %}
+            <span class="success">✅ Locales match</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Crawler Detection:</span>
+            {% if tracking_data.crawler_detection %}
+            <span class="warning">{{ tracking_data.crawler_detection }}</span>
+            {% else %}
+            <span class="success">✅ No crawler detected</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Suspicious Activity:</span>
+            {% if tracking_data.suspicious_activity %}
+            <span class="warning">{{ tracking_data.suspicious_activity }}</span>
+            {% else %}
+            <span class="success">✅ No suspicious activity detected</span>
+            {% endif %}
+        </div>
+        <div class="field-value">
+            <span class="field-label">Data Consistency:</span>
+            {% if tracking_data.data_consistency %}
+            <span class="warning">{{ tracking_data.data_consistency }}</span>
+            {% else %}
+            <span class="success">✅ Data consistency verified</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

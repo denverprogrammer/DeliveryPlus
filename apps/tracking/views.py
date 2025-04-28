@@ -7,6 +7,9 @@ from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from typing import Optional
+from django.contrib.admin.views.decorators import staff_member_required
+from django.template.response import TemplateResponse
+import json
 
 
 @csrf_exempt
@@ -122,3 +125,25 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
         })
 
     return render(request, 'tracking/redirect.html', {})
+
+@staff_member_required
+def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
+    """View for displaying tracking data in a read-only format."""
+    tracking_data = get_object_or_404(TrackingData, pk=pk)
+    
+    # Format JSON data for display
+    ip_data = json.dumps(tracking_data.ip_data.model_dump(), indent=2, sort_keys=True) if tracking_data.ip_data else None
+    user_agent_data = json.dumps(tracking_data.user_agent_data.model_dump(), indent=2, sort_keys=True) if tracking_data.user_agent_data else None
+    header_data = json.dumps(tracking_data.header_data.model_dump(), indent=2, sort_keys=True) if tracking_data.header_data else None
+    form_data = json.dumps(tracking_data.form_data, indent=2, sort_keys=True) if tracking_data.form_data else None
+    
+    context = {
+        'tracking_data': tracking_data,
+        'ip_data': ip_data,
+        'user_agent_data': user_agent_data,
+        'header_data': header_data,
+        'form_data': form_data,
+        'title': f'Tracking Data for {tracking_data.agent}',
+    }
+    
+    return TemplateResponse(request, 'tracking/tracking_data_view.html', context)
