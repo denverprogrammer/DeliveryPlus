@@ -13,29 +13,66 @@ from django_json_widget.widgets import JSONEditorWidget # type: ignore
 @admin.register(TrackingData)
 class TrackingDataAdmin(admin.ModelAdmin):  # type: ignore
     model = TrackingData
-    extra = 0
-    show_change_link = False
-    can_delete = False
-    fields = (
-        'server_timestamp', 
-        'http_method',
-        'ip_address',
-        'ip_source',
-        'os',
-        'browser',
-        'platform',
-        'locale',
-        'client_time',
-        'client_timezone',
-        'latitude',
-        'longitude',
-        'location_source',
-        '_ip_data',
-        '_user_agent_data',
-        '_header_data',
-        '_form_data'
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'server_timestamp',
+                'http_method',
+                'ip_address',
+                'ip_source',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Client Information', {
+            'fields': (
+                'os',
+                'browser',
+                'platform',
+                'locale',
+                'client_time',
+                'client_timezone',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Location Information', {
+            'fields': (
+                'latitude',
+                'longitude',
+                'location_source',
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Data Fields', {
+            'fields': (
+                'ip_data',
+                'user_agent_data',
+                'header_data',
+                'form_data'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Security Checks', {
+            'fields': (
+                'ip_mismatch',
+                'country_mismatch',
+                'user_agent_mismatch',
+                'timezone_mismatch',
+                'locale_mismatch',
+                'security_issues',
+                'crawler_detection',
+            ),
+            'classes': ('collapse',)
+        })
     )
-    readonly_fields = fields
+    readonly_fields = (
+        'server_timestamp', 'http_method', 'ip_address', 'ip_source',
+        'os', 'browser', 'platform', 'locale', 'client_time', 'client_timezone',
+        'latitude', 'longitude', 'location_source',
+        '_ip_data', '_user_agent_data', '_header_data', '_form_data',
+        'ip_mismatch', 'country_mismatch', 'user_agent_mismatch',
+        'timezone_mismatch', 'locale_mismatch', 'security_issues',
+        'crawler_detection'
+    )
     formfield_overrides = {
         JSONField: {'widget': JSONEditorWidget},
     }
@@ -49,112 +86,112 @@ class TrackingDataAdmin(admin.ModelAdmin):  # type: ignore
     def has_list_view(self, request: HttpRequest, obj: Optional[TrackingData] = None) -> bool:
         return False
 
-    def check_ip_mismatch(self, obj: TrackingData) -> Optional[str]:
+    def ip_mismatch(self, obj: TrackingData) -> str:
         """Check for IP address mismatches between server and client."""
         ip_data = obj.ip_data
         
         if not ip_data:
-            return None
+            return 'No IP data available'
 
         server_ip = ip_data.getServerIpAddress()
         header_ip = ip_data.getHeaderIpAddress()
         
         if server_ip and header_ip and server_ip != header_ip:
             return format_html(
-                '<span>IP Address Mismatch: Server IP ({}) differs from Header IP ({})</span>',
+                '<span style="color: #ff9800;">⚠️ IP Address Mismatch: Server IP ({}) differs from Header IP ({})</span>',
                 server_ip,
                 header_ip
             )
-        return None
+        return '✅ IP addresses match'
 
-    def check_country_mismatch(self, obj: TrackingData) -> Optional[str]:
+    def country_mismatch(self, obj: TrackingData) -> str:
         """Check for country mismatches between server and client."""
         ip_data = obj.ip_data
         header_data = obj.header_data 
 
         if not ip_data or not header_data:
-            return None
+            return 'No data available for comparison'
 
         server_country = ip_data.getSelectedCountry()
         header_country = header_data.getHeaderCountry()
         
         if server_country and header_country and server_country != header_country:
             return format_html(
-                '<span>Country Mismatch: Server country ({}) differs from Header country ({})</span>',
+                '<span style="color: #ff9800;">⚠️ Country Mismatch: Server country ({}) differs from Header country ({})</span>',
                 server_country,
                 header_country
             )
-        return None
+        return '✅ Countries match'
 
-    def check_crawler(self, obj: TrackingData) -> Optional[str]:
+    def crawler_detection(self, obj: TrackingData) -> str:
         """Check for crawler/bot detection."""
         user_agent_data = obj.user_agent_data
 
         if not user_agent_data:
-            return None
+            return 'No user agent data available'
 
         if user_agent_data.is_crawler():
             return format_html(
-                '<span>Crawler/Bot Detected</span>'
+                '<span style="color: #ff9800;">⚠️ Crawler/Bot Detected</span>'
             )
-        return None
+        return '✅ No crawler detected'
 
-    def check_user_agent_mismatch(self, obj: TrackingData) -> Optional[str]:
+    def user_agent_mismatch(self, obj: TrackingData) -> str:
         """Check for user agent mismatches."""
         user_agent_data = obj.user_agent_data
 
         if not user_agent_data:
-            return None
+            return 'No user agent data available'
 
         if user_agent_data.header != user_agent_data.server:
             return format_html(
-                '<span>User Agent Mismatch: Server and Client user agents differ</span>'
+                '<span style="color: #ff9800;">⚠️ User Agent Mismatch: Server and Client user agents differ</span>'
             )
-        return None
+        return '✅ User agents match'
 
-    def check_timezone_mismatch(self, obj: TrackingData) -> Optional[str]:
+    def timezone_mismatch(self, obj: TrackingData) -> str:
         """Check for timezone mismatches."""
         ip_data = obj.ip_data
         header_data = obj.header_data 
 
         if not ip_data or not header_data:
-            return None
+            return 'No data available for comparison'
 
         header_timezone = header_data.getTimezone()
         ip_timezone = ip_data.getTimezone()
 
         if header_timezone != ip_timezone:
             return format_html(
-                '<span>Timezone Mismatch: Header timezone ({}) differs from IP timezone ({})</span>',
+                '<span style="color: #ff9800;">⚠️ Timezone Mismatch: Header timezone ({}) differs from IP timezone ({})</span>',
                 header_timezone,
                 ip_timezone
             )
-        return None
+        return '✅ Timezones match'
 
-    def check_locale_mismatch(self, obj: TrackingData) -> Optional[str]:
+    def locale_mismatch(self, obj: TrackingData) -> str:
         """Check for locale mismatches between server and client."""
         ip_data = obj.ip_data
         header_data = obj.header_data 
 
         if not ip_data or not header_data:
-            return None
+            return 'No data available for comparison'
         
         server_locale = ip_data.getLocales()
         header_locale = header_data.getLocale()
         
         if server_locale and header_locale and server_locale[0] != header_locale:
             return format_html(
-                '<span>Locale Mismatch: Server locale ({}) differs from Browser locale ({})</span>',
+                '<span style="color: #ff9800;">⚠️ Locale Mismatch: Server locale ({}) differs from Browser locale ({})</span>',
                 server_locale[0],
                 header_locale
             )
-        return None
+        return '✅ Locales match'
 
-    def check_security(self, obj: TrackingData) -> Optional[List[str]]:
+    def security_issues(self, obj: TrackingData) -> str:
         """Check for security issues."""
         ip_data = obj.ip_data
         if not ip_data:
-            return None
+            return 'No IP data available'
 
         warnings: List[str] = []
         security: Dict[str, bool] = {
@@ -165,26 +202,11 @@ class TrackingDataAdmin(admin.ModelAdmin):  # type: ignore
         }
         for key, label in security.items():
             if label:
-                warnings.append(format_html('<span>{} detected</span>', key.title()))
+                warnings.append(format_html('<span style="color: #ff9800;">⚠️ {} detected</span>', key.title()))
         
-        return warnings if warnings else None
-
-    def details(self, obj: TrackingData) -> str:
-        """Display warnings and metadata."""
-        # Render the modal template
-        # checks: List[str|None] = [
-        #     self.check_ip_mismatch(obj),
-        #     self.check_country_mismatch(obj),
-        #     self.check_locale_mismatch(obj),
-        #     self.check_crawler(obj),
-        #     self.check_user_agent_mismatch(obj),
-        #     self.check_timezone_mismatch(obj)
-        # ]
-        # security: Optional[List[str]] = self.check_security(obj)
-        # if security:
-        #     checks.extend(security)
-        # warnings = [warning for warning in checks if warning]
-        return ''
+        if warnings:
+            return format_html('<br>'.join(warnings))
+        return '✅ No security issues detected'
 
 
 class TrackingDataInline(admin.TabularInline):  # type: ignore
@@ -215,8 +237,10 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     def view_details(self, obj: TrackingData) -> str:
         """Display a link to view the details in a modal."""
         url = reverse('admin:tracking_trackingdata_change', args=[obj.pk])
-        url = f"{url}?_popup=1"
-        return format_html('<a href="{}">View Details</a>', url)
+        return format_html(
+            '<a href="{}" class="button" onclick="return showRelatedObjectLookupPopup(this);">View Details</a>',
+            f"{url}?_popup=1"
+        )
     view_details.short_description = 'Details'  # type: ignore
 
     def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
