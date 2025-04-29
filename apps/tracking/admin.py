@@ -330,7 +330,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
 
     def view_details(self, obj: TrackingData) -> str:
         """Display a link to view the details in a modal."""
-        url = reverse('tracking_data_view', args=[obj.pk])
+        url = reverse('tracking_data_modal', args=[obj.pk])
         return format_html(
             '<a href="{}" class="button" onclick="return showRelatedObjectLookupPopup(this);">View Details</a>',
             f"{url}?_popup=1"

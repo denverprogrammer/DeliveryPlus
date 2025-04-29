@@ -10,7 +10,6 @@ from django.shortcuts import render, get_object_or_404
 from typing import Optional
 from django.contrib.admin.views.decorators import staff_member_required
 from django.template.response import TemplateResponse
-import json
 
 
 @csrf_exempt
@@ -128,9 +127,16 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
     return render(request, 'tracking/redirect.html', {})
 
 @staff_member_required
-def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
+def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
     """View for displaying tracking data in a read-only format."""
     tracking_data = get_object_or_404(TrackingData, pk=pk)
+    
+    # Convert Pydantic models to dictionaries for JSON fields
+    ip_data = tracking_data.ip_data.model_dump() if tracking_data.ip_data else None
+    user_agent_data = tracking_data.user_agent_data.model_dump() if tracking_data.user_agent_data else None
+    header_data = tracking_data.header_data.model_dump() if tracking_data.header_data else None
+    form_data = tracking_data.form_data if tracking_data.form_data else None
+    
     form = TrackingDataViewForm(initial={
         'server_timestamp': tracking_data.server_timestamp,
         'http_method': tracking_data.http_method,
@@ -145,10 +151,10 @@ def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
         'latitude': tracking_data.latitude,
         'longitude': tracking_data.longitude,
         'location_source': tracking_data.location_source,
-        'ip_data': tracking_data.ip_data.model_dump() if tracking_data.ip_data else None,
-        'user_agent_data': tracking_data.user_agent_data.model_dump() if tracking_data.user_agent_data else None,
-        'header_data': tracking_data.header_data.model_dump() if tracking_data.header_data else None,
-        'form_data': tracking_data.form_data,
+        'ip_data': ip_data,
+        'user_agent_data': user_agent_data,
+        'header_data': header_data,
+        'form_data': form_data,
     })
     
     context = {
@@ -157,4 +163,4 @@ def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
         'json_fields': ['ip_data', 'user_agent_data', 'header_data', 'form_data'],
     }
     
-    return TemplateResponse(request, 'tracking/tracking_data_view.html', context)
+    return TemplateResponse(request, 'tracking/tracking_data_modal.html', context)

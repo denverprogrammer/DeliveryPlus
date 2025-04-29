@@ -1,8 +1,7 @@
-{% extends "admin/base_site.html" %}
+{% extends "config/base_modal.html" %}
 {% load i18n static %}
 
-{% block extrastyle %}
-{{ block.super }}
+{% block extra_css %}
 <link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -44,13 +43,11 @@
     .nav-tabs .nav-item {
         margin-bottom: -1px;
     }
+    .jsoneditor {
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
 </style>
-{% endblock %}
-
-{% block extrahead %}
-{{ block.super }}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -100,7 +97,7 @@
                     <div class="tab-pane fade" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
                         <fieldset class="module aligned">
                             <div class="form-row">
-                                {{ field }}
+                                <div id="{{ field.name }}-editor" style="height: 300px;"></div>
                             </div>
                         </fieldset>
                     </div>
@@ -110,4 +107,32 @@
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script type="application/javascript">
+window.addEventListener('load', function() {
+    {% for field in form %}
+        {% if field.name in json_fields and field.value %}
+        var container = document.getElementById('{{ field.name }}-editor');
+        var options = {
+            mode: 'view',
+            mainMenuBar: false,
+            navigationBar: false,
+            statusBar: false,
+            search: false,
+            enableSort: false,
+            enableTransform: false,
+            colorPicker: false,
+            modeSwitcher: false,
+            onEditable: function() { return false; }
+        };
+        var editor = new JSONEditor(container, options);
+        editor.set({{ field.value|safe }});
+        {% endif %}
+    {% endfor %}
+});
+</script>
+{% endblock %}
