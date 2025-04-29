@@ -4,6 +4,8 @@
 {% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
     .form-row {
         padding: 4px 0;
@@ -30,66 +32,82 @@
         white-space: pre-wrap;
     }
     .map-container {
-        margin-top: 20px;
+        margin-bottom: 20px;
         border: 1px solid #ccc;
         border-radius: 4px;
         overflow: hidden;
     }
+    .nav-tabs {
+        list-style: none;
+        padding-left: 0;
+    }
+    .nav-tabs .nav-item {
+        margin-bottom: -1px;
+    }
 </style>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}
 
 {% block content %}
 <div id="content-main">
-    {% if form.latitude.value and form.longitude.value %}
-    <fieldset class="module aligned">
-        <h2>Location Map</h2>
-        <div class="map-container">
-            <iframe width="100%" height="300" frameborder="0" style="border: 1px solid #ccc" 
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q={{ form.latitude.value }},{{ form.longitude.value }}&zoom=12" 
-                    allowfullscreen></iframe>
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" id="trackingTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">Details</button>
+                </li>
+                {% for field in form %}
+                    {% if field.name in json_fields and field.value %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="{{ field.name }}-tab" data-bs-toggle="tab" data-bs-target="#{{ field.name }}" type="button" role="tab" aria-controls="{{ field.name }}" aria-selected="false">{{ field.label }}</button>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
         </div>
-    </fieldset>
-    {% endif %}
+        <div class="card-body">
+            <div class="tab-content" id="trackingTabsContent">
+                <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+                    {% if form.latitude.value and form.longitude.value %}
+                    <fieldset class="module aligned">
+                        <div class="map-container">
+                            <iframe width="100%" height="300" frameborder="0" style="border: 1px solid #ccc" 
+                                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q={{ form.latitude.value }},{{ form.longitude.value }}&zoom=12" 
+                                    allowfullscreen></iframe>
+                        </div>
+                    </fieldset>
+                    {% endif %}
 
-    <fieldset class="module aligned">
-        <h2>Basic Information</h2>
-        {% for field in form %}
-            <div class="form-row">
-                <label>{{ field.label }}:</label>
-                <div class="readonly">{{ field.value|default:"-" }}</div>
-            </div>
-        {% endfor %}
-    </fieldset>
+                    <fieldset class="module aligned">
+                        {% for field in form %}
+                            {% if field.name not in json_fields %}
+                            <div class="form-row">
+                                <label>{{ field.label }}:</label>
+                                <div class="readonly">{{ field.value|default:"-" }}</div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </fieldset>
+                </div>
 
-    <fieldset class="module aligned">
-        <h2>JSON Data</h2>
-        {% if ip_data %}
-            <div class="form-row">
-                <label>IP Data:</label>
-                <pre class="json-data">{{ ip_data }}</pre>
+                {% for field in form %}
+                    {% if field.name in json_fields and field.value %}
+                    <div class="tab-pane fade" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
+                        <fieldset class="module aligned">
+                            <div class="form-row">
+                                {{ field }}
+                            </div>
+                        </fieldset>
+                    </div>
+                    {% endif %}
+                {% endfor %}
             </div>
-        {% endif %}
-        
-        {% if user_agent_data %}
-            <div class="form-row">
-                <label>User Agent Data:</label>
-                <pre class="json-data">{{ user_agent_data }}</pre>
-            </div>
-        {% endif %}
-        
-        {% if header_data %}
-            <div class="form-row">
-                <label>Header Data:</label>
-                <pre class="json-data">{{ header_data }}</pre>
-            </div>
-        {% endif %}
-        
-        {% if form_data %}
-            <div class="form-row">
-                <label>Form Data:</label>
-                <pre class="json-data">{{ form_data }}</pre>
-            </div>
-        {% endif %}
-    </fieldset>
+        </div>
+    </div>
 </div>
 {% endblock %} 

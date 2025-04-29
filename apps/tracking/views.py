@@ -145,21 +145,16 @@ def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
         'latitude': tracking_data.latitude,
         'longitude': tracking_data.longitude,
         'location_source': tracking_data.location_source,
+        'ip_data': tracking_data.ip_data.model_dump() if tracking_data.ip_data else None,
+        'user_agent_data': tracking_data.user_agent_data.model_dump() if tracking_data.user_agent_data else None,
+        'header_data': tracking_data.header_data.model_dump() if tracking_data.header_data else None,
+        'form_data': tracking_data.form_data,
     })
-    
-    # Format JSON data for display
-    ip_data = tracking_data.ip_data.to_json() if tracking_data.ip_data else None
-    user_agent_data = tracking_data.user_agent_data.to_json() if tracking_data.user_agent_data else None
-    header_data = tracking_data.header_data.to_json() if tracking_data.header_data else None
-    form_data = json.dumps(tracking_data.form_data, indent=2, sort_keys=True) if tracking_data.form_data else None
     
     context = {
         'form': form,
-        'ip_data': ip_data,
-        'user_agent_data': user_agent_data,
-        'header_data': header_data,
-        'form_data': form_data,
         'title': f'Tracking Data for {tracking_data.agent}',
+        'json_fields': ['ip_data', 'user_agent_data', 'header_data', 'form_data'],
     }
     
     return TemplateResponse(request, 'tracking/tracking_data_view.html', context)

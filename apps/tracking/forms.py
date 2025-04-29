@@ -2,6 +2,7 @@ from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
 from typing import Any
+from django_json_widget.widgets import JSONEditorWidget
 
 
 class AgentForm(forms.ModelForm):
@@ -132,4 +133,40 @@ class TrackingDataViewForm(forms.Form):
     location_source = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'readonly': True})
+    )
+    ip_data = forms.JSONField(
+        required=False,
+        widget=JSONEditorWidget(
+            attrs={
+                'readonly': True,
+                'style': 'height: 300px;'
+            }
+        )
+    )
+    user_agent_data = forms.JSONField(
+        required=False,
+        widget=JSONEditorWidget(
+            attrs={
+                'readonly': True,
+                'style': 'height: 300px;'
+            }
+        )
+    )
+    header_data = forms.JSONField(
+        required=False,
+        widget=JSONEditorWidget(
+            attrs={
+                'readonly': True,
+                'style': 'height: 300px;'
+            }
+        )
+    )
+    form_data = forms.JSONField(
+        required=False,
+        widget=JSONEditorWidget(
+            attrs={
+                'readonly': True,
+                'style': 'height: 300px;'
+            }
+        )
     )
