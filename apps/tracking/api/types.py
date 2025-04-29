@@ -189,16 +189,13 @@ class GenericBaseModel(BaseModel, Generic[SelectType, InfoType]):
     info: Optional[InfoType] = None
 
     def to_json(self) -> str:
-        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
+        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True, indent=2)
 
 
 class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
 
     def getTimezone(self) -> Optional[str]:
         return self.info.time_zone.name if self.info and self.info.time_zone else None
-
-    def to_json(self) -> str:
-        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
     
     def getLocation(self) -> Optional[LocationInfo]:
         if self.info and self.info.latitude and self.info.longitude:
@@ -276,9 +273,6 @@ class UserAgentData(GenericBaseModel[str, UserStackResponse]):
 
     def has_user_agent_mismatch(self) -> bool:
         return self.server != self.header
-
-    def to_json(self) -> str:
-        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
 
 
 class LocaleData(GenericBaseModel[str, None]):

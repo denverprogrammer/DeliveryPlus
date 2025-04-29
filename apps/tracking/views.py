@@ -3,6 +3,7 @@ from config.common import HeaderData
 from config import settings
 from tracking.api.api import TwilioApiClient, TwilioLookupResponse
 from tracking.models import TrackingData, Agent
+from tracking.forms import TrackingDataViewForm
 from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
@@ -130,15 +131,30 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
 def tracking_data_view(request: HttpRequest, pk: int) -> TemplateResponse:
     """View for displaying tracking data in a read-only format."""
     tracking_data = get_object_or_404(TrackingData, pk=pk)
+    form = TrackingDataViewForm(initial={
+        'server_timestamp': tracking_data.server_timestamp,
+        'http_method': tracking_data.http_method,
+        'ip_address': tracking_data.ip_address,
+        'ip_source': tracking_data.ip_source,
+        'os': tracking_data.os,
+        'browser': tracking_data.browser,
+        'platform': tracking_data.platform,
+        'locale': tracking_data.locale,
+        'client_time': tracking_data.client_time,
+        'client_timezone': tracking_data.client_timezone,
+        'latitude': tracking_data.latitude,
+        'longitude': tracking_data.longitude,
+        'location_source': tracking_data.location_source,
+    })
     
     # Format JSON data for display
-    ip_data = json.dumps(tracking_data.ip_data.model_dump(), indent=2, sort_keys=True) if tracking_data.ip_data else None
-    user_agent_data = json.dumps(tracking_data.user_agent_data.model_dump(), indent=2, sort_keys=True) if tracking_data.user_agent_data else None
-    header_data = json.dumps(tracking_data.header_data.model_dump(), indent=2, sort_keys=True) if tracking_data.header_data else None
+    ip_data = tracking_data.ip_data.to_json() if tracking_data.ip_data else None
+    user_agent_data = tracking_data.user_agent_data.to_json() if tracking_data.user_agent_data else None
+    header_data = tracking_data.header_data.to_json() if tracking_data.header_data else None
     form_data = json.dumps(tracking_data.form_data, indent=2, sort_keys=True) if tracking_data.form_data else None
     
     context = {
-        'tracking_data': tracking_data,
+        'form': form,
         'ip_data': ip_data,
         'user_agent_data': user_agent_data,
         'header_data': header_data,

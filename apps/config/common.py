@@ -52,7 +52,7 @@ class HeaderData(BaseModel):
     public_ip: HeaderIpInfo
 
     def to_json(self) -> str:
-        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True)
+        return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True, indent=2)
     
     def getLocation(self) -> Optional[LocationInfo]:
         if self.public_ip and self.public_ip.location:

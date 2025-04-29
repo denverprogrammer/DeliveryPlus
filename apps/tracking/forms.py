@@ -77,3 +77,59 @@ class CampaignAdminForm(forms.ModelForm):
 
     def clean_time_tracking(self) -> list[str]:
         return self.cleaned_data['time_tracking'] or []
+
+
+class TrackingDataViewForm(forms.Form):
+    """Form for displaying tracking data in a readonly format."""
+    server_timestamp = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={'readonly': True})
+    )
+    http_method = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    ip_address = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    ip_source = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    os = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    browser = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    platform = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    locale = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    client_time = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={'readonly': True})
+    )
+    client_timezone = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
+    latitude = forms.FloatField(
+        required=False,
+        widget=forms.NumberInput(attrs={'readonly': True})
+    )
+    longitude = forms.FloatField(
+        required=False,
+        widget=forms.NumberInput(attrs={'readonly': True})
+    )
+    location_source = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'readonly': True})
+    )
