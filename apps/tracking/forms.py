@@ -2,7 +2,6 @@ from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
 from typing import Any
-from django_json_widget.widgets import JSONEditorWidget
 
 
 class AgentForm(forms.ModelForm):
@@ -81,92 +80,44 @@ class CampaignAdminForm(forms.ModelForm):
 
 
 class TrackingDataViewForm(forms.Form):
-    """Form for displaying tracking data in a readonly format."""
-    server_timestamp = forms.DateTimeField(
-        required=False,
-        widget=forms.DateTimeInput(attrs={'readonly': True})
-    )
-    http_method = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    ip_address = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    ip_source = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    os = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    browser = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    platform = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    locale = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    client_time = forms.DateTimeField(
-        required=False,
-        widget=forms.DateTimeInput(attrs={'readonly': True})
-    )
-    client_timezone = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    latitude = forms.FloatField(
-        required=False,
-        widget=forms.NumberInput(attrs={'readonly': True})
-    )
-    longitude = forms.FloatField(
-        required=False,
-        widget=forms.NumberInput(attrs={'readonly': True})
-    )
-    location_source = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'readonly': True})
-    )
-    ip_data = forms.JSONField(
-        required=False,
-        widget=JSONEditorWidget(
-            attrs={
-                'readonly': True,
-                'style': 'height: 300px;'
-            }
+    # Basic Information
+    server_timestamp = forms.DateTimeField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    http_method = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    ip_address = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    ip_source = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+
+    # Client Information
+    os = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    browser = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    platform = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    locale = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    client_time = forms.DateTimeField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    client_timezone = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+
+    # Location Information
+    latitude = forms.FloatField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    longitude = forms.FloatField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    location_source = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+
+    # JSON Data
+    ip_data = forms.JSONField(required=False, widget=forms.HiddenInput())
+    user_agent_data = forms.JSONField(required=False, widget=forms.HiddenInput())
+    header_data = forms.JSONField(required=False, widget=forms.HiddenInput())
+    form_data = forms.JSONField(required=False, widget=forms.HiddenInput())
+
+    class Meta:
+        fieldsets = (
+            ('Basic Information', {
+                'fields': ('server_timestamp', 'http_method', 'ip_address', 'ip_source')
+            }),
+            ('Client Information', {
+                'fields': ('os', 'browser', 'platform', 'locale', 'client_time', 'client_timezone')
+            }),
+            ('Location Information', {
+                'fields': ('latitude', 'longitude', 'location_source')
+            }),
+            ('JSON Data', {
+                'fields': ('ip_data', 'user_agent_data', 'header_data', 'form_data'),
+                'classes': ('collapse',)
+            })
         )
-    )
-    user_agent_data = forms.JSONField(
-        required=False,
-        widget=JSONEditorWidget(
-            attrs={
-                'readonly': True,
-                'style': 'height: 300px;'
-            }
-        )
-    )
-    header_data = forms.JSONField(
-        required=False,
-        widget=JSONEditorWidget(
-            attrs={
-                'readonly': True,
-                'style': 'height: 300px;'
-            }
-        )
-    )
-    form_data = forms.JSONField(
-        required=False,
-        widget=JSONEditorWidget(
-            attrs={
-                'readonly': True,
-                'style': 'height: 300px;'
-            }
-        )
-    )

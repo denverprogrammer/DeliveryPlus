@@ -47,6 +47,55 @@
         border: 1px solid #ccc;
         border-radius: 4px;
     }
+    .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .field-item {
+        display: flex;
+        align-items: center;
+    }
+    .field-item label {
+        margin-right: 10px;
+        min-width: 120px;
+    }
+    .field-item .readonly {
+        flex: 1;
+    }
+    .field-group {
+        margin-bottom: 20px;
+    }
+    .field-group h3 {
+        font-size: 1.1em;
+        color: #666;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+    }
+    .warning-item {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeeba;
+        color: #856404;
+    }
+    .warning-item.success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+    .warning-item.warning {
+        background-color: #fff3cd;
+        border-color: #ffeeba;
+        color: #856404;
+    }
+    .warning-item.danger {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
 </style>
 {% endblock %}
 
@@ -57,6 +106,9 @@
             <ul class="nav nav-tabs card-header-tabs" id="trackingTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">Details</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="warnings-tab" data-bs-toggle="tab" data-bs-target="#warnings" type="button" role="tab" aria-controls="warnings" aria-selected="false">Warnings</button>
                 </li>
                 {% for field in form %}
                     {% if field.name in json_fields and field.value %}
@@ -81,14 +133,100 @@
                     {% endif %}
 
                     <fieldset class="module aligned">
-                        {% for field in form %}
-                            {% if field.name not in json_fields %}
-                            <div class="form-row">
-                                <label>{{ field.label }}:</label>
-                                <div class="readonly">{{ field.value|default:"-" }}</div>
+                        <div class="field-group">
+                            <h3>Basic Information</h3>
+                            <div class="field-grid">
+                                {% for field in form %}
+                                    {% if field.name in 'server_timestamp,http_method,ip_address,ip_source' %}
+                                    <div class="field-item">
+                                        <label>{{ field.label }}:</label>
+                                        <div class="readonly">{{ field.value|default:"-" }}</div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
-                            {% endif %}
-                        {% endfor %}
+                        </div>
+
+                        <div class="field-group">
+                            <h3>Client Information</h3>
+                            <div class="field-grid">
+                                {% for field in form %}
+                                    {% if field.name in 'os,browser,platform,locale,client_time,client_timezone' %}
+                                    <div class="field-item">
+                                        <label>{{ field.label }}:</label>
+                                        <div class="readonly">{{ field.value|default:"-" }}</div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <h3>Location Information</h3>
+                            <div class="field-grid">
+                                {% for field in form %}
+                                    {% if field.name in 'latitude,longitude,location_source' %}
+                                    <div class="field-item">
+                                        <label>{{ field.label }}:</label>
+                                        <div class="readonly">{{ field.value|default:"-" }}</div>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="tab-pane fade" id="warnings" role="tabpanel" aria-labelledby="warnings-tab">
+                    <fieldset class="module aligned">
+                        <div class="field-group">
+                            <h3>IP Address Checks</h3>
+                            <div class="warning-item {{ warnings.ip_checks.vpn.status }}">
+                                {{ warnings.ip_checks.vpn.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.ip_checks.proxy.status }}">
+                                {{ warnings.ip_checks.proxy.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.ip_checks.tor.status }}">
+                                {{ warnings.ip_checks.tor.message }}
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <h3>IP and Header Consistency</h3>
+                            <div class="warning-item {{ warnings.ip_mismatch.status }}">
+                                {{ warnings.ip_mismatch.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.country_mismatch.status }}">
+                                {{ warnings.country_mismatch.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.timezone_mismatch.status }}">
+                                {{ warnings.timezone_mismatch.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.locale_mismatch.status }}">
+                                {{ warnings.locale_mismatch.message }}
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <h3>Browser and Client Checks</h3>
+                            <div class="warning-item {{ warnings.user_agent_mismatch.status }}">
+                                {{ warnings.user_agent_mismatch.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.crawler_detection.status }}">
+                                {{ warnings.crawler_detection.message }}
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <h3>Security and Consistency</h3>
+                            <div class="warning-item {{ warnings.suspicious_activity.status }}">
+                                {{ warnings.suspicious_activity.message }}
+                            </div>
+                            <div class="warning-item {{ warnings.data_consistency.status }}">
+                                {{ warnings.data_consistency.message }}
+                            </div>
+                        </div>
                     </fieldset>
                 </div>
 
@@ -97,7 +235,7 @@
                     <div class="tab-pane fade" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
                         <fieldset class="module aligned">
                             <div class="form-row">
-                                <div id="{{ field.name }}-editor" style="height: 300px;"></div>
+                                <div id="{{ field.name }}-editor" style="height: 300px;" data-json='{{ field.value|safe }}'></div>
                             </div>
                         </fieldset>
                     </div>
@@ -114,9 +252,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script type="application/javascript">
 window.addEventListener('load', function() {
-    {% for field in form %}
-        {% if field.name in json_fields and field.value %}
-        var container = document.getElementById('{{ field.name }}-editor');
+    document.querySelectorAll('[id$="-editor"]').forEach(function(container) {
         var options = {
             mode: 'view',
             mainMenuBar: false,
@@ -130,9 +266,8 @@ window.addEventListener('load', function() {
             onEditable: function() { return false; }
         };
         var editor = new JSONEditor(container, options);
-        editor.set({{ field.value|safe }});
-        {% endif %}
-    {% endfor %}
+        editor.set(JSON.parse(container.dataset.json));
+    });
 });
 </script>
 {% endblock %}

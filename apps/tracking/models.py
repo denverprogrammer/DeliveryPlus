@@ -160,5 +160,84 @@ class TrackingData(models.Model):
     def form_data(self, value: Optional[Dict[str, Any]]):
         self._form_data = value
 
+    @property
+    def ip_checks(self) -> dict[str, dict[str, str]]:
+        """Check for VPN, proxy, and Tor usage."""
+        return {
+            'vpn': {
+                'status': 'warning' if self.ip_data and self.ip_data.isVpn() else 'success',
+                'message': '⚠️ VPN usage detected' if self.ip_data and self.ip_data.isVpn() else '✅ No VPN detected'
+            },
+            'proxy': {
+                'status': 'warning' if self.ip_data and self.ip_data.isProxy() else 'success',
+                'message': '⚠️ Proxy usage detected' if self.ip_data and self.ip_data.isProxy() else '✅ No proxy detected'
+            },
+            'tor': {
+                'status': 'warning' if self.ip_data and self.ip_data.isTor() else 'success',
+                'message': '⚠️ Tor usage detected' if self.ip_data and self.ip_data.isTor() else '✅ No Tor detected'
+            }
+        }
+
+    @property
+    def ip_mismatch(self) -> dict[str, str]:
+        """Check for IP address mismatches between server and client."""
+        return {
+            'status': 'warning' if self.ip_data and self.ip_data.getServerIpAddress() != self.ip_data.getHeaderIpAddress() else 'success',
+            'message': '⚠️ IP Address Mismatch: Server IP differs from Header IP' if self.ip_data and self.ip_data.getServerIpAddress() != self.ip_data.getHeaderIpAddress() else '✅ IP addresses match'
+        }
+
+    @property
+    def country_mismatch(self) -> dict[str, str]:
+        """Check for country mismatches between server and client."""
+        return {
+            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getSelectedCountry() != self.header_data.getHeaderCountry() else 'success',
+            'message': '⚠️ Country Mismatch: Server country differs from Header country' if self.ip_data and self.header_data and self.ip_data.getSelectedCountry() != self.header_data.getHeaderCountry() else '✅ Countries match'
+        }
+
+    @property
+    def user_agent_mismatch(self) -> dict[str, str]:
+        """Check for user agent mismatches."""
+        return {
+            'status': 'warning' if self.user_agent_data and self.user_agent_data.header != self.user_agent_data.server else 'success',
+            'message': '⚠️ User Agent Mismatch: Server and Client user agents differ' if self.user_agent_data and self.user_agent_data.header != self.user_agent_data.server else '✅ User agents match'
+        }
+
+    @property
+    def timezone_mismatch(self) -> dict[str, str]:
+        """Check for timezone mismatches."""
+        return {
+            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getTimezone() != self.header_data.getTimezone() else 'success',
+            'message': '⚠️ Timezone Mismatch: Header timezone differs from IP timezone' if self.ip_data and self.header_data and self.ip_data.getTimezone() != self.header_data.getTimezone() else '✅ Timezones match'
+        }
+
+    @property
+    def locale_mismatch(self) -> dict[str, str]:
+        """Check for locale mismatches between server and client."""
+        return {
+            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getLocales() and self.header_data.getLocale() and self.ip_data.getLocales()[0] != self.header_data.getLocale() else 'success',
+            'message': '⚠️ Locale Mismatch: Server locale differs from Browser locale' if self.ip_data and self.header_data and self.ip_data.getLocales() and self.header_data.getLocale() and self.ip_data.getLocales()[0] != self.header_data.getLocale() else '✅ Locales match'
+        }
+
+    @property
+    def crawler_detection(self) -> dict[str, str]:
+        """Check for crawler/bot detection."""
+        return {
+            'status': 'warning' if self.user_agent_data and self.user_agent_data.is_crawler() else 'success',
+            'message': '⚠️ Crawler/Bot Detected' if self.user_agent_data and self.user_agent_data.is_crawler() else '✅ No crawler detected'
+        }
+
+    @property
+    def all_warnings(self) -> dict[str, Any]:
+        """Get all warning checks."""
+        return {
+            'ip_checks': self.ip_checks,
+            'ip_mismatch': self.ip_mismatch,
+            'country_mismatch': self.country_mismatch,
+            'user_agent_mismatch': self.user_agent_mismatch,
+            'timezone_mismatch': self.timezone_mismatch,
+            'locale_mismatch': self.locale_mismatch,
+            'crawler_detection': self.crawler_detection
+        }
+
     def __str__(self):
         return f'{self.agent} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
