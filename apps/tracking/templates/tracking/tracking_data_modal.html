@@ -137,7 +137,7 @@
                             <h3>Basic Information</h3>
                             <div class="field-grid">
                                 {% for field in form %}
-                                    {% if field.name in 'server_timestamp,http_method,ip_address,ip_source' %}
+                                    {% if field.name in 'server_timestamp,http_method,ip_address,ip_source, organization' %}
                                     <div class="field-item">
                                         <label>{{ field.label }}:</label>
                                         <div class="readonly">{{ field.value|default:"-" }}</div>
@@ -165,7 +165,7 @@
                             <h3>Location Information</h3>
                             <div class="field-grid">
                                 {% for field in form %}
-                                    {% if field.name in 'latitude,longitude,location_source' %}
+                                    {% if field.name in 'latitude,longitude,location_source,country,region,city' %}
                                     <div class="field-item">
                                         <label>{{ field.label }}:</label>
                                         <div class="readonly">{{ field.value|default:"-" }}</div>

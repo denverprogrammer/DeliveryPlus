@@ -85,6 +85,8 @@ class TrackingDataViewForm(forms.Form):
     http_method = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ip_address = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     ip_source = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    organization = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    isp = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
 
     # Client Information
     os = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
@@ -95,6 +97,9 @@ class TrackingDataViewForm(forms.Form):
     client_timezone = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
 
     # Location Information
+    country = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    region = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
+    city = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     latitude = forms.FloatField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     longitude = forms.FloatField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
     location_source = forms.CharField(required=False, widget=forms.TextInput(attrs={'readonly': 'readonly'}))
@@ -108,13 +113,13 @@ class TrackingDataViewForm(forms.Form):
     class Meta:
         fieldsets = (
             ('Basic Information', {
-                'fields': ('server_timestamp', 'http_method', 'ip_address', 'ip_source')
+                'fields': ('server_timestamp', 'http_method', 'ip_address', 'ip_source', 'organization', 'isp')
             }),
             ('Client Information', {
                 'fields': ('os', 'browser', 'platform', 'locale', 'client_time', 'client_timezone')
             }),
             ('Location Information', {
-                'fields': ('latitude', 'longitude', 'location_source')
+                'fields': ('country', 'region', 'city', 'latitude', 'longitude', 'location_source')
             }),
             ('JSON Data', {
                 'fields': ('ip_data', 'user_agent_data', 'header_data', 'form_data'),

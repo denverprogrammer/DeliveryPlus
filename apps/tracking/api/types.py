@@ -288,6 +288,31 @@ class IpData(GenericBaseModel[IPGeolocationResponse, None]):
             return self.info.country_code2
         return None
 
+    def getSelectedCountryName(self) -> Optional[str]:
+        if self.selected and self.selected.country_name:
+            return self.selected.country_name
+        return None
+
+    def getSelectedRegion(self) -> Optional[str]:
+        if self.selected and self.selected.state_prov:
+            return self.selected.state_prov
+        return None
+
+    def getSelectedCity(self) -> Optional[str]:
+        if self.selected and self.selected.city:
+            return self.selected.city
+        return None
+
+    def getSelectedOrganization(self) -> Optional[str]:
+        if self.selected and self.selected.organization:
+            return self.selected.organization
+        return None
+
+    def getSelectedISP(self) -> Optional[str]:
+        if self.selected and self.selected.isp:
+            return self.selected.isp
+        return None
+
     def get_security_checks(self) -> List[WarningStatus]:
         """Check for VPN, proxy, Tor and Relay usage in server and header."""
         
