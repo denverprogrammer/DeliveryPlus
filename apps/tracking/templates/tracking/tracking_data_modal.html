@@ -180,16 +180,12 @@
                 <div class="tab-pane fade" id="warnings" role="tabpanel" aria-labelledby="warnings-tab">
                     <fieldset class="module aligned">
                         <div class="field-group">
-                            <h3>IP Address Checks</h3>
-                            <div class="warning-item {{ warnings.ip_checks.vpn.status }}">
-                                {{ warnings.ip_checks.vpn.message }}
-                            </div>
-                            <div class="warning-item {{ warnings.ip_checks.proxy.status }}">
-                                {{ warnings.ip_checks.proxy.message }}
-                            </div>
-                            <div class="warning-item {{ warnings.ip_checks.tor.status }}">
-                                {{ warnings.ip_checks.tor.message }}
-                            </div>
+                            <h3>Security Checks</h3>
+                            {% for warning in warnings.security_checks %}
+                                <div class="warning-item {{ warning.status }}">
+                                    {{ warning.message }}
+                                </div>
+                            {% endfor %}
                         </div>
 
                         <div class="field-group">
@@ -215,16 +211,6 @@
                             </div>
                             <div class="warning-item {{ warnings.crawler_detection.status }}">
                                 {{ warnings.crawler_detection.message }}
-                            </div>
-                        </div>
-
-                        <div class="field-group">
-                            <h3>Security and Consistency</h3>
-                            <div class="warning-item {{ warnings.suspicious_activity.status }}">
-                                {{ warnings.suspicious_activity.message }}
-                            </div>
-                            <div class="warning-item {{ warnings.data_consistency.status }}">
-                                {{ warnings.data_consistency.message }}
                             </div>
                         </div>
                     </fieldset>

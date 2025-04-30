@@ -1,8 +1,8 @@
 from __future__ import annotations
 from django.db import models
 from tracking.common import AgentStatus, TrackingType
-from typing import Optional, Dict, Any
-from tracking.api.types import IpData, UserAgentData
+from typing import List, Optional, Dict, Any
+from tracking.api.types import IpData, UserAgentData, WarningStatus
 from config.common import HeaderData
 
 
@@ -161,82 +161,65 @@ class TrackingData(models.Model):
         self._form_data = value
 
     @property
-    def ip_checks(self) -> dict[str, dict[str, str]]:
+    def security_checks(self) -> List[WarningStatus]:
         """Check for VPN, proxy, and Tor usage."""
-        return {
-            'vpn': {
-                'status': 'warning' if self.ip_data and self.ip_data.isVpn() else 'success',
-                'message': '⚠️ VPN usage detected' if self.ip_data and self.ip_data.isVpn() else '✅ No VPN detected'
-            },
-            'proxy': {
-                'status': 'warning' if self.ip_data and self.ip_data.isProxy() else 'success',
-                'message': '⚠️ Proxy usage detected' if self.ip_data and self.ip_data.isProxy() else '✅ No proxy detected'
-            },
-            'tor': {
-                'status': 'warning' if self.ip_data and self.ip_data.isTor() else 'success',
-                'message': '⚠️ Tor usage detected' if self.ip_data and self.ip_data.isTor() else '✅ No Tor detected'
-            }
-        }
+        if not self.ip_data:
+            return [WarningStatus(status='warning', category='security', message='Security checks could not be set for ip address')]
+        return self.ip_data.get_security_checks()
 
     @property
-    def ip_mismatch(self) -> dict[str, str]:
+    def ip_mismatch(self) -> WarningStatus:
         """Check for IP address mismatches between server and client."""
-        return {
-            'status': 'warning' if self.ip_data and self.ip_data.getServerIpAddress() != self.ip_data.getHeaderIpAddress() else 'success',
-            'message': '⚠️ IP Address Mismatch: Server IP differs from Header IP' if self.ip_data and self.ip_data.getServerIpAddress() != self.ip_data.getHeaderIpAddress() else '✅ IP addresses match'
-        }
+        if not self.ip_data:
+            return WarningStatus(status='warning', message='IP Address could not be set')
+        return self.ip_data.get_ip_mismatch()
 
     @property
-    def country_mismatch(self) -> dict[str, str]:
+    def country_mismatch(self) -> WarningStatus:
         """Check for country mismatches between server and client."""
-        return {
-            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getSelectedCountry() != self.header_data.getHeaderCountry() else 'success',
-            'message': '⚠️ Country Mismatch: Server country differs from Header country' if self.ip_data and self.header_data and self.ip_data.getSelectedCountry() != self.header_data.getHeaderCountry() else '✅ Countries match'
-        }
+        if not self.ip_data:
+            return WarningStatus(status='warning', message='IP Address could not be set')
+        return self.ip_data.get_country_mismatch()
 
     @property
-    def user_agent_mismatch(self) -> dict[str, str]:
+    def user_agent_mismatch(self) -> WarningStatus:
         """Check for user agent mismatches."""
-        return {
-            'status': 'warning' if self.user_agent_data and self.user_agent_data.header != self.user_agent_data.server else 'success',
-            'message': '⚠️ User Agent Mismatch: Server and Client user agents differ' if self.user_agent_data and self.user_agent_data.header != self.user_agent_data.server else '✅ User agents match'
-        }
+        if not self.user_agent_data:
+            return WarningStatus(status='warning', message='User Agent data could not be set')
+        return self.user_agent_data.get_user_agent_mismatch()
 
     @property
-    def timezone_mismatch(self) -> dict[str, str]:
+    def timezone_mismatch(self) -> WarningStatus:
         """Check for timezone mismatches."""
-        return {
-            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getTimezone() != self.header_data.getTimezone() else 'success',
-            'message': '⚠️ Timezone Mismatch: Header timezone differs from IP timezone' if self.ip_data and self.header_data and self.ip_data.getTimezone() != self.header_data.getTimezone() else '✅ Timezones match'
-        }
+        if not self.ip_data:
+            return WarningStatus(status='warning', message='IP Address could not be set')
+        return self.ip_data.get_timezone_mismatch()
 
     @property
-    def locale_mismatch(self) -> dict[str, str]:
+    def locale_mismatch(self) -> WarningStatus:
         """Check for locale mismatches between server and client."""
-        return {
-            'status': 'warning' if self.ip_data and self.header_data and self.ip_data.getLocales() and self.header_data.getLocale() and self.ip_data.getLocales()[0] != self.header_data.getLocale() else 'success',
-            'message': '⚠️ Locale Mismatch: Server locale differs from Browser locale' if self.ip_data and self.header_data and self.ip_data.getLocales() and self.header_data.getLocale() and self.ip_data.getLocales()[0] != self.header_data.getLocale() else '✅ Locales match'
-        }
+        if not self.ip_data:
+            return WarningStatus(status='warning', message='IP Address could not be set')
+        return self.ip_data.get_locale_mismatch()
 
     @property
-    def crawler_detection(self) -> dict[str, str]:
+    def crawler_detection(self) -> WarningStatus:
         """Check for crawler/bot detection."""
-        return {
-            'status': 'warning' if self.user_agent_data and self.user_agent_data.is_crawler() else 'success',
-            'message': '⚠️ Crawler/Bot Detected' if self.user_agent_data and self.user_agent_data.is_crawler() else '✅ No crawler detected'
-        }
+        if not self.user_agent_data:
+            return WarningStatus(status='warning', message='User Agent data could not be set')
+        return self.user_agent_data.get_crawler_detection()
 
     @property
     def all_warnings(self) -> dict[str, Any]:
         """Get all warning checks."""
         return {
-            'ip_checks': self.ip_checks,
-            'ip_mismatch': self.ip_mismatch,
-            'country_mismatch': self.country_mismatch,
-            'user_agent_mismatch': self.user_agent_mismatch,
-            'timezone_mismatch': self.timezone_mismatch,
-            'locale_mismatch': self.locale_mismatch,
-            'crawler_detection': self.crawler_detection
+            'security_checks': self.security_checks,
+            'ip_mismatch': self.ip_mismatch.model_dump(),
+            'country_mismatch': self.country_mismatch.model_dump(),
+            'user_agent_mismatch': self.user_agent_mismatch.model_dump(),
+            'timezone_mismatch': self.timezone_mismatch.model_dump(),
+            'locale_mismatch': self.locale_mismatch.model_dump(),
+            'crawler_detection': self.crawler_detection.model_dump()
         }
 
     def __str__(self):

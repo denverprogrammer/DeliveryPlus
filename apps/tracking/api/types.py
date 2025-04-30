@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import json
 
-from config.common import IpAddressInfo, LocationInfo
+from config.common import LocationInfo
 
 
 class IpStackResponse(BaseModel):
@@ -192,8 +192,21 @@ class GenericBaseModel(BaseModel, Generic[SelectType, InfoType]):
         return json.dumps(self.model_dump(), sort_keys=True, ensure_ascii=True, indent=2)
 
 
-class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
+class WarningStatus(BaseModel):
+    """Base model for warning status."""
+    status: str
+    message: str
+    category: Optional[str] = None
 
+class IpChecks(BaseModel):
+    """Model for IP security checks."""
+    vpn: Optional[WarningStatus] = None
+    proxy: Optional[WarningStatus] = None
+    tor: Optional[WarningStatus] = None
+    relay: Optional[WarningStatus] = None
+
+
+class IpData(GenericBaseModel[IPGeolocationResponse, None]):
     def getTimezone(self) -> Optional[str]:
         return self.info.time_zone.name if self.info and self.info.time_zone else None
     
@@ -204,33 +217,51 @@ class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
 
     def getLatitude(self) -> Optional[float]:
         location: Optional[LocationInfo] = self.getLocation()
-        
         return location.latitude if location else None
 
     def getLongitude(self) -> Optional[float]:
         location: Optional[LocationInfo] = self.getLocation()
-
         return location.longitude if location else None
     
-    def isVpn(self) -> bool:
-        if self.info and self.info.security:
-            return self.info.security.vpn
+    def isHeaderVpn(self) -> bool:
+        if self.header and self.header.security:
+            return self.header.security.vpn
         return False
         
-    def isTor(self) -> bool:
-        if self.info and self.info.security:
-            return self.info.security.tor
+    def isHeaderTor(self) -> bool:
+        if self.header and self.header.security:
+            return self.header.security.tor
         return False
     
-    def isProxy(self) -> bool:
-        if self.info and self.info.security:
-            return self.info.security.proxy
+    def isHeaderProxy(self) -> bool:
+        if self.header and self.header.security:
+            return self.header.security.proxy
         return False
     
-    def isRelay(self) -> bool:
-        if self.info and self.info.security:
-            return self.info.security.relay
-        return False    
+    def isHeaderRelay(self) -> bool:
+        if self.header and self.header.security:
+            return self.header.security.relay
+        return False
+    
+    def isServerVpn(self) -> bool:
+        if self.server and self.server.security:
+            return self.server.security.vpn
+        return False
+        
+    def isServerTor(self) -> bool:
+        if self.server and self.server.security:
+            return self.server.security.tor
+        return False
+    
+    def isServerProxy(self) -> bool:
+        if self.server and self.server.security:
+            return self.server.security.proxy
+        return False
+    
+    def isServerRelay(self) -> bool:
+        if self.server and self.server.security:
+            return self.server.security.relay
+        return False
     
     def getLocales(self) -> Optional[List[str]]:
         if self.info and self.info.languages:
@@ -238,24 +269,135 @@ class IpData(GenericBaseModel[IpAddressInfo, IPGeolocationResponse]):
         return None
     
     def getHeaderIpAddress(self) -> Optional[str]:
-        if self.header and self.header.address:
-            return self.header.address
+        if self.header and self.header.ip:
+            return self.header.ip
         return None
     
     def getServerIpAddress(self) -> Optional[str]:
-        if self.server and self.server.address:
-            return self.server.address
+        if self.server and self.server.ip:
+            return self.server.ip
         return None
     
     def getSelectedAddress(self) -> Optional[str]:
         if self.selected:
-            return self.selected.address
+            return self.selected.ip
         return None
     
     def getSelectedCountry(self) -> Optional[str]:
         if self.info and self.info.country_code2:
             return self.info.country_code2
         return None
+
+    def get_security_checks(self) -> List[WarningStatus]:
+        """Check for VPN, proxy, Tor and Relay usage in server and header."""
+        
+        checks: List[WarningStatus] = []
+        
+        if self.server and self.server.security:
+            checks.extend([
+                WarningStatus(
+                    status='warning' if self.isServerVpn() else 'success',
+                    category='vpn',
+                    message='⚠️ VPN usage detected in server' if self.isServerVpn() else '✅ No VPN detected in server'
+                ),
+                WarningStatus(
+                    status='warning' if self.isServerProxy() else 'success',
+                    category='proxy',
+                    message='⚠️ Proxy usage detected in server' if self.isServerProxy() else '✅ No proxy detected in server'
+                ),
+                WarningStatus(
+                    status='warning' if self.isServerTor() else 'success',
+                    category='tor',
+                    message='⚠️ Tor usage detected in server' if self.isServerTor() else '✅ No Tor detected in server'
+                ),
+                WarningStatus(
+                    status='warning' if self.isServerRelay() else 'success',
+                    category='relay',
+                    message='⚠️ Relay usage detected in server' if self.isServerRelay() else '✅ No Relay detected in server'
+                )
+            ])
+        else:
+            checks.append(WarningStatus(
+                status='warning',
+                category='security',
+                message='⚠️ Could not perform security checks for server'
+            ))
+
+        if self.header and self.header.security:
+            checks.extend([
+                WarningStatus(
+                    status='warning' if self.isHeaderVpn() else 'success',
+                    category='vpn',
+                    message='⚠️ VPN usage detected in header' if self.isHeaderVpn() else '✅ No VPN detected in header'
+                ),
+                WarningStatus(
+                    status='warning' if self.isHeaderProxy() else 'success',
+                    category='proxy',
+                    message='⚠️ Proxy usage detected in header' if self.isHeaderProxy() else '✅ No proxy detected in header'
+                ),
+                WarningStatus(
+                    status='warning' if self.isHeaderTor() else 'success',
+                    category='tor',
+                    message='⚠️ Tor usage detected in header' if self.isHeaderTor() else '✅ No Tor detected in header'
+                ),
+                WarningStatus(
+                    status='warning' if self.isHeaderRelay() else 'success',
+                    category='relay',
+                    message='⚠️ Relay usage detected in header' if self.isHeaderRelay() else '✅ No Relay detected in header'
+                )
+            ])
+        else:
+            checks.append(WarningStatus(
+                status='warning',
+                category='security',
+                message='⚠️ Could not perform security checks for header'
+            ))
+
+        return checks
+
+    def get_ip_mismatch(self) -> WarningStatus:
+        """Check for IP address mismatches between server and client."""
+        server_ip = self.server.ip if self.server and self.server.ip else None
+        header_ip = self.header.ip if self.header and self.header.ip else None
+        header_ip_changed = server_ip != header_ip
+        
+        return WarningStatus(
+            status='warning' if header_ip_changed else 'success',
+            message='⚠️ IP Address Mismatch: Server IP differs from Header IP' if header_ip_changed else '✅ IP addresses match'
+        )
+
+    def get_country_mismatch(self) -> WarningStatus:
+        """Check for country mismatches between server and client."""
+        server_country = self.server.country_code2 if self.server and self.server.country_code2 else None
+        header_country = self.header.country_code2 if self.header and self.header.country_code2 else None
+        country_mismatch = server_country != header_country
+        
+        return WarningStatus(
+            status='warning' if country_mismatch else 'success',
+            message='⚠️ Country Mismatch: Server country differs from Header country' if country_mismatch else '✅ Countries match'
+        )
+
+    def get_timezone_mismatch(self) -> WarningStatus:
+        """Check for timezone mismatches."""
+        server_timezone = self.server.time_zone.name if self.server and self.server.time_zone else None
+        header_timezone = self.header.time_zone.name if self.header and self.header.time_zone else None
+        timezone_mismatch = server_timezone != header_timezone
+        
+        return WarningStatus(
+            status='warning' if timezone_mismatch else 'success',
+            message='⚠️ Timezone Mismatch: Header timezone differs from IP timezone' if timezone_mismatch else '✅ Timezones match'
+        )
+
+    def get_locale_mismatch(self) -> WarningStatus:
+        """Check for locale mismatches between server and client."""
+        server_locale = self.server.languages.split(',')[0] if self.server and self.server.languages else None
+        header_locale = self.header.languages.split(',')[0] if self.header and self.header.languages else None
+        locale_mismatch = server_locale != header_locale
+        
+        return WarningStatus(
+            status='warning' if locale_mismatch else 'success',
+            message='⚠️ Locale Mismatch: Server locale differs from Browser locale' if locale_mismatch else '✅ Locales match'
+        )
 
 
 class UserAgentData(GenericBaseModel[str, UserStackResponse]):
@@ -273,6 +415,20 @@ class UserAgentData(GenericBaseModel[str, UserStackResponse]):
 
     def has_user_agent_mismatch(self) -> bool:
         return self.server != self.header
+
+    def get_user_agent_mismatch(self) -> WarningStatus:
+        """Check for user agent mismatches."""
+        return WarningStatus(
+            status='warning' if self.has_user_agent_mismatch() else 'success',
+            message='⚠️ User Agent Mismatch: Server and Client user agents differ' if self.has_user_agent_mismatch() else '✅ User agents match'
+        )
+
+    def get_crawler_detection(self) -> WarningStatus:
+        """Check for crawler/bot detection."""
+        return WarningStatus(
+            status='warning' if self.is_crawler() else 'success',
+            message='⚠️ Crawler/Bot Detected' if self.is_crawler() else '✅ No crawler detected'
+        )
 
 
 class LocaleData(GenericBaseModel[str, None]):

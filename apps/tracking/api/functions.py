@@ -1,4 +1,4 @@
-from tracking.api.types import IpData, LocaleData, LocationData, TimeData, UserAgentData
+from tracking.api.types import IPGeolocationResponse, IpData, LocaleData, LocationData, TimeData, UserAgentData
 from config.common import IpAddressInfo, LocationInfo, HeaderData
 from config import settings
 from tracking.api.api import IPGeolocationApiClient, UserStackApiClient, VpnApiClient
@@ -11,32 +11,41 @@ from zoneinfo import ZoneInfo
 
 def get_ip_data(request: HttpRequest, header_data : HeaderData) -> IpData:
     """Extract and process IP data from request and headers."""
-    # Get IP from headers (ipinfo.io)
-    header_info: Optional[IpAddressInfo] = header_data .getHeaderIpAddress()
-    server_info: Optional[IpAddressInfo] = header_data .getClientIpAddress(request)
-    
-    # Store both IPs in the data
-    ip_data = IpData(server=server_info, header=header_info, selected=None, source=None, info=None)
+    # Get IP from headers (ipinfo.io and ipware)
+    header_address: Optional[IpAddressInfo] = header_data.getHeaderIpAddress()
+    server_address: Optional[IpAddressInfo] = header_data.getClientIpAddress(request)
+
+    header_info: Optional[IPGeolocationResponse] = None
+    server_info: Optional[IPGeolocationResponse] = None
+
+    # Get IP data from Ip Geolocation Api
+    ip_client = IPGeolocationApiClient(settings.IP_GEO_LOCATION_KEY)
+    # Get VPN data from VPN Api
+    vpn_client = VpnApiClient(settings.VPN_API_IO_KEY)
 
     # Always use header IP if available, otherwise fall back to server IP    
-    if header_info and header_info.address and header_info.is_routable:
+    if header_address and header_address.address and header_address.is_routable:
+        header_info = ip_client.get_data(header_address.address)
+
+    if header_info:
+        vpn_data = vpn_client.get_data(header_info.ip)
+        header_info.security = vpn_data.security if vpn_data else None
+    
+    if server_address and server_address.address and server_address.is_routable:
+        server_info = ip_client.get_data(server_address.address)
+    
+    if server_info:
+        vpn_data = vpn_client.get_data(server_info.ip)
+        server_info.security = vpn_data.security if vpn_data else None
+        
+    ip_data = IpData(server=server_info, header=header_info, selected=None, source=None, info=None)
+
+    if header_info and header_info.ip:
         ip_data.selected = header_info
         ip_data.source = TrackingType.HEADER
-    elif server_info and server_info.address and server_info.is_routable:
+    elif server_info and server_info.ip:
         ip_data.selected = server_info
         ip_data.source = TrackingType.SERVER
-
-    # Add selected IP information
-    if ip_data.selected:
-        # Get IP data from IPGeolocation
-        ipGeolocationClient = IPGeolocationApiClient(settings.IP_GEO_LOCATION_KEY)
-        ip_data.info = ipGeolocationClient.get_data(ip_data.selected.address)
-    
-    if ip_data.info and ip_data.info.ip:
-        # Get VPN data from VPN Api
-        vpn_client = VpnApiClient(settings.VPN_API_IO_KEY)
-        vpn_data = vpn_client.get_data(ip_data.info.ip)
-        ip_data.info.security = vpn_data.security if vpn_data else None
 
     return ip_data
 
