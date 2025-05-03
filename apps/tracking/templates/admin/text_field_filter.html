@@ -1,0 +1,19 @@
+{% load i18n %}
+
+<h3>{% blocktranslate with filter_title=title %}By {{ filter_title }}{% endblocktranslate %}</h3>
+<ul>
+    <li>
+        <form method="GET">
+            {% for k, v in spec.form.data.items %}
+                {% if k != spec.parameter_name|add:'_term' %}
+                    <input type="hidden" name="{{ k }}" value="{{ v }}">
+                {% endif %}
+            {% endfor %}
+            <input type="text" 
+                   name="{{ spec.parameter_name }}_term" 
+                   value="{{ spec.term_value|default:'' }}" 
+                   placeholder="{% translate 'Enter search term...' %}"
+                   onchange="this.form.submit()">
+        </form>
+    </li>
+</ul> 

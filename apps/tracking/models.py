@@ -1,5 +1,6 @@
 from __future__ import annotations
 from django.db import models
+from django.contrib.postgres.fields import ArrayField
 from tracking.common import AgentStatus, TrackingType
 from typing import List, Optional, Dict, Any
 from tracking.api.types import IpData, UserAgentData, WarningStatus
@@ -79,6 +80,12 @@ class Agent(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    tags = ArrayField(
+        models.CharField(max_length=50),
+        blank=True,
+        null=True,
+        help_text="Tags for categorizing agents"
+    )
 
     status = models.CharField(
         max_length=10,

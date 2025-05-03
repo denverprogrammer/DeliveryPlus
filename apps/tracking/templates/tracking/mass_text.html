@@ -1,0 +1,79 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
+<style>
+    .mass-text-container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .agent-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+    }
+    .agent-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+    }
+    .agent-item:last-child {
+        border-bottom: none;
+    }
+    .submit-row {
+        margin-top: 20px;
+        padding: 10px 0;
+        border-top: 1px solid #eee;
+    }
+    .submit-row input {
+        margin-right: 10px;
+    }
+    .help-text {
+        color: #666;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="mass-text-container">
+        <h1>{{ title }}</h1>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                {{ form.message.label_tag }}
+                {{ form.message }}
+                {% if form.message.help_text %}
+                <div class="help-text">{{ form.message.help_text }}</div>
+                {% endif %}
+                {{ form.message.errors }}
+            </div>
+            
+            <div class="form-row">
+                <label>Select Agents:</label>
+                <div class="agent-list">
+                    {{ form.agents }}
+                </div>
+                {{ form.agents.errors }}
+            </div>
+            
+            <div class="submit-row">
+                <input type="submit" value="Send Messages" class="default" name="_send">
+                <a href="{% url 'admin:tracking_campaign_change' campaign.id %}" class="button cancel-link">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 
