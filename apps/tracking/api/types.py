@@ -198,6 +198,7 @@ class WarningStatus(BaseModel):
     message: str
     category: Optional[str] = None
 
+
 class IpChecks(BaseModel):
     """Model for IP security checks."""
     vpn: Optional[WarningStatus] = None

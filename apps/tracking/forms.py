@@ -2,6 +2,7 @@ from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
 from typing import Any
+from tagulous import forms as TagulousForms # type: ignore
 
 
 class AgentForm(forms.ModelForm):
@@ -126,3 +127,20 @@ class TrackingDataViewForm(forms.Form):
                 'classes': ('collapse',)
             })
         )
+
+
+class AgentAdminForm(forms.ModelForm):
+    class Meta:
+        model = Agent
+        fields = '__all__'
+        widgets = {
+            'tags': TagulousForms.TagWidget(
+                attrs={
+                    # 'class': 'select2',
+                    'style': 'width: 272px;',
+                    'data-placeholder': 'Add tags...',
+                    'data-tags': 'true',
+                    'data-token-separators': '[","]',
+                }
+            )
+        }

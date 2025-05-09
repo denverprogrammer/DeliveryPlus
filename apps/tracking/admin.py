@@ -1,15 +1,20 @@
 from django.contrib import admin
-from typing import Optional, Any, List, Tuple, Type, Dict
+from typing import Optional, Any
 from django.utils.html import format_html
-# from django.utils.safestring import mark_safe
 from django.http import HttpRequest
 from django.urls import reverse
 from subadmin import SubAdmin  # type: ignore
-from tracking.forms import CampaignAdminForm
-from tracking.models import TrackingData, Agent, Campaign
-from django_json_widget.widgets import JSONEditorWidget # type: ignore
-from django.db.models import QuerySet, Model
-
+from tracking.filters import (
+    EmailFilter, 
+    FirstNameFilter,
+    LastNameFilter, 
+    PhoneNumberFilter, 
+    TokenFilter
+)
+from tracking.forms import CampaignAdminForm, AgentAdminForm
+from tracking.models import TrackingData, Agent, Campaign, AgentTag
+from tagulous import admin as TagulousAdmin # type: ignore
+from django.db.models import QuerySet
 
 class TrackingDataInline(admin.TabularInline):  # type: ignore
     model = TrackingData
@@ -56,89 +61,36 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         return super().get_queryset(request).select_related('agent')
 
 
-class BaseTextFieldFilter(admin.SimpleListFilter):
-    """Base class for text field filters."""
-    template = 'admin/text_field_filter.html'
-    field_name = ''
-
-    def __init__(self, request: HttpRequest, params: Dict[str, Any], model: Type[Model], model_admin: Any) -> None:
-        super().__init__(request, params, model, model_admin) # type: ignore
-
-    def lookups(self, request: HttpRequest, model_admin: Any) -> List[Tuple[str, str]]:
-        return [(self.field_name, self.title)]
-
-    def queryset(self, request: HttpRequest, queryset: QuerySet[Agent]) -> QuerySet[Agent]:
-        if self.value():
-            search_term = request.GET.get(f'{self.parameter_name}_term', '')
-            if search_term:
-                return queryset.filter(**{f"{self.field_name}__icontains": search_term})
-        return queryset
-
-
-class FirstNameFilter(BaseTextFieldFilter):
-    title = 'First Name'
-    parameter_name = 'first_name'
-    field_name = 'first_name'
-
-
-class LastNameFilter(BaseTextFieldFilter):
-    title = 'Last Name'
-    parameter_name = 'last_name'
-    field_name = 'last_name'
-
-
-class EmailFilter(BaseTextFieldFilter):
-    title = 'Email'
-    parameter_name = 'email'
-    field_name = 'email'
-
-
-class PhoneNumberFilter(BaseTextFieldFilter):
-    title = 'Phone Number'
-    parameter_name = 'phone_number'
-    field_name = 'phone_number'
-
-
-class TokenFilter(BaseTextFieldFilter):
-    title = 'Token'
-    parameter_name = 'token'
-    field_name = 'token'
-
-
-class TagsFilter(BaseTextFieldFilter):
-    title = 'Tags'
-    parameter_name = 'tags'
-    field_name = 'tags'
-
-    def queryset(self, request: HttpRequest, queryset: QuerySet[Agent]) -> QuerySet[Agent]:
-        if self.value():
-            search_term = request.GET.get(f'{self.parameter_name}_term', '')
-            if search_term:
-                return queryset.filter(tags__contains=[search_term])
-        return queryset
-
-
-class AgentAdmin(SubAdmin):
+class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin): # type: ignore
     model = Agent
+    form = AgentAdminForm
     fieldsets = (
         (None, {'fields': ('first_name', 'last_name', 'status')}),
         ('Contact', {'fields': ('token', 'email', 'phone_number')}),
         ('Metadata', {'fields': ('tags',)}),
     )
     
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'status', 'tags')
+    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'status', 'get_tags')
     list_filter = (
         FirstNameFilter,
         LastNameFilter,
         EmailFilter,
         PhoneNumberFilter,
         TokenFilter,
-        TagsFilter,
-        'status'
+        'status',
+        'tags'
     )
-    search_fields = ('first_name', 'last_name', 'email', 'phone_number', 'token', 'tags')
+    search_fields = ('first_name', 'last_name', 'email', 'phone_number', 'token', 'status', 'tags__name')
     ordering = ('first_name', 'last_name', 'email', 'phone_number', 'status')
     inlines = [TrackingDataInline]
+
+    @admin.display(description='Tags')
+    def get_tags(self, obj: Agent) -> str:
+        """Return a comma-separated list of tags."""
+        agent_tags: QuerySet[AgentTag] = obj.tags.all()  # type: ignore[attr-defined]
+        
+        return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""
+
 
 class CampaignAdmin(SubAdmin):
     model = Campaign
@@ -155,3 +107,5 @@ class CampaignAdmin(SubAdmin):
         )}),
     )
     subadmins = [AgentAdmin]
+
+TagulousAdmin.enhance(Agent, AgentAdmin) # type: ignore

@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.forms',
     'django_htmx',
     'subadmin',
+    'tagulous',
     'mgmt',
     'tracking'
 ]
@@ -176,4 +177,22 @@ def show_toolbar(_: Any) -> bool:
 
 DEBUG_TOOLBAR_CONFIG: dict[str, Any] = {
     'SHOW_TOOLBAR_CALLBACK': show_toolbar,
+}
+
+SERIALIZATION_MODULES = {
+    'xml':    'tagulous.serializers.xml_serializer',
+    'json':   'tagulous.serializers.json',
+    'python': 'tagulous.serializers.python',
+    'yaml':   'tagulous.serializers.pyyaml',
+}
+
+TAGULOUS_AUTOCOMPLETE_JS = (
+    "tagulous/lib/jquery.js",
+    "tagulous/lib/select2-4/js/select2.full.min.js",
+    "tagulous/tagulous.js",
+    "tagulous/adaptor/select2-4.js",
+)
+
+TAGULOUS_AUTOCOMPLETE_CSS = {
+    'all': ['tagulous/lib/select2-4/css/select2.min.css']
 }

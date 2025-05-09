@@ -1,10 +1,10 @@
 from __future__ import annotations
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from tracking.common import AgentStatus, TrackingType
 from typing import List, Optional, Dict, Any
 from tracking.api.types import IpData, UserAgentData, WarningStatus
 from config.common import HeaderData
+import tagulous.models # type: ignore
 
 
 class Campaign(models.Model):
@@ -68,6 +68,16 @@ class Campaign(models.Model):
         return self.name
 
 
+class AgentTag(tagulous.models.TagModel):
+    class TagulousMeta:
+        initial = ['active', 'inactive', 'suspended', 'verified']
+        force_lowercase = True
+        max_count = 10
+        space_delimiter = False
+        autocomplete_view = 'agent_tags_autocomplete'
+        autocomplete_limit = 10
+
+
 class Agent(models.Model):
     campaign = models.ForeignKey(
         Campaign,
@@ -80,17 +90,15 @@ class Agent(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
-    tags = ArrayField(
-        models.CharField(max_length=50),
-        blank=True,
-        null=True,
-        help_text="Tags for categorizing agents"
-    )
-
     status = models.CharField(
         max_length=10,
         choices=AgentStatus.choices(),
         default=AgentStatus.ACTIVE.value
+    )
+    tags = tagulous.models.TagField(
+        to='tracking.AgentTag',
+        help_text="Enter tags to categorize this agent (max 10 tags)",
+        blank=True
     )
 
     def __str__(self):
