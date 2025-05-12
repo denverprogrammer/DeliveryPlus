@@ -43,7 +43,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     list_per_page = 20
 
     @admin.display(description='Details')
-    def get_tags(self, obj: Agent) -> str:
+    def view_details(self, obj: Agent) -> str:
         """Return a comma-separated list of tags."""
         url = reverse('tracking_data_dialog', args=[obj.pk])
         return format_html(
