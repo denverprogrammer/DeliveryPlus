@@ -9,28 +9,34 @@ ls -lac
 python manage.py wait_for_db
 sleep 10
 
+if [ "$DEBUG" = 1 ]; then
+    echo "Making migrations"
+    python manage.py makemigrations mgmt
+    python manage.py makemigrations tracking
+fi
 
+echo "Migrating"
+python manage.py migrate --no-input
+
+echo "Loading admin interface themes"
+python manage.py loaddata admin_interface_theme_django.json
+python manage.py loaddata admin_interface_theme_bootstrap.json
+python manage.py loaddata admin_interface_theme_foundation.json
+python manage.py loaddata admin_interface_theme_uswds.json
+
+echo "Collecting static files"
+python manage.py collectstatic --no-input --clear
 
 # Run migrations in development mode
 if [ "$DEBUG" = 1 ]
 then
-    python manage.py makemigrations mgmt
-    python manage.py makemigrations tracking
-    python manage.py migrate --no-input
-    
     # Use Django's development server in debug mode with debugger enabled
     # Disable frozen modules to fix debugger warnings
     # python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py runserver 0.0.0.0:8080
+    echo "Running development server"
     python manage.py runserver 0.0.0.0:8080
 else
-    python manage.py loaddata admin_interface_theme_django.json
-    python manage.py loaddata admin_interface_theme_bootstrap.json
-    python manage.py loaddata admin_interface_theme_foundation.json
-    python manage.py loaddata admin_interface_theme_uswds.json
-
-    # Production mode with Gunicorn
-    python manage.py collectstatic --no-input --clear
-
+    echo "Running production server"
     gunicorn config.asgi:application \
         -w 2 \
         -k uvicorn.workers.UvicornWorker \
@@ -40,5 +46,5 @@ else
         --log-level debug \
         --bind 0.0.0.0:8080
 fi
-   
+
 exec "$@"

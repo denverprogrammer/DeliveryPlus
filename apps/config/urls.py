@@ -10,6 +10,7 @@ urlpatterns = [
     path('mgmt/', include('mgmt.urls')),
     path('tracking/', include('tracking.urls')),
     path('admin/', admin.site.urls),
+    path('api/', include('api.urls')),
     path('', views.home_page_view, name='home'),
 ]
 

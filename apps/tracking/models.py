@@ -2,7 +2,7 @@ from __future__ import annotations
 from django.db import models
 from tracking.common import AgentStatus, TrackingType
 from typing import List, Optional, Dict, Any
-from tracking.api.types import IpData, UserAgentData, WarningStatus
+from common.types import IpData, UserAgentData, WarningStatus
 from config.common import HeaderData
 import tagulous.models # type: ignore
 

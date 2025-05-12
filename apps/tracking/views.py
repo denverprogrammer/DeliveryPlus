@@ -1,7 +1,7 @@
-from tracking.api.functions import IpData, LocaleData, LocationData, TimeData, UserAgentData, get_ip_data, get_locale_data, get_location_data, get_time_data, get_user_agent_data
+from common.functions import IpData, LocaleData, LocationData, TimeData, UserAgentData, get_ip_data, get_locale_data, get_location_data, get_time_data, get_user_agent_data
 from config.common import HeaderData
 from config import settings
-from tracking.api.api import TwilioApiClient, TwilioLookupResponse
+from common.api import TwilioApiClient, TwilioLookupResponse
 from tracking.models import TrackingData, Agent
 from tracking.forms import TrackingDataViewForm
 from django.http import HttpRequest, JsonResponse, HttpResponse
@@ -64,7 +64,6 @@ def track_view(request: HttpRequest, token: Optional[str] = None) -> HttpRespons
 
     # For GET request: serve Django template
     return render(request, 'tracking/track.html', {})
-
 
 @csrf_exempt
 def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> HttpResponse:

@@ -33,6 +33,7 @@ ALLOWED_HOSTS = list(filter(None, os.environ.get('ALLOWED_HOSTS', '').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    'django_extensions',
     'django_json_widget',
     'admin_interface',
     'colorfield',
@@ -47,6 +48,8 @@ INSTALLED_APPS = [
     'django_htmx',
     'subadmin',
     'tagulous',
+    'rest_framework',
+    'django_filters',
     'mgmt',
     'tracking'
 ]
@@ -179,13 +182,6 @@ DEBUG_TOOLBAR_CONFIG: dict[str, Any] = {
     'SHOW_TOOLBAR_CALLBACK': show_toolbar,
 }
 
-SERIALIZATION_MODULES = {
-    'xml':    'tagulous.serializers.xml_serializer',
-    'json':   'tagulous.serializers.json',
-    'python': 'tagulous.serializers.python',
-    'yaml':   'tagulous.serializers.pyyaml',
-}
-
 TAGULOUS_AUTOCOMPLETE_JS = (
     "tagulous/lib/jquery.js",
     "tagulous/lib/select2-4/js/select2.full.min.js",
@@ -195,4 +191,22 @@ TAGULOUS_AUTOCOMPLETE_JS = (
 
 TAGULOUS_AUTOCOMPLETE_CSS = {
     'all': ['tagulous/lib/select2-4/css/select2.min.css']
+}
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
 }

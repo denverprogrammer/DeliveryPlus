@@ -1,7 +1,7 @@
-from tracking.api.types import IPGeolocationResponse, IpData, LocaleData, LocationData, TimeData, UserAgentData
+from common.types import IPGeolocationResponse, IpData, LocaleData, LocationData, TimeData, UserAgentData
 from config.common import IpAddressInfo, LocationInfo, HeaderData
 from config import settings
-from tracking.api.api import IPGeolocationApiClient, UserStackApiClient, VpnApiClient
+from common.api import IPGeolocationApiClient, UserStackApiClient, VpnApiClient
 from tracking.common import TrackingType
 from django.http import HttpRequest
 from typing import Optional

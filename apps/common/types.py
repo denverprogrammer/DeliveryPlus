@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional, TypeVar, Generic, List
+from typing import Any, Dict, Optional, TypeVar, Generic, List, TypedDict
 from pydantic import BaseModel, Field
 from datetime import datetime
 import json
+from enum import Enum
 
 from config.common import LocationInfo
 
@@ -480,3 +481,48 @@ class TimeData(GenericBaseModel[str, datetime]):
 
     def getTimezone(self) -> Optional[str]:
         return self.selected if self.selected else None
+
+
+class PublishingType(str, Enum):
+    """Types of publishing methods."""
+    WEBSITE = 'website'
+    SOCIAL_MEDIA = 'social_media'
+    EMAIL = 'email'
+    SMS = 'sms'
+    DIRECT_MAIL = 'direct_mail'
+
+    @classmethod
+    def choices(cls) -> List[tuple[str, str]]:
+        return [(choice.value, choice.value.replace('_', ' ').title()) for choice in cls]
+
+class TrackingType(str, Enum):
+    """Types of tracking methods."""
+    GPS = 'gps'
+    IP = 'ip'
+    BROWSER = 'browser'
+    USER_AGENT = 'user_agent'
+    COOKIES = 'cookies'
+
+    @classmethod
+    def choices(cls) -> List[tuple[str, str]]:
+        return [(choice.value, choice.value.replace('_', ' ').title()) for choice in cls]
+
+class TrackingData(TypedDict):
+    """Type for tracking data."""
+    server_timestamp: str
+    http_method: str
+    ip_address: str
+    ip_source: str
+    os: str
+    browser: str
+    platform: str
+    locale: str
+    client_time: str
+    client_timezone: str
+    latitude: Optional[float]
+    longitude: Optional[float]
+    location_source: str
+    ip_data: Dict[str, Any]
+    user_agent_data: Dict[str, Any]
+    header_data: Dict[str, Any]
+    form_data: Dict[str, Any]

@@ -42,14 +42,14 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     list_filter = ('http_method',)
     list_per_page = 20
 
-    def view_details(self, obj: TrackingData) -> str:
-        """Display a link to view the details in a modal dialog."""
+    @admin.display(description='Details')
+    def get_tags(self, obj: Agent) -> str:
+        """Return a comma-separated list of tags."""
         url = reverse('tracking_data_dialog', args=[obj.pk])
         return format_html(
             '<a href="{}" class="button" onclick="return showRelatedObjectLookupPopup(this);">View Details</a>',
             f"{url}?_popup=1"
         )
-    view_details.short_description = 'Details'  # type: ignore
 
     def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
         return False

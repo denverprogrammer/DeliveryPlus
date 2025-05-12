@@ -9,7 +9,7 @@ import requests
 from pydantic import BaseModel
 from twilio.base.exceptions import TwilioRestException  # type: ignore
 from twilio.rest import Client as TwilioClient # type: ignore
-from tracking.api.types import IPGeolocationResponse, IpStackResponse, TwilioLookupResponse, UserStackResponse, VpnApiResponse  # type: ignore
+from common.types import IPGeolocationResponse, IpStackResponse, TwilioLookupResponse, UserStackResponse, VpnApiResponse  # type: ignore
 
 
 ClientType = TypeVar('ClientType', bound=BaseModel)
