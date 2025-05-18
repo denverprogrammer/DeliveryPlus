@@ -12,11 +12,12 @@ from tracking.filters import (
     TokenFilter,
 )
 from tracking.forms import CampaignAdminForm, AgentAdminForm
-from tracking.models import TrackingData, Agent, Campaign
+from tracking.models import AgentTag, TrackingData, Agent, Campaign
 from tagulous import admin as TagulousAdmin
+from django.db.models import QuerySet
 
 
-class TrackingDataInline(admin.TabularInline):  # type: ignore
+class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
     model = TrackingData
     extra = 0
     can_delete = False
@@ -58,12 +59,12 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
     def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
         return False
 
-    def get_queryset(self, request: HttpRequest):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
         return super().get_queryset(request).select_related("agent")
 
 
 # TODO: SubAdmin when to version that allows Django 5.2
-class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin):  # type: ignore[override]
+class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin):  # type: ignore[misc]
     model = Agent
     form = AgentAdminForm
     fieldsets = (
@@ -92,14 +93,14 @@ class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin):  # type: ignore[over
         "tags__name",
     )
     ordering = ("first_name", "last_name", "email", "phone_number", "status")
-    inlines = [TrackingDataInline]
+    inlines = (TrackingDataInline,)
 
     @admin.display(description="Tags")
     def get_tags(self, obj: Agent) -> str:
         """Return a comma-separated list of tags."""
-        agent_tags = obj.tags.all()  # type: ignore
+        agent_tags: QuerySet[AgentTag] = obj.tags.all()
 
-        return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""  # type: ignore
+        return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""
 
 
 class CampaignAdmin(SubAdmin):

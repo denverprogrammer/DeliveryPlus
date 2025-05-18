@@ -12,7 +12,7 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
     field_name = ""
 
     def lookups(self, request: HttpRequest, model_admin: Any) -> List[Tuple[str, str]]:
-        return [(self.field_name, self.title)]
+        return [(self.field_name, str(self.title))]  # type: ignore[arg-type]
 
     def queryset(self, request: HttpRequest, queryset: QuerySet[Agent]) -> QuerySet[Agent]:
         if self.value():

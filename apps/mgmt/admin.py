@@ -12,7 +12,7 @@ class CompanyAdmin(RootSubAdmin):
 
 
 @admin.register(User)
-class CustomUserAdmin(admin.ModelAdmin):  # type: ignore
+class CustomUserAdmin(admin.ModelAdmin[User]):
     list_display = ("username", "email", "company", "is_active", "is_staff")
     search_fields = ("username", "email")
     list_filter = ("company", "is_active", "is_staff")

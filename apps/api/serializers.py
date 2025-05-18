@@ -1,13 +1,14 @@
-from rest_framework import serializers
-
-# from tracking.models import Agent, Campaign, TrackingData, AgentTag
+from rest_framework.serializers import ModelSerializer
 from tracking.models import AgentTag
 
 
-class AgentTagSerializer(serializers.ModelSerializer):
-    class Meta:
+class AgentTagSerializer(ModelSerializer[AgentTag]):
+    class Meta:  # type: ignore[misc]
         model = AgentTag
-        fields = ["id", "name"]
+        fields = ("id", "name")
+
+
+# from tracking.models import Agent, Campaign, TrackingData, AgentTag
 
 
 # class AgentSerializer(serializers.ModelSerializer):

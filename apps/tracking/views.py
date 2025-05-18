@@ -19,7 +19,7 @@ from django.http import HttpRequest, JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from typing import Optional
-from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.admin.views.decorators import staff_member_required  # type: ignore[attr-defined]
 from django.template.response import TemplateResponse
 
 

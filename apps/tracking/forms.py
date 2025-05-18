@@ -1,30 +1,29 @@
 from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
-from typing import Any
 from tagulous import forms as TagulousForms
 
 
-class AgentForm(forms.ModelForm):
-    class Meta:
-        model = Agent
-        fields = [
-            "campaign",
-            "token",
-            "first_name",
-            "last_name",
-            "email",
-            "phone_number",
-            "status",
-        ]
+# class AgentForm(forms.ModelForm[Agent]):
+#     class Meta:
+#         model = Agent
+#         fields = [
+#             "campaign",
+#             "token",
+#             "first_name",
+#             "last_name",
+#             "email",
+#             "phone_number",
+#             "status",
+#         ]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        if "campaign" in self.fields:
-            self.fields["campaign"].queryset = Campaign.objects.all()
+#     def __init__(self, *args: Any, **kwargs: Any) -> None:
+#         super().__init__(*args, **kwargs)
+#         if "campaign" in self.fields:
+#             self.fields["campaign"].queryset = Campaign.objects.all()
 
 
-class CampaignAdminForm(forms.ModelForm):
+class CampaignAdminForm(forms.ModelForm[Campaign]):
     publishing_type = forms.MultipleChoiceField(
         choices=PublishingType.choices(), required=False, widget=forms.CheckboxSelectMultiple
     )
@@ -176,7 +175,7 @@ class TrackingDataViewForm(forms.Form):
         )
 
 
-class AgentAdminForm(forms.ModelForm):
+class AgentAdminForm(forms.ModelForm[Agent]):
     class Meta:
         model = Agent
         fields = "__all__"

@@ -3,7 +3,7 @@ from django import forms
 from mgmt.models import Company
 
 
-class CompanyForm(forms.ModelForm):
+class CompanyForm(forms.ModelForm[Company]):
     class Meta:
         model = Company
         fields = [
