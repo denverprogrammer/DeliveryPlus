@@ -1,5 +1,5 @@
-from rest_framework import viewsets # type: ignore
-from rest_framework.permissions import IsAuthenticated # type: ignore
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 from tracking.models import AgentTag
 from api.serializers import  AgentTagSerializer
 

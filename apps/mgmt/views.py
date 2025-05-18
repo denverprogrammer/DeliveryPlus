@@ -12,13 +12,19 @@ from mgmt.models import User
 
 @login_required
 def dashboard_view(request: HttpRequest) -> HttpResponse:
-    user: User = request.user  # type: ignore
+    if not isinstance(request.user, User):
+        return redirect('login')
+
+    user: User = request.user
 
     return render(request, 'mgmt/dashboard.html', {'company': user.company})
 
 @login_required
 def edit_company_view(request: HttpRequest) -> HttpResponse:
-    user: User = request.user  # type: ignore
+    if not isinstance(request.user, User):
+        return redirect('login')
+
+    user: User = request.user
     form = CompanyForm(request.POST or None, instance=user.company)
 
     if request.method == 'POST' and form.is_valid():
@@ -33,14 +39,20 @@ def edit_company_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def agent_list_view(request: HttpRequest) -> HttpResponse:
-    user: User = request.user  # type: ignore
+    if not isinstance(request.user, User):
+        return redirect('login')
+
+    user: User = request.user
     agents = Agent.objects.filter(campaign__company=user.company)
 
     return render(request, 'mgmt/agent_list.html', {'agents': agents})
 
 @login_required
 def agent_create_view(request: HttpRequest) -> HttpResponse:
-    user: User = request.user  # type: ignore
+    if not isinstance(request.user, User):
+        return redirect('login')
+
+    user: User = request.user
     form = AgentForm(request.POST or None)
 
     if form.is_bound:
@@ -55,7 +67,10 @@ def agent_create_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def agent_edit_view(request: HttpRequest, agent_id: int) -> HttpResponse:
-    user: User = request.user  # type: ignore
+    if not isinstance(request.user, User):
+        return redirect('login')
+
+    user: User = request.user
     agent = get_object_or_404(Agent, id=agent_id, campaign__company=user.company)
     form = AgentForm(request.POST or None, instance=agent)
     form.fields['campaign'].queryset = Campaign.objects.filter(company=user.company)

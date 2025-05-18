@@ -1,4 +1,4 @@
-from rest_framework import serializers # type: ignore
+from rest_framework import serializers
 # from tracking.models import Agent, Campaign, TrackingData, AgentTag
 from tracking.models import AgentTag
 

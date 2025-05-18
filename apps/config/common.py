@@ -3,7 +3,7 @@ from typing import Optional
 from django.http import HttpRequest
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
-from ipware import get_client_ip  # type: ignore
+from ipware import get_client_ip
 
 
 class IpAddressInfo(BaseModel):

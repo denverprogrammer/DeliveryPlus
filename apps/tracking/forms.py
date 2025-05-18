@@ -2,7 +2,7 @@ from django import forms
 from tracking.models import Agent, Campaign
 from tracking.common import PublishingType, TrackingType
 from typing import Any
-from tagulous import forms as TagulousForms # type: ignore
+from tagulous import forms as TagulousForms 
 
 
 class AgentForm(forms.ModelForm):

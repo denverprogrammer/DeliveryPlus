@@ -4,7 +4,7 @@ from tracking.common import AgentStatus, TrackingType
 from typing import List, Optional, Dict, Any
 from common.types import IpData, UserAgentData, WarningStatus
 from config.common import HeaderData
-import tagulous.models # type: ignore
+import tagulous.models
 
 
 class Campaign(models.Model):

@@ -7,9 +7,9 @@ import json
 import redis
 import requests
 from pydantic import BaseModel
-from twilio.base.exceptions import TwilioRestException  # type: ignore
-from twilio.rest import Client as TwilioClient # type: ignore
-from common.types import IPGeolocationResponse, IpStackResponse, TwilioLookupResponse, UserStackResponse, VpnApiResponse  # type: ignore
+from twilio.base.exceptions import TwilioRestException
+from twilio.rest import Client as TwilioClient
+from common.types import IPGeolocationResponse, IpStackResponse, TwilioLookupResponse, UserStackResponse, VpnApiResponse
 
 
 ClientType = TypeVar('ClientType', bound=BaseModel)

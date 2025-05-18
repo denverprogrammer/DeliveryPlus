@@ -1,19 +1,14 @@
 from django.contrib import admin
-from typing import Any, List, Tuple, Type, Dict
-# from django.utils.safestring import mark_safe
+from typing import Any, List, Tuple
 from django.http import HttpRequest
-from subadmin import SubAdmin  # type: ignore
 from tracking.models import Agent
-from django.db.models import QuerySet, Model
+from django.db.models import QuerySet
 
 
 class BaseTextFieldFilter(admin.SimpleListFilter):
     """Base class for text field filters."""
     template = 'admin/text_field_filter.html'
     field_name = ''
-
-    def __init__(self, request: HttpRequest, params: Dict[str, Any], model: Type[Model], model_admin: Any) -> None:
-        super().__init__(request, params, model, model_admin) # type: ignore
 
     def lookups(self, request: HttpRequest, model_admin: Any) -> List[Tuple[str, str]]:
         return [(self.field_name, self.title)]

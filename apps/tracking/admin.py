@@ -3,7 +3,7 @@ from typing import Optional, Any
 from django.utils.html import format_html
 from django.http import HttpRequest
 from django.urls import reverse
-from subadmin import SubAdmin  # type: ignore
+from subadmin import SubAdmin
 from tracking.filters import (
     EmailFilter, 
     FirstNameFilter,
@@ -13,10 +13,10 @@ from tracking.filters import (
 )
 from tracking.forms import CampaignAdminForm, AgentAdminForm
 from tracking.models import TrackingData, Agent, Campaign, AgentTag
-from tagulous import admin as TagulousAdmin # type: ignore
+from tagulous import admin as TagulousAdmin
 from django.db.models import QuerySet
 
-class TrackingDataInline(admin.TabularInline):  # type: ignore
+class TrackingDataInline(admin.TabularInline): # type: ignore
     model = TrackingData
     extra = 0
     can_delete = False
@@ -61,7 +61,7 @@ class TrackingDataInline(admin.TabularInline):  # type: ignore
         return super().get_queryset(request).select_related('agent')
 
 
-class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin): # type: ignore
+class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin):
     model = Agent
     form = AgentAdminForm
     fieldsets = (
@@ -87,7 +87,7 @@ class AgentAdmin(SubAdmin, TagulousAdmin.TaggedModelAdmin): # type: ignore
     @admin.display(description='Tags')
     def get_tags(self, obj: Agent) -> str:
         """Return a comma-separated list of tags."""
-        agent_tags: QuerySet[AgentTag] = obj.tags.all()  # type: ignore[attr-defined]
+        agent_tags: QuerySet[AgentTag] = obj.tags.all()
         
         return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""
 
@@ -108,4 +108,4 @@ class CampaignAdmin(SubAdmin):
     )
     subadmins = [AgentAdmin]
 
-TagulousAdmin.enhance(Agent, AgentAdmin) # type: ignore
+TagulousAdmin.enhance(Agent, AgentAdmin)

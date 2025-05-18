@@ -26,7 +26,6 @@
         "--strict-optional",
         "--strict-equality"
     ],
-    "python.analysis.typeCheckingMode": "strict",
     "python.analysis.diagnosticMode": "workspace",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.extraPaths": [
@@ -40,26 +39,10 @@
         "reportOptionalCall": "warning",
         "reportOptionalIterable": "warning",
         "reportOptionalContextManager": "warning",
-        "reportOptionalOperand": "warning"
-    },
-    "python.analysis.ignore": [
-        "**/migrations/**",
-        "**/__init__.py",
-        "**/setup.py"
-    ],
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}"
-    ],
-    "python.analysis.autoSearchPaths": true,
-    "python.analysis.diagnosticSeverityOverrides": {
-        "reportGeneralTypeIssues": "warning",
-        "reportOptionalMemberAccess": "warning",
-        "reportOptionalSubscript": "warning",
-        "reportOptionalCall": "warning",
-        "reportOptionalIterable": "warning",
-        "reportOptionalContextManager": "warning",
-        "reportOptionalOperand": "warning"
+        "reportOptionalOperand": "warning",
+        "reportMissingTypeStubs": "none",
+        "reportMissingTypeArgument": "none",
+        "reportMissingParameterType": "warning",
     },
     "python.analysis.ignore": [
         "**/migrations/**",
