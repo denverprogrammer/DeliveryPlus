@@ -7,8 +7,8 @@ router = DefaultRouter()
 # router.register(r'agents', AgentViewSet)
 # router.register(r'campaigns', CampaignViewSet)
 # router.register(r'tracking-data', TrackingDataViewSet)
-router.register(r'tags', AgentTagViewSet) # type: ignore
+router.register(r"tags", AgentTagViewSet)  # type: ignore
 
 urlpatterns = [
-    path('', include(router.urls)), # type: ignore
-] 
+    path("", include(router.urls)),  # type: ignore
+]

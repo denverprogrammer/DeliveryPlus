@@ -4,8 +4,8 @@ from enum import Enum
 
 
 class TrackingType(str, Enum):
-    SERVER = 'server'
-    HEADER = 'client'
+    SERVER = "server"
+    HEADER = "client"
 
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:
@@ -13,8 +13,8 @@ class TrackingType(str, Enum):
 
 
 class AgentStatus(str, Enum):
-    ACTIVE = 'active'
-    INACTIVE = 'inactive'
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:
@@ -22,8 +22,8 @@ class AgentStatus(str, Enum):
 
 
 class PublishingType(str, Enum):
-    EMAIL = 'email'
-    PHONE = 'phone'
+    EMAIL = "email"
+    PHONE = "phone"
 
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:

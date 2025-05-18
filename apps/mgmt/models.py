@@ -13,17 +13,13 @@ class Company(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        verbose_name_plural = 'Companies'
-        
+        verbose_name_plural = "Companies"
+
     def __str__(self):
         return self.name
 
 
 class User(AbstractUser):
     company = models.ForeignKey(
-        Company,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='users'
+        Company, on_delete=models.SET_NULL, null=True, blank=True, related_name="users"
     )
