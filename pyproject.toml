@@ -234,6 +234,7 @@ exclude = [
     "venv.bak",
     ".poetry",
     "migrations",
+    "*.pyi",
 ]
 per-file-ignores = [
     "__init__.py:F401",
