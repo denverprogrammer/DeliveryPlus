@@ -1,6 +1,9 @@
+"""Common enums used across the application."""
+
 from __future__ import annotations
-from typing import List, Tuple
 from enum import Enum
+from typing import List
+from typing import Tuple
 
 
 class TrackingType(str, Enum):

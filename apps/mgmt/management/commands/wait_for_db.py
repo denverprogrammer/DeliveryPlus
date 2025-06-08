@@ -1,5 +1,8 @@
 import time
-from typing import Any, Dict, Tuple
+
+from typing import Any
+from typing import Dict
+from typing import Tuple
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.utils import OperationalError

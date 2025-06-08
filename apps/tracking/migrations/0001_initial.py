@@ -3,8 +3,10 @@
 import django.db.models.deletion
 import tagulous.models.fields
 import tagulous.models.models
-import tracking.common
-from django.db import migrations, models
+
+from common.enums import TrackingType
+from django.db import migrations
+from django.db import models
 
 
 class Migration(migrations.Migration):
@@ -76,7 +78,7 @@ class Migration(migrations.Migration):
                     "ip_precedence",
                     models.CharField(
                         choices=[("server", "Server"), ("client", "Header")],
-                        default=tracking.common.TrackingType["SERVER"],
+                        default=TrackingType.SERVER.value,
                         help_text="Determines whether to use server or client IP for tracking",
                         max_length=10,
                     ),
@@ -85,7 +87,7 @@ class Migration(migrations.Migration):
                     "location_precedence",
                     models.CharField(
                         choices=[("server", "Server"), ("client", "Header")],
-                        default=tracking.common.TrackingType["SERVER"],
+                        default=TrackingType.SERVER.value,
                         help_text="Determines whether to use server or client location for tracking",
                         max_length=10,
                     ),
@@ -94,7 +96,7 @@ class Migration(migrations.Migration):
                     "locale_precedence",
                     models.CharField(
                         choices=[("server", "Server"), ("client", "Header")],
-                        default=tracking.common.TrackingType["SERVER"],
+                        default=TrackingType.SERVER.value,
                         help_text="Determines whether to use server or client locale for tracking",
                         max_length=10,
                     ),
@@ -103,7 +105,7 @@ class Migration(migrations.Migration):
                     "browser_precedence",
                     models.CharField(
                         choices=[("server", "Server"), ("client", "Header")],
-                        default=tracking.common.TrackingType["SERVER"],
+                        default=TrackingType.SERVER.value,
                         help_text="Determines whether to use server or client browser information for tracking",
                         max_length=10,
                     ),
@@ -112,7 +114,7 @@ class Migration(migrations.Migration):
                     "time_precedence",
                     models.CharField(
                         choices=[("server", "Server"), ("client", "Header")],
-                        default=tracking.common.TrackingType["SERVER"],
+                        default=TrackingType.SERVER.value,
                         help_text="Determines whether to use server or client time for tracking",
                         max_length=10,
                     ),
@@ -180,7 +182,7 @@ class Migration(migrations.Migration):
                         _set_tag_meta=True,
                         blank=True,
                         help_text="Enter tags to categorize this agent (max 10 tags)",
-                        to="tracking.agenttag",
+                        to="tracking.AgentTag",
                     ),
                 ),
                 (
@@ -243,9 +245,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "_user_agent_data",
-                    models.JSONField(
-                        blank=True, db_column="user_agent_data", null=True
-                    ),
+                    models.JSONField(blank=True, db_column="user_agent_data", null=True),
                 ),
                 (
                     "_header_data",

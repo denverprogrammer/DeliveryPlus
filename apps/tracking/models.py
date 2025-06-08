@@ -1,14 +1,29 @@
 from __future__ import annotations
-from django.db import models
-from tracking.common import AgentStatus, TrackingType
-from typing import List, Optional, Dict, Any, TypeVar, Generic
-from common.types import IpData, UserAgentData, WarningStatus
-from config.common import HeaderData
+import datetime
+
+from typing import Any
+from typing import Dict
+from typing import Generic
+from typing import List
+from typing import Optional
+from typing import TypeVar
 import tagulous.models
+
+from common.api_types import IpData
+from common.api_types import UserAgentData
+from common.api_types import WarningStatus
+from common.enums import AgentStatus
+from common.enums import TrackingType
+from common.models import HeaderData
+from django.db import models
+from django.db.models import Manager
+from django.db.models import ManyToManyField
+from django.db.models import Model
+
+# from django.db.models import QuerySet
 from django_stubs_ext.db.models import TypedModelMeta
 from mgmt.models import Company
-import datetime
-from django.db.models import Manager, Model, ManyToManyField
+
 
 T = TypeVar("T", bound=Model)
 
@@ -17,21 +32,18 @@ class TagManager(Manager[T], Generic[T]):
     pass
 
 
-class Campaign(models.Model):
-    class Meta(TypedModelMeta):
-        verbose_name_plural = "Campaigns"
-
-    company: models.ForeignKey[Company, Company] = models.ForeignKey(
-        "mgmt.Company", on_delete=models.CASCADE, related_name="campaigns", null=True, blank=True
+class Campaign(models.Model):  # type: ignore[django-manager-missing]
+    company: models.ForeignKey[Company, Optional[Company]] = models.ForeignKey(
+        "mgmt.Company", on_delete=models.CASCADE, related_name="campaigns"
     )
     name: models.CharField[str, str] = models.CharField(max_length=255)
-    description: models.TextField[str, str] = models.TextField(blank=True, null=True)
+    description: models.TextField[str, Optional[str]] = models.TextField(blank=True, null=True)
 
-    publishing_type: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    publishing_type: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
-    landing_page_url: models.URLField[str, str] = models.URLField(blank=True, null=True)
-    tracking_pixel: models.TextField[str, str] = models.TextField(blank=True, null=True)
+    landing_page_url: models.URLField[str, Optional[str]] = models.URLField(blank=True, null=True)
+    tracking_pixel: models.TextField[str, Optional[str]] = models.TextField(blank=True, null=True)
 
     ip_precedence: models.CharField[str, str] = models.CharField(
         max_length=10,
@@ -68,22 +80,27 @@ class Campaign(models.Model):
         help_text="Determines whether to use server or client time for tracking",
     )
 
-    ip_tracking: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    ip_tracking: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
-    location_tracking: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    location_tracking: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
-    locale_tracking: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    locale_tracking: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
-    time_tracking: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    time_tracking: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
-    browser_tracking: models.JSONField[list[Any], list[Any]] = models.JSONField(
+    browser_tracking: models.JSONField[list[Any], Optional[list[Any]]] = models.JSONField(
         default=list, blank=True, null=True
     )
     # has_phone = models.BooleanField(default=False)
+
+    objects: Manager[Campaign] = Manager["Campaign"]()
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Campaigns"
 
     def __str__(self) -> str:
         return self.name
@@ -102,18 +119,19 @@ class AgentTag(tagulous.models.TagModel):
 
 
 class Agent(models.Model):
-    class Meta(TypedModelMeta):
-        verbose_name_plural = "Agents"
-
     campaign: models.ForeignKey[Campaign, Campaign] = models.ForeignKey(
         Campaign, on_delete=models.CASCADE, related_name="agents"
     )
     token: models.CharField[str, str] = models.CharField(max_length=255)
 
-    first_name: models.CharField[str, str] = models.CharField(max_length=100, blank=True, null=True)
-    last_name: models.CharField[str, str] = models.CharField(max_length=100, blank=True, null=True)
-    email: models.EmailField[str, str] = models.EmailField(blank=True, null=True)
-    phone_number: models.CharField[str, str] = models.CharField(
+    first_name: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=100, blank=True, null=True
+    )
+    last_name: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=100, blank=True, null=True
+    )
+    email: models.EmailField[str, Optional[str]] = models.EmailField(blank=True, null=True)
+    phone_number: models.CharField[str, Optional[str]] = models.CharField(
         max_length=20, blank=True, null=True
     )
     status: models.CharField[str, str] = models.CharField(
@@ -125,14 +143,16 @@ class Agent(models.Model):
         blank=True,
     )
 
+    objects: Manager[Agent] = Manager["Agent"]()
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Agents"
+
     def __str__(self) -> str:
         return f'{self.first_name or ""} {self.last_name or ""}'.strip() or self.token
 
 
 class TrackingData(models.Model):
-    class Meta(TypedModelMeta):
-        verbose_name_plural = "Tracking Data"
-
     agent: models.ForeignKey[Agent, Agent] = models.ForeignKey(
         Agent, related_name="tracking", on_delete=models.CASCADE
     )
@@ -140,25 +160,37 @@ class TrackingData(models.Model):
     server_timestamp: models.DateTimeField[datetime.datetime, datetime.datetime] = (
         models.DateTimeField(auto_now_add=True)
     )
-    ip_address: models.GenericIPAddressField[str, str] = models.GenericIPAddressField(
-        null=True, blank=True
+    ip_address: models.GenericIPAddressField[Optional[str], Optional[str]] = (
+        models.GenericIPAddressField(null=True, blank=True)
     )
-    ip_source: models.CharField[str, str] = models.CharField(
+    ip_source: models.CharField[Optional[str], Optional[str]] = models.CharField(
         max_length=10, choices=TrackingType.choices(), null=True, blank=True
     )
-    os: models.CharField[str, str] = models.CharField(max_length=100, null=True, blank=True)
-    browser: models.CharField[str, str] = models.CharField(max_length=100, null=True, blank=True)
-    platform: models.CharField[str, str] = models.CharField(max_length=100, null=True, blank=True)
-    locale: models.CharField[str, str] = models.CharField(max_length=10, null=True, blank=True)
-    client_time: models.DateTimeField[datetime.datetime, datetime.datetime] = models.DateTimeField(
-        null=True, blank=True
+    os: models.CharField[Optional[str], Optional[str]] = models.CharField(
+        max_length=100, null=True, blank=True
     )
-    client_timezone: models.CharField[str, str] = models.CharField(
+    browser: models.CharField[Optional[str], Optional[str]] = models.CharField(
+        max_length=100, null=True, blank=True
+    )
+    platform: models.CharField[Optional[str], Optional[str]] = models.CharField(
+        max_length=100, null=True, blank=True
+    )
+    locale: models.CharField[Optional[str], Optional[str]] = models.CharField(
+        max_length=10, null=True, blank=True
+    )
+    client_time: models.DateTimeField[Optional[datetime.datetime], Optional[datetime.datetime]] = (
+        models.DateTimeField(null=True, blank=True)
+    )
+    client_timezone: models.CharField[Optional[str], Optional[str]] = models.CharField(
         max_length=50, null=True, blank=True
     )
-    latitude: models.FloatField[float, float] = models.FloatField(null=True, blank=True)
-    longitude: models.FloatField[float, float] = models.FloatField(null=True, blank=True)
-    location_source: models.CharField[str, str] = models.CharField(
+    latitude: models.FloatField[Optional[float], Optional[float]] = models.FloatField(
+        null=True, blank=True
+    )
+    longitude: models.FloatField[Optional[float], Optional[float]] = models.FloatField(
+        null=True, blank=True
+    )
+    location_source: models.CharField[Optional[str], Optional[str]] = models.CharField(
         max_length=10, choices=TrackingType.choices(), null=True, blank=True
     )
     _ip_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
@@ -176,6 +208,9 @@ class TrackingData(models.Model):
 
     # phone_data = models.JSONField(null=True, blank=True)
 
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Tracking Data"
+
     @property
     def ip_data(self) -> Optional[IpData]:
         if not self._ip_data:
@@ -183,7 +218,7 @@ class TrackingData(models.Model):
         return IpData.model_validate(self._ip_data)
 
     @ip_data.setter
-    def ip_data(self, value: Optional[IpData]):
+    def ip_data(self, value: Optional[IpData]) -> None:
         self._ip_data = value.model_dump() if value else None
 
     @property
@@ -193,7 +228,7 @@ class TrackingData(models.Model):
         return UserAgentData.model_validate(self._user_agent_data)
 
     @user_agent_data.setter
-    def user_agent_data(self, value: Optional[UserAgentData]):
+    def user_agent_data(self, value: Optional[UserAgentData]) -> None:
         self._user_agent_data = value.model_dump() if value else None
 
     @property
@@ -203,7 +238,7 @@ class TrackingData(models.Model):
         return HeaderData.model_validate(self._header_data)
 
     @header_data.setter
-    def header_data(self, value: Optional[HeaderData]):
+    def header_data(self, value: Optional[HeaderData]) -> None:
         self._header_data = value.model_dump() if value else None
 
     @property
@@ -211,7 +246,7 @@ class TrackingData(models.Model):
         return self._form_data
 
     @form_data.setter
-    def form_data(self, value: Optional[Dict[str, Any]]):
+    def form_data(self, value: Optional[Dict[str, Any]]) -> None:
         self._form_data = value
 
     @property

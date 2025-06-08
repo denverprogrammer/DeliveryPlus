@@ -1,8 +1,10 @@
+from typing import Any
+from typing import List
+from typing import Tuple
 from django.contrib import admin
-from typing import Any, List, Tuple
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from tracking.models import Agent
-from django.db.models import QuerySet
 
 
 class BaseTextFieldFilter(admin.SimpleListFilter):
@@ -12,7 +14,7 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
     field_name = ""
 
     def lookups(self, request: HttpRequest, model_admin: Any) -> List[Tuple[str, str]]:
-        return [(self.field_name, str(self.title))]  # type: ignore[arg-type]
+        return [(self.field_name, str(self.title))]
 
     def queryset(self, request: HttpRequest, queryset: QuerySet[Agent]) -> QuerySet[Agent]:
         if self.value():

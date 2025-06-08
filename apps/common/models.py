@@ -1,9 +1,12 @@
 import json
+
+from datetime import datetime
+from datetime import UTC
 from typing import Optional
 from django.http import HttpRequest
-from pydantic import BaseModel, Field
-from datetime import datetime, UTC
 from ipware import get_client_ip
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class IpAddressInfo(BaseModel):

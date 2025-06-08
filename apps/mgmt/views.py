@@ -1,16 +1,19 @@
-from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth import logout
 
 # from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login, logout
-
-# from django.contrib import messages
-from django.http import HttpRequest, HttpResponse
 
 # from tracking.models import Agent, Campaign
 # from mgmt.forms import CompanyForm
 # from tracking.forms import AgentForm
 from django.contrib.auth.forms import AuthenticationForm
+
+# from django.contrib import messages
+from django.http import HttpRequest
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.shortcuts import render
 from mgmt.models import User
 
 

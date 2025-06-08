@@ -3,7 +3,7 @@ from tracking.models import AgentTag
 
 
 class AgentTagSerializer(ModelSerializer[AgentTag]):
-    class Meta:  # type: ignore[misc]
+    class Meta:
         model = AgentTag
         fields = ("id", "name")
 

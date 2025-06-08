@@ -1,7 +1,9 @@
+from common.enums import PublishingType
+from common.enums import TrackingType
 from django import forms
-from tracking.models import Agent, Campaign
-from tracking.common import PublishingType, TrackingType
 from tagulous import forms as TagulousForms
+from tracking.models import Agent
+from tracking.models import Campaign
 
 
 # class AgentForm(forms.ModelForm[Agent]):

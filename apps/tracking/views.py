@@ -1,26 +1,31 @@
-from common.functions import (
-    IpData,
-    LocaleData,
-    LocationData,
-    TimeData,
-    UserAgentData,
-    get_ip_data,
-    get_locale_data,
-    get_location_data,
-    get_time_data,
-    get_user_agent_data,
-)
-from config.common import HeaderData
-from config import settings
-from common.api import TwilioApiClient, TwilioLookupResponse
-from tracking.models import TrackingData, Agent
-from tracking.forms import TrackingDataViewForm
-from django.http import HttpRequest, JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import render, get_object_or_404
 from typing import Optional
-from django.contrib.admin.views.decorators import staff_member_required  # type: ignore[attr-defined]
+
+# from common.api_clients import TwilioApiClient
+# from common.api_clients import TwilioLookupResponse
+from common.api_types import IpData
+from common.api_types import LocaleData
+from common.api_types import LocationData
+from common.api_types import TimeData
+from common.api_types import UserAgentData
+from common.functions import get_ip_data
+from common.functions import get_locale_data
+from common.functions import get_location_data
+from common.functions import get_time_data
+from common.functions import get_user_agent_data
+from common.models import HeaderData
+
+# from config import settings
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpRequest
+from django.http import HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
 from django.template.response import TemplateResponse
+from django.views.decorators.csrf import csrf_exempt
+from tracking.forms import TrackingDataViewForm
+from tracking.models import Agent
+from tracking.models import TrackingData
 
 
 @csrf_exempt
@@ -62,10 +67,10 @@ def track_view(request: HttpRequest, token: Optional[str] = None) -> HttpRespons
             latitude=location_data.getLatitude(),
             longitude=location_data.getLongitude(),
             location_source=location_data.source,
-            ip_data=ip_data,
-            user_agent_data=user_agent_data,
-            header_data=header_data,
-            form_data=request.POST,
+            _ip_data=ip_data.model_dump(),
+            _user_agent_data=user_agent_data.model_dump(),
+            _header_data=header_data.model_dump(),
+            _form_data=request.POST,
         )
 
         return JsonResponse(
@@ -85,7 +90,7 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
         agent = get_object_or_404(Agent, token=token)
         header_data: HeaderData = getattr(request, "header_data ")
         http_method = request.POST.get("http_method", request.method)
-        notifications = request.POST.get("notifications")
+        # notifications = request.POST.get("notifications")
 
         # Get IP data
         ip_data: IpData = get_ip_data(request, header_data)
@@ -104,16 +109,16 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
         location_data: LocationData = get_location_data(header_data, ip_data)
 
         # Handle notifications if provided
-        phone_data: Optional[TwilioLookupResponse] = None
-        if notifications:
-            twilio_client = TwilioApiClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-            phone_data = twilio_client.get_data(notifications)
+        # phone_data: Optional[TwilioLookupResponse] = None
+        # if notifications:
+        #     twilio_client = TwilioApiClient(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        #     phone_data = twilio_client.get_data(notifications)
 
         # Create tracking data
         TrackingData.objects.create(
             agent=agent,
             http_method=http_method,
-            ip_address=ip_data.selected,
+            ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
             os=user_agent_data.get_os_name(),
             browser=user_agent_data.get_browser_name(),
@@ -124,11 +129,11 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
             latitude=location_data.getLatitude(),
             longitude=location_data.getLongitude(),
             location_source=location_data.source,
-            ip_data=ip_data,
-            user_agent_data=user_agent_data,
-            header_data=header_data,
-            form_data=request.POST,
-            phone_data=phone_data.model_dump() if phone_data else None,
+            _ip_data=ip_data.model_dump(),
+            _user_agent_data=user_agent_data.model_dump(),
+            _header_data=header_data.model_dump(),
+            _form_data=request.POST,
+            # _phone_data=phone_data.model_dump() if phone_data else None,
         )
 
         return JsonResponse(

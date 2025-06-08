@@ -1,19 +1,22 @@
-from common.types import (
-    IPGeolocationResponse,
-    IpData,
-    LocaleData,
-    LocationData,
-    TimeData,
-    UserAgentData,
-)
-from config.common import IpAddressInfo, LocationInfo, HeaderData
-from config import settings
-from common.api import IPGeolocationApiClient, UserStackApiClient, VpnApiClient
-from tracking.common import TrackingType
-from django.http import HttpRequest
+from datetime import datetime
+from datetime import timezone
 from typing import Optional
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from common.api_clients import IPGeolocationApiClient
+from common.api_clients import UserStackApiClient
+from common.api_clients import VpnApiClient
+from common.api_types import IpData
+from common.api_types import IPGeolocationResponse
+from common.api_types import LocaleData
+from common.api_types import LocationData
+from common.api_types import TimeData
+from common.api_types import UserAgentData
+from common.enums import TrackingType
+from common.models import HeaderData
+from common.models import IpAddressInfo
+from common.models import LocationInfo
+from config import settings
+from django.http import HttpRequest
 
 
 def get_ip_data(request: HttpRequest, header_data: HeaderData) -> IpData:

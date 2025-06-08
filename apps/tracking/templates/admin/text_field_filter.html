@@ -9,11 +9,11 @@
                     <input type="hidden" name="{{ k }}" value="{{ v }}">
                 {% endif %}
             {% endfor %}
-            <input type="text" 
-                   name="{{ spec.parameter_name }}_term" 
-                   value="{{ spec.term_value|default:'' }}" 
+            <input type="text"
+                   name="{{ spec.parameter_name }}_term"
+                   value="{{ spec.term_value|default:'' }}"
                    placeholder="{% translate 'Enter search term...' %}"
                    onchange="this.form.submit()">
         </form>
     </li>
-</ul> 
+</ul>

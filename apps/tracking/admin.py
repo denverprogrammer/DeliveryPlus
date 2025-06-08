@@ -1,20 +1,23 @@
+from typing import Any
+from typing import Optional
 from django.contrib import admin
-from typing import Optional, Any
-from django.utils.html import format_html
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
+from django.utils.html import format_html
 from subadmin import SubAdmin
-from tracking.filters import (
-    EmailFilter,
-    FirstNameFilter,
-    LastNameFilter,
-    PhoneNumberFilter,
-    TokenFilter,
-)
-from tracking.forms import CampaignAdminForm, AgentAdminForm
-from tracking.models import AgentTag, TrackingData, Agent, Campaign
 from tagulous import admin as TagulousAdmin
-from django.db.models import QuerySet
+from tracking.filters import EmailFilter
+from tracking.filters import FirstNameFilter
+from tracking.filters import LastNameFilter
+from tracking.filters import PhoneNumberFilter
+from tracking.filters import TokenFilter
+from tracking.forms import AgentAdminForm
+from tracking.forms import CampaignAdminForm
+from tracking.models import Agent
+from tracking.models import AgentTag
+from tracking.models import Campaign
+from tracking.models import TrackingData
 
 
 class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
@@ -64,7 +67,7 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
 
 
 # TODO: SubAdmin when to version that allows Django 5.2
-class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin):  # type: ignore[misc]
+class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin[Agent]):
     model = Agent
     form = AgentAdminForm
     fieldsets = (
@@ -103,7 +106,7 @@ class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin):  # type: ignore[misc
         return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""
 
 
-class CampaignAdmin(SubAdmin):
+class CampaignAdmin(SubAdmin[Campaign]):
     model = Campaign
     form = CampaignAdminForm
     fieldsets = (
@@ -125,4 +128,4 @@ class CampaignAdmin(SubAdmin):
     subadmins = [AgentAdmin]
 
 
-TagulousAdmin.enhance(Agent, AgentAdmin)  # type: ignore
+TagulousAdmin.enhance(Agent, AgentAdmin)

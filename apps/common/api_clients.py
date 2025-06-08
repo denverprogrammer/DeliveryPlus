@@ -1,22 +1,30 @@
 """API clients for various external services with Redis caching."""
 
-from abc import ABC, abstractmethod
-from datetime import timedelta
-from typing import Any, Dict, Optional, TypeVar, Generic
-
 import json
+
+from abc import ABC
+from abc import abstractmethod
+from datetime import timedelta
+from typing import Any
+from typing import cast
+from typing import Dict
+from typing import Generic
+from typing import Optional
+from typing import TypeVar
 import redis
 import requests
+
+from common.api_types import IPGeolocationResponse
+from common.api_types import IpStackResponse
+from common.api_types import TwilioLookupResponse
+from common.api_types import UserStackResponse
+from common.api_types import VpnApiResponse
 from pydantic import BaseModel
 from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client as TwilioClient
-from common.types import (
-    IPGeolocationResponse,
-    IpStackResponse,
-    TwilioLookupResponse,
-    UserStackResponse,
-    VpnApiResponse,
-)
+from twilio.rest.lookups.v2 import V2
+from twilio.rest.lookups.v2.phone_number import PhoneNumberContext
+from twilio.rest.lookups.v2.phone_number import PhoneNumberList
 
 
 ClientType = TypeVar("ClientType", bound=BaseModel)
@@ -192,7 +200,7 @@ class TwilioApiClient(BaseApiClient[TwilioLookupResponse]):
             auth_token: Twilio auth token
         """
         super().__init__(redis_db=2, redis_prefix="phone_number")
-        self.client = TwilioClient(account_sid, auth_token)
+        self.client: TwilioClient = TwilioClient(account_sid, auth_token)
 
     def _get_response_model(self) -> type[TwilioLookupResponse]:
         """Get the response model class for this API client."""
@@ -215,7 +223,10 @@ class TwilioApiClient(BaseApiClient[TwilioLookupResponse]):
             if cache_data:
                 return cache_data
 
-            response = self.client.lookups.v2.phone_numbers(identifier).fetch(
+            v2 = cast(V2, self.client.lookups.v2)
+            phone_numbers = cast(PhoneNumberList, v2.phone_numbers)
+            phone_number = cast(PhoneNumberContext, phone_numbers(identifier))
+            response = phone_number.fetch(
                 fields=[
                     "caller_name",
                     "sim_swap",
@@ -230,7 +241,7 @@ class TwilioApiClient(BaseApiClient[TwilioLookupResponse]):
                 ]
             )
 
-            response_data = response.__dict__
+            response_data: Dict[str, Any] = response.__dict__
             response_data.pop("_version", None)
             response_data.pop("url", None)
             self.put_cache_data(identifier, response_data)
