@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "admin_interface",
     "colorfield",
     "django_bootstrap5",
+    "dal",
+    "dal_select2",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -52,12 +54,15 @@ INSTALLED_APPS = [
     "django.forms",
     "django_htmx",
     "subadmin",
-    "tagulous",
+    "taggit",
     "rest_framework",
     "django_filters",
     "mgmt",
     "tracking",
+    "django_select2",
 ]
+
+TAGGIT_CASE_INSENSITIVE = True
 
 MIDDLEWARE = [
     "config.middleware.tracking_payload.TrackingPayloadMiddleware",
@@ -188,15 +193,6 @@ def show_toolbar(_: Any) -> bool:
 DEBUG_TOOLBAR_CONFIG: dict[str, Any] = {
     "SHOW_TOOLBAR_CALLBACK": show_toolbar,
 }
-
-TAGULOUS_AUTOCOMPLETE_JS = (
-    "tagulous/lib/jquery.js",
-    "tagulous/lib/select2-4/js/select2.full.min.js",
-    "tagulous/tagulous.js",
-    "tagulous/adaptor/select2-4.js",
-)
-
-TAGULOUS_AUTOCOMPLETE_CSS = {"all": ["tagulous/lib/select2-4/css/select2.min.css"]}
 
 # Django REST Framework settings
 REST_FRAMEWORK = {

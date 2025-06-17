@@ -1,28 +1,13 @@
 from common.enums import PublishingType
 from common.enums import TrackingType
+from dal import autocomplete
 from django import forms
-from tagulous import forms as TagulousForms
+
+# from taggit.forms import TagWidget
+from django_select2.forms import ModelSelect2TagWidget
+from taggit.models import Tag
 from tracking.models import Agent
 from tracking.models import Campaign
-
-
-# class AgentForm(forms.ModelForm[Agent]):
-#     class Meta:
-#         model = Agent
-#         fields = [
-#             "campaign",
-#             "token",
-#             "first_name",
-#             "last_name",
-#             "email",
-#             "phone_number",
-#             "status",
-#         ]
-
-#     def __init__(self, *args: Any, **kwargs: Any) -> None:
-#         super().__init__(*args, **kwargs)
-#         if "campaign" in self.fields:
-#             self.fields["campaign"].queryset = Campaign.objects.all()
 
 
 class CampaignAdminForm(forms.ModelForm[Campaign]):
@@ -177,18 +162,24 @@ class TrackingDataViewForm(forms.Form):
         )
 
 
+class TaggitSelect2Widget(ModelSelect2TagWidget):
+    model = Tag
+
+    def value_from_datadict(self, data: dict, files: dict, name: str) -> list[str]:
+        """Create objects for given non-pimary-key values. Return list of all primary keys."""
+        values = set(super().value_from_datadict(data, files, name))
+        # This may only work for MyModel, if MyModel has title field.
+        # You need to implement this method yourself, to ensure proper object creation.
+        pks = self.queryset.filter(**{"pk__in": list(values)}).values_list("pk", flat=True)
+        pks = set(map(str, pks))
+        cleaned_values = list(pks)
+        for val in values - pks:
+            cleaned_values.append(self.queryset.create(title=val).pk)
+        return cleaned_values
+
+
 class AgentAdminForm(forms.ModelForm[Agent]):
     class Meta:
         model = Agent
         fields = "__all__"
-        widgets = {
-            "tags": TagulousForms.TagWidget(
-                attrs={
-                    # 'class': 'select2',
-                    "style": "width: 272px;",
-                    "data-placeholder": "Add tags...",
-                    "data-tags": "true",
-                    "data-token-separators": '[","]',
-                }
-            )
-        }
+        widgets = {"tags": autocomplete.TaggitSelect2(url="tag-autocomplete")}

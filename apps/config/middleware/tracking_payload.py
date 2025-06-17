@@ -3,7 +3,7 @@ import json
 import logging
 
 from typing import Callable
-from common.models import HeaderData
+from common.api_types import HeaderData
 from django.http import HttpRequest
 from django.http import HttpResponse
 

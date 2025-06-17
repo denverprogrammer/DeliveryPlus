@@ -5,8 +5,8 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
+from django.utils.safestring import SafeString
 from subadmin import SubAdmin
-from tagulous import admin as TagulousAdmin
 from tracking.filters import EmailFilter
 from tracking.filters import FirstNameFilter
 from tracking.filters import LastNameFilter
@@ -15,7 +15,6 @@ from tracking.filters import TokenFilter
 from tracking.forms import AgentAdminForm
 from tracking.forms import CampaignAdminForm
 from tracking.models import Agent
-from tracking.models import AgentTag
 from tracking.models import Campaign
 from tracking.models import TrackingData
 
@@ -67,7 +66,7 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
 
 
 # TODO: SubAdmin when to version that allows Django 5.2
-class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin[Agent]):
+class AgentAdmin(SubAdmin[Agent]):
     model = Agent
     form = AgentAdminForm
     fieldsets = (
@@ -76,7 +75,7 @@ class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin[Agent]):
         ("Metadata", {"fields": ("tags",)}),
     )
 
-    list_display = ("first_name", "last_name", "email", "phone_number", "status", "get_tags")
+    list_display = ("first_name", "last_name", "email", "phone_number", "status", "display_tags")
     list_filter = (
         FirstNameFilter,
         LastNameFilter,
@@ -99,11 +98,16 @@ class AgentAdmin(TagulousAdmin.TaggedModelAdmin, SubAdmin[Agent]):
     inlines = (TrackingDataInline,)
 
     @admin.display(description="Tags")
-    def get_tags(self, obj: Agent) -> str:
-        """Return a comma-separated list of tags."""
-        agent_tags: QuerySet[AgentTag] = obj.tags.all()
+    def display_tags(self, obj: Agent) -> SafeString:
+        """Display tags with color coding based on status"""
+        if not obj.tags.exists():
+            return format_html("-")
 
-        return ", ".join(tag.name for tag in agent_tags) if agent_tags else ""
+        tags_html = []
+        for tag in obj.tags.all():
+            tags_html.append(format_html('<span style="color: grey">{}</span>', tag.name))
+
+        return format_html(", ".join(tags_html))
 
 
 class CampaignAdmin(SubAdmin[Campaign]):
@@ -126,6 +130,3 @@ class CampaignAdmin(SubAdmin[Campaign]):
         ),
     )
     subadmins = [AgentAdmin]
-
-
-TagulousAdmin.enhance(Agent, AgentAdmin)

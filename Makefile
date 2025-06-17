@@ -11,14 +11,14 @@ status:
 	docker compose -f docker-compose.deploy.yml run --rm ebcli status --profile packageparcels
 
 nuke-it:
-	docker-compose down --remove-orphans --volumes
+	docker compose down --remove-orphans --volumes
 	docker volume prune --force
 	docker network prune --force
 	docker container prune --force
 	docker rmi -f $(shell docker images -aq)
 
 start:
-	docker-compose up --detach --build
+	docker compose up --detach --build
 
 destroy:
-	docker-compose down --remove-orphans --volumes
+	docker compose down --remove-orphans --volumes

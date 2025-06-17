@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include
 from django.urls import path
+from tracking.views import TagAutocomplete
 
 
 handler403 = "config.views.custom_permission_denied_view"
@@ -13,7 +14,9 @@ urlpatterns = [
     path("tracking/", include("tracking.urls")),
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
+    path("select2/", include("django_select2.urls")),
     path("", views.home_page_view, name="home"),
+    path("admin/tag-autocomplete/", TagAutocomplete.as_view(), name="tag-autocomplete"),
 ]
 
 if settings.DEBUG:

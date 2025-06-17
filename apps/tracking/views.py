@@ -2,6 +2,7 @@ from typing import Optional
 
 # from common.api_clients import TwilioApiClient
 # from common.api_clients import TwilioLookupResponse
+from common.api_types import HeaderData
 from common.api_types import IpData
 from common.api_types import LocaleData
 from common.api_types import LocationData
@@ -12,10 +13,12 @@ from common.functions import get_locale_data
 from common.functions import get_location_data
 from common.functions import get_time_data
 from common.functions import get_user_agent_data
-from common.models import HeaderData
+from dal import autocomplete
 
 # from config import settings
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -23,6 +26,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
+from taggit.models import Tag
 from tracking.forms import TrackingDataViewForm
 from tracking.models import Agent
 from tracking.models import TrackingData
@@ -196,3 +200,14 @@ def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
     }
 
     return TemplateResponse(request, "tracking/tracking_data_modal.html", context)
+
+
+class TagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetView):
+    def get_queryset(self) -> QuerySet[Tag]:
+        # Don't forget to filter out results if a query is provided
+        qs: QuerySet[Tag] = Tag.objects.all()
+
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs

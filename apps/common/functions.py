@@ -5,16 +5,16 @@ from zoneinfo import ZoneInfo
 from common.api_clients import IPGeolocationApiClient
 from common.api_clients import UserStackApiClient
 from common.api_clients import VpnApiClient
+from common.api_types import HeaderData
+from common.api_types import IpAddressInfo
 from common.api_types import IpData
 from common.api_types import IPGeolocationResponse
 from common.api_types import LocaleData
 from common.api_types import LocationData
+from common.api_types import LocationInfo
 from common.api_types import TimeData
 from common.api_types import UserAgentData
 from common.enums import TrackingType
-from common.models import HeaderData
-from common.models import IpAddressInfo
-from common.models import LocationInfo
 from config import settings
 from django.http import HttpRequest
 

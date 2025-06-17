@@ -3,36 +3,27 @@ import datetime
 
 from typing import Any
 from typing import Dict
-from typing import Generic
 from typing import List
 from typing import Optional
 from typing import TypeVar
-import tagulous.models
-
+from common.api_types import HeaderData
 from common.api_types import IpData
 from common.api_types import UserAgentData
 from common.api_types import WarningStatus
 from common.enums import AgentStatus
 from common.enums import TrackingType
-from common.models import HeaderData
 from django.db import models
 from django.db.models import Manager
-from django.db.models import ManyToManyField
 from django.db.models import Model
-
-# from django.db.models import QuerySet
 from django_stubs_ext.db.models import TypedModelMeta
 from mgmt.models import Company
+from taggit.managers import TaggableManager
 
 
 T = TypeVar("T", bound=Model)
 
 
-class TagManager(Manager[T], Generic[T]):
-    pass
-
-
-class Campaign(models.Model):  # type: ignore[django-manager-missing]
+class Campaign(models.Model):
     company: models.ForeignKey[Company, Optional[Company]] = models.ForeignKey(
         "mgmt.Company", on_delete=models.CASCADE, related_name="campaigns"
     )
@@ -106,18 +97,6 @@ class Campaign(models.Model):  # type: ignore[django-manager-missing]
         return self.name
 
 
-class AgentTag(tagulous.models.TagModel):
-    name: models.CharField[str, str] = models.CharField(max_length=255, unique=True)
-
-    class TagulousMeta:
-        initial = ["active", "inactive", "suspended", "verified"]
-        force_lowercase = True
-        max_count = 10
-        space_delimiter = False
-        autocomplete_view = "agent_tags_autocomplete"
-        autocomplete_limit = 10
-
-
 class Agent(models.Model):
     campaign: models.ForeignKey[Campaign, Campaign] = models.ForeignKey(
         Campaign, on_delete=models.CASCADE, related_name="agents"
@@ -137,8 +116,7 @@ class Agent(models.Model):
     status: models.CharField[str, str] = models.CharField(
         max_length=10, choices=AgentStatus.choices(), default=AgentStatus.ACTIVE.value
     )
-    tags: ManyToManyField[AgentTag, Any] = tagulous.models.TagField(
-        to="tracking.AgentTag",
+    tags = TaggableManager(
         help_text="Enter tags to categorize this agent (max 10 tags)",
         blank=True,
     )
