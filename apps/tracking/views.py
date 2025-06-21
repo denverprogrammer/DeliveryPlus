@@ -204,10 +204,21 @@ def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
 
 class TagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetView):
     def get_queryset(self) -> QuerySet[Tag]:
-        # Don't forget to filter out results if a query is provided
+        # Get company_id from URL parameters
+        company_id = self.kwargs.get("company_id")
+
+        # Filter by company if company_id is provided
         qs: QuerySet[Tag] = Tag.objects.all()
 
+        if company_id:
+            qs = qs.filter(company_id=company_id)
+
+        # Don't forget to filter out results if a query is provided
         if self.q:
             qs = qs.filter(name__icontains=self.q)
 
         return qs
+
+
+# class TagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetView):
+#     def get_queryset(self) -> QuerySet[CompanyTag]:
