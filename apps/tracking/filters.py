@@ -24,6 +24,14 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
         return queryset
 
 
+class TagFilter(BaseTextFieldFilter):
+    """Filter agents by tag name."""
+
+    title = "Tags"
+    parameter_name = "tags"
+    field_name = "tags__name"
+
+
 class FirstNameFilter(BaseTextFieldFilter):
     title = "First Name"
     parameter_name = "first_name"

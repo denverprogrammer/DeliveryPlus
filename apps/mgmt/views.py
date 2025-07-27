@@ -1,8 +1,12 @@
+from __future__ import annotations
+from dal import autocomplete
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -11,6 +15,7 @@ from django.shortcuts import render
 from mgmt.forms import AgentForm
 from mgmt.forms import CompanyForm
 from mgmt.models import User
+from taggit.models import Tag
 from tracking.models import Agent
 from tracking.models import Campaign
 
@@ -113,3 +118,28 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     logout(request)
 
     return redirect("home")
+
+
+class CompanyTagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetView):
+    def get_queryset(self) -> QuerySet[Tag]:
+        # Get company_id from URL parameters
+        company_id = self.kwargs.get("company_id")
+
+        # Start with all tags
+        qs: QuerySet[Tag] = Tag.objects.all()
+
+        # Filter by company if company_id is provided
+        if company_id:
+            # Get tags that are used by agents belonging to this company's campaigns
+            qs = qs.filter(
+                taggit_taggeditem_items__content_type__model="agent",
+                taggit_taggeditem_items__object_id__in=Agent.objects.filter(
+                    campaign__company_id=company_id
+                ).values_list("id", flat=True),
+            ).distinct()
+
+        # Filter by search query if provided
+        if self.q:
+            qs = qs.filter(name__icontains=self.q)
+
+        return qs

@@ -1,0 +1,27 @@
+{% load i18n %}
+<h3>{% blocktrans with filter_title=title %}By {{ filter_title }}{% endblocktrans %}</h3>
+<ul>
+    <li>
+        <select id="select2-{{ spec.parameter_name }}" name="{{ spec.parameter_name }}" style="width: 100%;">
+            <option value="">{% trans "All" %}</option>
+            {% for choice in spec.lookups %}
+                <option value="{{ choice.0 }}" {% if choice.0 == spec.value %}selected{% endif %}>
+                    {{ choice.1 }}
+                </option>
+            {% endfor %}
+        </select>
+    </li>
+</ul>
+
+<script>
+$(document).ready(function() {
+    $('#select2-{{ spec.parameter_name }}').select2({
+        placeholder: '{% trans "Select a tag..." %}',
+        allowClear: true,
+        width: '100%'
+    }).on('change', function() {
+        // Submit the form when selection changes
+        $(this).closest('form').submit();
+    });
+});
+</script> 

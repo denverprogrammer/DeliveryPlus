@@ -11,6 +11,7 @@ from tracking.filters import EmailFilter
 from tracking.filters import FirstNameFilter
 from tracking.filters import LastNameFilter
 from tracking.filters import PhoneNumberFilter
+from tracking.filters import TagFilter
 from tracking.filters import TokenFilter
 from tracking.forms import AgentAdminForm
 from tracking.forms import CampaignAdminForm
@@ -82,8 +83,8 @@ class AgentAdmin(SubAdmin[Agent]):
         EmailFilter,
         PhoneNumberFilter,
         TokenFilter,
+        TagFilter,
         "status",
-        "tags",
     )
     search_fields = (
         "first_name",
