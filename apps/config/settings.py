@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     "django_json_widget",
     "admin_interface",
     "colorfield",
-    "django_bootstrap5",
     "dal",
     "dal_select2",
     "django.contrib.admin",
@@ -52,7 +51,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.forms",
-    "django_htmx",
     "subadmin",
     "taggit",
     "rest_framework",
@@ -73,7 +71,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 if DEBUG:
@@ -155,16 +152,17 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Additional static files directories
+STATICFILES_DIRS = [
+    BASE_DIR / "staticfiles" / "react",
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "mgmt.User"
-
-BOOTSTRAP5 = {
-    "css_url": "https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/sandstone/bootstrap.min.css",
-}
 
 X_FRAME_OPTIONS = "SAMEORIGIN"
 SILENCED_SYSTEM_CHECKS = ["security.W019"]

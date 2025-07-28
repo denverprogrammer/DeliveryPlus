@@ -18,11 +18,12 @@ fi
 echo "Migrating"
 python manage.py migrate --no-input
 
-echo "Loading admin interface themes"
+echo "Loading admin interface theme"
 python manage.py loaddata admin_interface_theme_django.json
-python manage.py loaddata admin_interface_theme_bootstrap.json
-python manage.py loaddata admin_interface_theme_foundation.json
-python manage.py loaddata admin_interface_theme_uswds.json
+
+echo "Building React app"
+cd /app/frontend && npm install && npm run build
+cd /app
 
 echo "Collecting static files"
 python manage.py collectstatic --no-input --clear

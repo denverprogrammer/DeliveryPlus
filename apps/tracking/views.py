@@ -23,7 +23,7 @@ from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.shortcuts import render
+from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.views.decorators.csrf import csrf_exempt
 from taggit.models import Tag
@@ -84,8 +84,10 @@ def track_view(request: HttpRequest, token: Optional[str] = None) -> HttpRespons
             }
         )
 
-    # For GET request: serve Django template
-    return render(request, "tracking/track.html", {})
+    # For GET request: serve React app
+    from django.shortcuts import redirect
+
+    return redirect("/")
 
 
 @csrf_exempt
@@ -147,7 +149,7 @@ def redirect_package_view(request: HttpRequest, token: Optional[str] = None) -> 
             }
         )
 
-    return render(request, "tracking/redirect.html", {})
+    return redirect("/redirects")
 
 
 @staff_member_required

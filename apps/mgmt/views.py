@@ -1,6 +1,5 @@
 from __future__ import annotations
 from dal import autocomplete
-from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
@@ -8,10 +7,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import QuerySet
 from django.http import HttpRequest
-from django.http import HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.shortcuts import redirect
-from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from mgmt.forms import AgentForm
 from mgmt.forms import CompanyForm
 from mgmt.models import User
@@ -21,103 +19,166 @@ from tracking.models import Campaign
 
 
 @login_required
-def dashboard_view(request: HttpRequest) -> HttpResponse:
+def dashboard_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
-        return redirect("login")
+        return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
-
-    return render(request, "mgmt/dashboard.html", {"company": user.company})
+    if user.company:
+        return JsonResponse({"company": {"name": user.company.name}})
+    return JsonResponse({"company": {"name": "No Company"}})
 
 
 @login_required
-def edit_company_view(request: HttpRequest) -> HttpResponse:
+def edit_company_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
-        return redirect("login")
+        return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
-    form = CompanyForm(request.POST or None, instance=user.company)
 
-    if request.method == "POST" and form.is_valid():
-        company = form.save()
-        if user.company != company:
-            user.company = company
-            user.save()
+    if request.method == "GET":
+        company_name = user.company.name if user.company else "No Company"
+        return JsonResponse(
+            {
+                "company": {
+                    "name": company_name,
+                    # Add other company fields as needed
+                }
+            }
+        )
 
-        return redirect("dashboard")
+    if request.method == "POST":
+        form = CompanyForm(request.POST, instance=user.company)
+        if form.is_valid():
+            company = form.save()
+            if user.company != company:
+                user.company = company
+                user.save()
+            return JsonResponse({"success": True})
+        return JsonResponse({"errors": form.errors}, status=400)
 
-    return render(request, "mgmt/edit_company.html", {"form": form, "company": user.company})
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @login_required
-def agent_list_view(request: HttpRequest) -> HttpResponse:
+def agent_list_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
-        return redirect("login")
+        return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
     agents = Agent.objects.filter(campaign__company=user.company)
 
-    return render(request, "mgmt/agent_list.html", {"agents": agents})
+    agents_data = []
+    for agent in agents:
+        agents_data.append(
+            {
+                "id": agent.id,
+                "first_name": agent.first_name,
+                "last_name": agent.last_name,
+                "email": agent.email,
+                "status": agent.status,
+            }
+        )
+
+    return JsonResponse({"agents": agents_data})
 
 
 @login_required
-def agent_create_view(request: HttpRequest) -> HttpResponse:
+def agent_create_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
-        return redirect("login")
+        return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
-    form = AgentForm(request.POST or None)
 
-    if form.is_bound and hasattr(form.fields["campaign"], "queryset"):
-        form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
+    if request.method == "POST":
+        form = AgentForm(request.POST)
+        if hasattr(form.fields["campaign"], "queryset"):
+            form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
 
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Agent created successfully.")
-        return redirect("agent_list")
+        if form.is_valid():
+            agent = form.save()
+            return JsonResponse(
+                {
+                    "success": True,
+                    "agent": {
+                        "id": agent.id,
+                        "first_name": agent.first_name,
+                        "last_name": agent.last_name,
+                        "email": agent.email,
+                        "status": agent.status,
+                    },
+                }
+            )
+        return JsonResponse({"errors": form.errors}, status=400)
 
-    return render(request, "mgmt/agent_form.html", {"form": form, "title": "Add Agent"})
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @login_required
-def agent_edit_view(request: HttpRequest, agent_id: int) -> HttpResponse:
+def agent_edit_view(request: HttpRequest, agent_id: int) -> JsonResponse:
     if not isinstance(request.user, User):
-        return redirect("login")
+        return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
     agent = get_object_or_404(Agent, id=agent_id, campaign__company=user.company)
-    form = AgentForm(request.POST or None, instance=agent)
 
-    if hasattr(form.fields["campaign"], "queryset"):
-        form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "agent": {
+                    "id": agent.id,
+                    "first_name": agent.first_name,
+                    "last_name": agent.last_name,
+                    "email": agent.email,
+                    "phone_number": agent.phone_number,
+                    "status": agent.status,
+                }
+            }
+        )
 
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Agent updated successfully.")
-        return redirect("agent_list")
+    if request.method == "POST":
+        form = AgentForm(request.POST, instance=agent)
+        if hasattr(form.fields["campaign"], "queryset"):
+            form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
 
-    return render(request, "mgmt/agent_form.html", {"form": form, "title": "Edit Agent"})
+        if form.is_valid():
+            agent = form.save()
+            return JsonResponse(
+                {
+                    "success": True,
+                    "agent": {
+                        "id": agent.id,
+                        "first_name": agent.first_name,
+                        "last_name": agent.last_name,
+                        "email": agent.email,
+                        "status": agent.status,
+                    },
+                }
+            )
+        return JsonResponse({"errors": form.errors}, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
-def login_view(request: HttpRequest) -> HttpResponse:
+@csrf_exempt
+def login_view(request: HttpRequest) -> JsonResponse:
     if request.user.is_authenticated:
-        return redirect("dashboard")
+        return JsonResponse({"error": "Already authenticated"}, status=400)
 
-    form = AuthenticationForm(request, data=request.POST or None)
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return JsonResponse({"success": True, "token": "session_token"})
+        return JsonResponse({"errors": form.errors}, status=400)
 
-    if request.method == "POST" and form.is_valid():
-        user = form.get_user()
-        login(request, user)
-
-        return redirect("dashboard")
-
-    return render(request, "mgmt/login.html", {"form": form})
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
-def logout_view(request: HttpRequest) -> HttpResponse:
+def logout_view(request: HttpRequest) -> JsonResponse:
     logout(request)
-
-    return redirect("home")
+    return JsonResponse({"success": True})
 
 
 class CompanyTagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetView):

@@ -1,10 +1,12 @@
-{% extends "config/base_modal.html" %}
-{% load i18n static %}
-
-{% block extra_css %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Tracking Data Details{% endblock %}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load i18n static %}
 <link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.css">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
     .form-row {
         padding: 4px 0;
@@ -39,9 +41,36 @@
     .nav-tabs {
         list-style: none;
         padding-left: 0;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 0;
     }
     .nav-tabs .nav-item {
         margin-bottom: -1px;
+        display: inline-block;
+    }
+    .nav-tabs .nav-link {
+        display: block;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
+        color: #495057;
+        border: 1px solid transparent;
+        border-radius: 0.25rem 0.25rem 0 0;
+    }
+    .nav-tabs .nav-link.active {
+        color: #495057;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+    }
+    .tab-content {
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-top: none;
+    }
+    .tab-pane {
+        display: none;
+    }
+    .tab-pane.active {
+        display: block;
     }
     .jsoneditor {
         border: 1px solid #ccc;
@@ -97,31 +126,29 @@
         color: #721c24;
     }
 </style>
-{% endblock %}
-
-{% block content %}
+</head>
+<body>
 <div id="content-main">
-    <div class="card">
-        <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs" id="trackingTabs" role="tablist">
+    <div style="border: 1px solid #dee2e6; border-radius: 0.25rem;">
+        <div style="background-color: #f8f9fa; padding: 1rem; border-bottom: 1px solid #dee2e6;">
+            <ul class="nav-tabs" id="trackingTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="true">Details</button>
+                    <button class="nav-link active" id="details-tab" onclick="showTab('details')" type="button" role="tab">Details</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="warnings-tab" data-bs-toggle="tab" data-bs-target="#warnings" type="button" role="tab" aria-controls="warnings" aria-selected="false">Warnings</button>
+                    <button class="nav-link" id="warnings-tab" onclick="showTab('warnings')" type="button" role="tab">Warnings</button>
                 </li>
                 {% for field in form %}
                     {% if field.name in json_fields and field.value %}
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="{{ field.name }}-tab" data-bs-toggle="tab" data-bs-target="#{{ field.name }}" type="button" role="tab" aria-controls="{{ field.name }}" aria-selected="false">{{ field.label }}</button>
+                        <button class="nav-link" id="{{ field.name }}-tab" onclick="showTab('{{ field.name }}')" type="button" role="tab">{{ field.label }}</button>
                     </li>
                     {% endif %}
                 {% endfor %}
             </ul>
         </div>
-        <div class="card-body">
-            <div class="tab-content" id="trackingTabsContent">
-                <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+        <div class="tab-content" id="trackingTabsContent">
+            <div class="tab-pane active" id="details" role="tabpanel" aria-labelledby="details-tab">
                     {% if form.latitude.value and form.longitude.value %}
                     <fieldset class="module aligned">
                         <div class="map-container">
@@ -177,7 +204,7 @@
                     </fieldset>
                 </div>
 
-                <div class="tab-pane fade" id="warnings" role="tabpanel" aria-labelledby="warnings-tab">
+                <div class="tab-pane" id="warnings" role="tabpanel" aria-labelledby="warnings-tab">
                     <fieldset class="module aligned">
                         <div class="field-group">
                             <h3>Security Checks</h3>
@@ -218,7 +245,7 @@
 
                 {% for field in form %}
                     {% if field.name in json_fields and field.value %}
-                    <div class="tab-pane fade" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
+                    <div class="tab-pane" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
                         <fieldset class="module aligned">
                             <div class="form-row">
                                 <div id="{{ field.name }}-editor" style="height: 300px;" data-json='{{ field.value|safe }}'></div>
@@ -231,12 +258,29 @@
         </div>
     </div>
 </div>
-{% endblock %}
+</div>
+</div>
 
-{% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.0/jsoneditor.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script type="application/javascript">
+function showTab(tabName) {
+    // Hide all tab panes
+    document.querySelectorAll('.tab-pane').forEach(function(pane) {
+        pane.classList.remove('active');
+    });
+    
+    // Remove active class from all nav links
+    document.querySelectorAll('.nav-link').forEach(function(link) {
+        link.classList.remove('active');
+    });
+    
+    // Show the selected tab pane
+    document.getElementById(tabName).classList.add('active');
+    
+    // Add active class to the clicked nav link
+    event.target.classList.add('active');
+}
+
 window.addEventListener('load', function() {
     document.querySelectorAll('[id$="-editor"]').forEach(function(container) {
         var options = {
@@ -256,4 +300,5 @@ window.addEventListener('load', function() {
     });
 });
 </script>
-{% endblock %}
+</body>
+</html>
