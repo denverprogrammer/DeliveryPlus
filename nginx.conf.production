@@ -1,0 +1,222 @@
+upstream web {
+    server web:8080;
+    # Add more servers for load balancing if needed
+    # server web2:8080;
+    # server web3:8080;
+}
+
+server {
+    listen 80;
+    server_name _;  # Replace with your domain in production
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self';" always;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=admin:10m rate=5r/s;
+
+    # Admin interface - Django admin
+    location /admin/ {
+        limit_req zone=admin burst=10 nodelay;
+        
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # Admin-specific settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Security for admin
+        proxy_hide_header X-Powered-By;
+        proxy_hide_header Server;
+    }
+
+    # Management API - Django mgmt views
+    location /mgmt/ {
+        limit_req zone=api burst=20 nodelay;
+        
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # API-specific settings
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        
+        # Security for API
+        proxy_hide_header X-Powered-By;
+        proxy_hide_header Server;
+    }
+
+    # Tracking API - Django tracking views
+    location /tracking/ {
+        limit_req zone=api burst=20 nodelay;
+        
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # API-specific settings
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        
+        # Security for API
+        proxy_hide_header X-Powered-By;
+        proxy_hide_header Server;
+    }
+
+    # General API - Django REST API
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # API-specific settings
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        
+        # Security for API
+        proxy_hide_header X-Powered-By;
+        proxy_hide_header Server;
+    }
+
+    # Select2 autocomplete - Django select2
+    location /select2/ {
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+    }
+
+    # Static files - Serve from nginx for better performance
+    location /static/ {
+        alias /static/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Vary Accept-Encoding;
+        
+        # Gzip compression for static files
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_comp_level 6;
+        gzip_types 
+            text/plain 
+            text/css 
+            text/xml 
+            text/javascript 
+            application/javascript 
+            application/xml+rss 
+            application/json
+            application/xml
+            image/svg+xml;
+        
+        # Security for static files
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Media files (if any)
+    location /media/ {
+        alias /static/media/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Vary Accept-Encoding;
+        
+        # Gzip compression for media files
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_comp_level 6;
+        gzip_types 
+            text/plain 
+            text/css 
+            text/xml 
+            text/javascript 
+            application/javascript 
+            application/xml+rss 
+            application/json
+            application/xml
+            image/svg+xml;
+    }
+
+    # React app - Catch-all for frontend routes
+    location / {
+        # Try to serve static files first (React build)
+        try_files $uri $uri/ @django;
+        
+        # Security for frontend
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Fallback to Django for React app
+    location @django {
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # React app settings
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Security for frontend
+        proxy_hide_header X-Powered-By;
+        proxy_hide_header Server;
+    }
+
+    # Health check endpoint
+    location /health/ {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Deny access to backup files
+    location ~ ~$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+} 

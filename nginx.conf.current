@@ -4,43 +4,12 @@ upstream web {
 
 server {
     listen 80;
-    server_name deliveryplus.local, mgmt.local;
+    server_name deliveryplus.local;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
-
-    # Debug toolbar (development only)
-    location /__debug__/ {
-        proxy_pass http://web;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Port $server_port;
-    }
-
-    # Static files - Serve from nginx for better performance
-    location /static/ {
-        alias /static/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        
-        # Gzip compression for static files
-        gzip on;
-        gzip_vary on;
-        gzip_min_length 1024;
-        gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-    }
-
-    # Media files (if any)
-    location /media/ {
-        alias /static/media/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
 
     # General API - Django REST API
     location /api/ {
@@ -74,7 +43,46 @@ server {
 
 server {
     listen 80;
-    server_name admin.local api.local;
+    server_name mgmt.local;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # General API - Django REST API
+    location /api/ {
+        proxy_pass http://web;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # API-specific settings
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    # Health check endpoint
+    location /health/ {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+
+    # React app - Catch-all for frontend routes
+    location / {
+        # Try to serve static files first (React build)
+        try_files $uri $uri/;
+    }
+}
+
+server {
+    listen 80;
+    server_name admin.local;
 
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
