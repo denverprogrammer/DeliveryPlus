@@ -34,8 +34,7 @@ help: ## Show this help message
 	@echo "  Main App:     http://deliveryplus.local"
 	@echo "  Admin:        http://admin.local"
 	@echo "  Management:   http://mgmt.local"
-	@echo "  Tracking:     http://tracking.local"
-	@echo "  API:          http://api.local"
+
 
 # =============================================================================
 # Development Commands
@@ -52,8 +51,13 @@ dev: ## Start development with custom domains (Ergo + nginx)
 		rm .ergo.pid; \
 	fi
 	@if lsof -ti:2000 > /dev/null 2>&1; then \
-		echo "🛑 Port 2000 is in use. Stopping existing process..."; \
-		kill $$(lsof -ti:2000) 2>/dev/null || true; \
+		echo "🛑 Checking for Ergo processes on port 2000..."; \
+		for pid in $$(lsof -ti:2000); do \
+			if ps -p $$pid -o comm= | grep -q ergo; then \
+				echo "🛑 Stopping Ergo process (PID: $$pid)..."; \
+				kill $$pid 2>/dev/null || true; \
+			fi; \
+		done; \
 		sleep 2; \
 	fi
 	@ergo run --domain .local &
@@ -62,13 +66,11 @@ dev: ## Start development with custom domains (Ergo + nginx)
 	@echo ""
 	@echo "🌐 Custom Domain Access:"
 	@echo "   Main App:     http://deliveryplus.local"
-	@echo "   Admin:        http://admin.local"
 	@echo "   Management:   http://mgmt.local"
-	@echo "   Tracking:     http://tracking.local"
-	@echo "   API:          http://api.local"
+	@echo "   Admin:        http://admin.local"
 	@echo ""
 	@echo "💡 If domains don't resolve, add to /etc/hosts:"
-	@echo "   127.0.0.1 deliveryplus.local admin.local mgmt.local tracking.local api.local"
+	@echo "   deliveryplus.local mgmt.local admin.local"
 	@echo ""
 	@echo "💡 Ergo proxy running"
 	@echo "   To stop Ergo: make stop-ergo"
@@ -102,8 +104,6 @@ quick-start: ## Quick setup with prerequisites check
 	@echo "   Main App:     http://deliveryplus.local"
 	@echo "   Admin:        http://admin.local"
 	@echo "   Management:   http://mgmt.local"
-	@echo "   Tracking:     http://tracking.local"
-	@echo "   API:          http://api.local"
 	@echo ""
 	@echo "📊 Check status: make status-dev"
 	@echo "🛑 Stop Ergo:   make stop-ergo"
@@ -131,9 +131,14 @@ stop-ergo: ## Stop Ergo proxy
 		echo "❌ No Ergo PID file found"; \
 	fi
 	@if lsof -ti:2000 > /dev/null 2>&1; then \
-		echo "🛑 Stopping any process on port 2000..."; \
-		kill $$(lsof -ti:2000) 2>/dev/null || true; \
-		echo "✅ Port 2000 cleared"; \
+		echo "🛑 Checking for Ergo processes on port 2000..."; \
+		for pid in $$(lsof -ti:2000); do \
+			if ps -p $$pid -o comm= | grep -q ergo; then \
+				echo "🛑 Stopping Ergo process (PID: $$pid)..."; \
+				kill $$pid 2>/dev/null || true; \
+			fi; \
+		done; \
+		echo "✅ Port 2000 cleared of Ergo processes"; \
 	fi
 
 # =============================================================================
