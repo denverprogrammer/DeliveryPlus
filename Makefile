@@ -42,6 +42,9 @@ help: ## Show this help message
 
 dev: ## Start development with custom domains (Ergo + nginx)
 	@echo "📦 Setting up development environment with custom domains..."
+	@echo "🔨 Building React app..."
+	@cd frontend && npm run build
+	@./update-react-template.sh
 	@cp nginx.conf nginx.conf.current
 	@docker compose down
 	@docker compose up --build -d

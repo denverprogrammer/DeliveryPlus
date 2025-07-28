@@ -21,9 +21,9 @@ python manage.py migrate --no-input
 echo "Loading admin interface theme"
 python manage.py loaddata admin_interface_theme_django.json
 
-echo "Building React app"
-cd /app/frontend && npm install && npm run build
-cd /app
+echo "Skipping React build (will be built on host)"
+# cd /app/frontend && npm install && npm run build
+# cd /app
 
 echo "Collecting static files"
 python manage.py collectstatic --no-input --clear
