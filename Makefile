@@ -76,7 +76,7 @@ help: ## Show this help message
 
 local-start: ## Start development with custom domains
 	@$(MAKE) docker-stop
-	@$(MAKE) react-build config=nginx.conf
+	@$(MAKE) react-build
 	@$(MAKE) docker-start
 	@$(MAKE) ergo-start
 	@echo "✅ Development environment deployed!"
@@ -100,7 +100,6 @@ react-build: ## Build React app only
 	@echo "🔨 Building React app..."
 	@cd frontend && npm run build
 	@./update-react-template.sh
-	@cp $(CONFIG_PARAM) nginx.conf.current
 
 docker-start: ## Start Docker containers only
 	@echo "🐳 Starting Docker containers..."

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure axios defaults
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -74,7 +74,7 @@ export const logout = async () => {
 
 // Management functions
 export const getDashboard = async () => {
-  const response = await api.get('/mgmt/dashboard/');
+  const response = await api.get('/mgmt/');
   return response.data;
 };
 
