@@ -9,6 +9,8 @@ A modern package tracking application with Django backend, React frontend, and c
 - **Custom Domains**: Development setup with Ergo proxy for clean URLs
 - **Production Ready**: Docker-based deployment with nginx
 - **AWS Integration**: Elastic Beanstalk deployment support
+- **GPS Tracking**: Token-based tracking with GPS coordinates and IP address
+- **Notification System**: Automated notifications for tracking events
 
 ## 🚀 Quick Start
 
@@ -18,13 +20,13 @@ A modern package tracking application with Django backend, React frontend, and c
 make quick-start
 
 # Or manual setup
-make dev
+make local-start
 ```
 
 ### Standard Development
 ```bash
 # Start standard development environment
-make start
+make docker-start
 ```
 
 ### Production
@@ -36,44 +38,48 @@ make prod
 ## 🌐 Access Points
 
 ### Development (Custom Domains)
-- **Main App**: http://dev.deliveryplus.test
-- **Admin**: http://dev.admin.test
-- **Management**: http://dev.mgmt.test
-- **Tracking**: http://dev.tracking.test
-- **API**: http://dev.api.test
+- **Main App**: http://deliveryplus.local
+- **Admin**: http://admin.local
+- **Management**: http://mgmt.local
+- **Tracking**: http://tracking.local
 
 ### Production
 - **Main App**: http://localhost
 - **Admin**: http://localhost/admin/
 - **Management**: http://localhost/mgmt/
 - **Tracking**: http://localhost/tracking/
-- **API**: http://localhost/api/
 
 ## 📋 Available Commands
 
 ```bash
 # Development
-make dev          # Start with custom domains
-make quick-start  # Quick setup with checks
-make start        # Standard development
-make stop-ergo    # Stop Ergo proxy
+make local-start    # Start with custom domains
+make local-stop     # Stop development environment
+make quick-start    # Quick setup with checks
+make react-build    # Build React app only
+make docker-start   # Start Docker containers only
+make docker-stop    # Stop Docker containers only
+
+# Ergo Proxy
+make ergo-start     # Start Ergo proxy only
+make ergo-stop      # Stop Ergo proxy only
+make ergo-check     # Check/install Ergo proxy
 
 # Production
-make prod         # Production environment
-make destroy      # Stop all containers
+make prod           # Production environment
+make docker-stop    # Stop all containers
 
 # AWS Deployment
-make init         # Initialize EB CLI
-make create       # Create EB environment
-make deploy       # Deploy to EB
-make status       # Check EB status
+make init           # Initialize EB CLI
+make create         # Create EB environment
+make deploy         # Deploy to EB
+make status         # Check EB status
 
 # Utilities
-make help         # Show all commands
-make status-dev   # Check development status
-make logs         # View logs
-make logs-follow  # Follow logs
-make nuke-it      # Clean up everything
+make help           # Show all commands
+make docker-logs    # View Docker logs (area=web, follow=true)
+make ergo-logs      # View Ergo logs (follow=true)
+make nuke-it        # Clean up all Docker resources
 ```
 
 ## 🏗️ Architecture
@@ -93,18 +99,18 @@ make nuke-it      # Clean up everything
 - `/` - React frontend application
 
 ### Development Domains
-- `dev.deliveryplus.test` - Main React application
-- `dev.admin.test` - Django admin interface
-- `dev.mgmt.test` - Management API endpoints
-- `dev.tracking.test` - Tracking API endpoints
-- `dev.api.test` - General REST API
+- `deliveryplus.local` - Main React application
+- `admin.local` - Django admin interface
+- `mgmt.local` - Management API endpoints
+- `tracking.local` - Tracking API endpoints
 
 ## 🔧 Configuration
 
 ### Development
-- **Ergo Proxy**: Custom domain resolution
+- **Ergo Proxy**: Custom domain resolution (.local domains)
 - **Nginx**: Domain-specific routing
 - **Docker Compose**: Local development environment
+- **React Build**: Automatic build on `make local-start`
 
 ### Production
 - **Nginx**: Production-optimized configuration
@@ -124,11 +130,12 @@ make nuke-it      # Clean up everything
 - Node.js (for React development)
 
 ### Workflow
-1. **Start Development**: `make dev`
+1. **Start Development**: `make local-start` (automatically builds React)
 2. **Make Changes**: Edit code in `apps/` or `frontend/`
-3. **View Changes**: Changes reflect immediately
-4. **Check Status**: `make status-dev`
-5. **Stop Development**: `make destroy`
+3. **Rebuild React**: `make react-build` (if frontend changes)
+4. **View Changes**: Changes reflect immediately
+5. **Check Status**: `make docker-logs`
+6. **Stop Development**: `make local-stop`
 
 ## 🚀 Deployment
 
@@ -146,18 +153,18 @@ make deploy
 
 ### Status Check
 ```bash
-make status-dev
+make docker-logs
 ```
 
 ### Logs
 ```bash
-make logs-follow
+make docker-logs follow=true
 ```
 
 ### Health Check
 ```bash
 # Development
-curl http://dev.deliveryplus.test/health/
+curl http://deliveryplus.local/health/
 
 # Production
 curl http://localhost/health/
@@ -167,24 +174,26 @@ curl http://localhost/health/
 
 ### Common Issues
 - **Ergo not starting**: Check port 2000 availability
-- **Domains not resolving**: Restart with `make dev`
+- **Domains not resolving**: Restart with `make local-start`
 - **Docker issues**: Clean up with `make nuke-it`
+- **React build issues**: Run `make react-build` manually
 
 ### Cleanup
 ```bash
 # Stop everything
-make destroy
+make local-stop
 
 # Clean all Docker resources
 make nuke-it
 ```
 
----
-
-**🎯 Key Benefits:**
-- ✅ Clean development domains
+## 🎯 Key Benefits
+- ✅ Clean development domains (.local)
 - ✅ Production-ready deployment
 - ✅ AWS integration
 - ✅ Modern React frontend
 - ✅ Comprehensive admin interface
 - ✅ Easy development workflow
+- ✅ Automatic React builds
+- ✅ GPS tracking capabilities
+- ✅ Notification system

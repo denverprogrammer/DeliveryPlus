@@ -155,3 +155,8 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Ergo proxy files
+.ergo
+.ergo.pid
+ergo.log
