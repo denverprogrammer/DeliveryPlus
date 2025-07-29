@@ -157,6 +157,5 @@ env/
 Thumbs.db
 
 # Ergo proxy files
-.ergo
 .ergo.pid
 ergo.log
