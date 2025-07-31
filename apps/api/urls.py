@@ -1,15 +1,13 @@
-# from api.views import AgentTagViewSet
-from django.urls import include
-from django.urls import path
+# urls.py
 from rest_framework.routers import DefaultRouter
+from .views import PackagesView
+
+
+# from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 router = DefaultRouter()
-# router.register(r'agents', AgentViewSet)
-# router.register(r'campaigns', CampaignViewSet)
-# router.register(r'tracking-data', TrackingDataViewSet)
-# router.register(r"tags", AgentTagViewSet)
+router.register(r"packages", PackagesView, basename="packages")
 
-urlpatterns = [
-    path("", include(router.urls)),
-]
+
+urlpatterns = router.urls
