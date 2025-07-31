@@ -39,7 +39,8 @@ help: ## Show this help message
 	@echo "  make local-start  - Start development with custom domains"
 	@echo "  make local-stop   - Stop development environment"
 	@echo "  make quick-start  - Quick setup with prerequisites check"
-	@echo "  make react-build  - Build React app only"
+	@echo "  make react-build  - Build React app in container"
+	@echo "  make react-dev    - Start React dev server in container"
 	@echo "  make docker-start - Start Docker containers only"
 	@echo "  make docker-stop  - Stop Docker containers only"
 	@echo ""
@@ -76,7 +77,6 @@ help: ## Show this help message
 
 local-start: ## Start development with custom domains
 	@$(MAKE) docker-stop
-	@$(MAKE) react-build
 	@$(MAKE) docker-start
 	@$(MAKE) ergo-start
 	@echo "✅ Development environment deployed!"
@@ -96,10 +96,13 @@ local-stop: docker-stop ergo-stop ## Stop development environment
 	@echo "🛑 Docker containers stopped"
 	@echo "🛑 Ergo proxy stopped"
 
-react-build: ## Build React app only
-	@echo "🔨 Building React app..."
-	@cd frontend && npm run build
-	@./update-react-template.sh
+react-build: ## Build React app in container
+	@echo "🔨 Building React app in container..."
+	# @docker compose run --rm -e NODE_ENV=production node
+
+react-dev: ## Start React development server in container
+	@echo "🚀 Starting React development server in container..."
+	@docker compose run --rm -p 5173:5173 -e NODE_ENV=development node
 
 docker-start: ## Start Docker containers only
 	@echo "🐳 Starting Docker containers..."

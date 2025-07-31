@@ -5,10 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '../apps/staticfiles/react',
-    emptyOutDir: true,
+    outDir: '/build/react',
+    emptyOutDir: false,
   },
   server: {
+    host: true,
+    allowedHosts: ['deliveryplus.local', 'mgmt.local'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 WORKDIR /app
 COPY pyproject.toml poetry.lock ./
-RUN pip install --upgrade pip && pip install poetry && poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+RUN pip install --upgrade pip && \
+    pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi
 
 # Copy application code
 COPY ./apps /app/
-
-# Collect static files
-RUN mkdir -p /app/staticfiles && python manage.py collectstatic --noinput
 
 # Expose ports for web and debugger
 EXPOSE 8080

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "taggit",
     "rest_framework",
     "django_filters",
+    "common",
     "mgmt",
     "tracking",
     "django_select2",
