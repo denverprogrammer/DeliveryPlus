@@ -1,120 +1,123 @@
-# React Frontend for DeliveryPlus
+# Frontend Split Architecture
 
-This is the React frontend for the DeliveryPlus tracking application. It provides a modern, responsive user interface while keeping the Django admin and API backend intact.
+This frontend has been split into two separate sites with a shared codebase, running in a single container:
 
-## Features
+## Folder Structure
 
-- **Modern React 18** with TypeScript
-- **React Router** for client-side routing
-- **React Bootstrap** for UI components
-- **Axios** for API communication
-- **Vite** for fast development and building
-- **Automatic Build Integration** with Django static files
+```
+frontend/
+├── delivery/           # Delivery site (public tracking)
+│   ├── DeliveryApp.tsx
+│   ├── main.tsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── management/         # Management site (admin interface)
+│   ├── ManagementApp.tsx
+│   ├── main.tsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+├── shared/            # Shared code between sites
+│   ├── components/
+│   │   └── Navigation.tsx
+│   ├── services/
+│   │   ├── api.ts
+│   │   └── trackingUtils.ts
+│   └── pages/
+│       ├── Home.tsx
+│       ├── Tracking.tsx
+│       └── Redirect.tsx
+└── package.json       # Root package with combined scripts
+```
 
-## Pages
+## 1. Delivery Site
+- **Purpose**: Public-facing tracking and delivery functionality
+- **Location**: `frontend/delivery/`
+- **Routes**: `/`, `/tracking`, `/redirects`
+- **Build Output**: `apps/staticfiles/delivery/`
+- **Development Port**: 3000
+- **Development**: `npm run dev:delivery`
+- **Build**: `npm run build:delivery`
 
-- **Home** (`/`) - Landing page
-- **Tracking** (`/tracking`) - Package tracking interface
-- **Redirect** (`/redirects`) - Package redirect interface
-- **Login** (`/login`) - Authentication
-- **Dashboard** (`/dashboard`) - Management dashboard
-- **Agents** (`/agents`) - Agent management
-- **Agent Form** (`/agents/add`, `/agents/:id/edit`) - Create/edit agents
-- **Company Edit** (`/company/edit`) - Company settings
+## 2. Management Site
+- **Purpose**: Administrative interface for managing agents and companies
+- **Location**: `frontend/management/`
+- **Routes**: `/login`, `/dashboard`, `/agents`, `/company/edit`
+- **Build Output**: `apps/staticfiles/management/`
+- **Development Port**: 3001
+- **Development**: `npm run dev:management`
+- **Build**: `npm run build:management`
 
 ## Development
 
-### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
-
-### Setup
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start development server:
-   ```bash
-   npm run dev
-   ```
-
-The development server will run on `http://localhost:5173` with proxy configuration to forward API calls to the Django backend at `http://localhost:8000`.
-
-### Building for Production
-
-The React app is automatically built when you run `make local-start` in the project root. The build process:
-
-1. **Automatic Build**: `make local-start` triggers `make react-build`
-2. **Build Output**: Files are built to `../apps/staticfiles/react/`
-3. **Template Update**: Django template is automatically updated with new asset filenames
-4. **Django Serving**: Built files are served by Django's static file system
-
-### Manual Build
-
-If you need to build manually:
-
+### Initial Setup
 ```bash
-# From project root
-make react-build
-
-# Or from frontend directory
-npm run build
+# Install dependencies for all apps
+npm run install:all
 ```
 
-## API Integration
+### Running Both Sites Together (Recommended)
+```bash
+# Run both delivery and management sites concurrently
+npm run dev
+```
+This will start:
+- **Delivery app** on http://localhost:3000
+- **Management app** on http://localhost:3001
 
-The React app communicates with the Django backend through REST API endpoints:
+### Running Individual Sites
+```bash
+# Delivery site only
+npm run dev:delivery
 
-- **Tracking**: `/tracking/` and `/tracking/:token/`
-- **Redirects**: `/tracking/redirects/` and `/tracking/redirects/:token/`
-- **Management**: `/mgmt/` endpoints for agents, company, etc.
-
-## Architecture
-
-- **Django Backend**: Handles admin interface, API endpoints, and serves the React app
-- **React Frontend**: Handles user-facing pages and interactions
-- **Static Files**: React build is served through Django's static file system
-- **Automatic Builds**: React builds are integrated into the development workflow
-
-## Development Workflow
-
-1. **Frontend Development**: Work in the `frontend/` directory
-2. **Backend Development**: Work in the `apps/` directory
-3. **API Development**: Add new endpoints in Django and update React API service
-4. **Automatic Deployment**: `make local-start` builds React and starts the full environment
-5. **Manual Rebuilds**: Use `make react-build` for frontend-only changes
-
-## Environment Variables
-
-Create a `.env` file in the frontend directory:
-
-```env
-VITE_API_URL=http://localhost:8000
+# Management site only
+npm run dev:management
 ```
 
-## Scripts
+### Building Individual Sites
+```bash
+# Build delivery site
+npm run build:delivery
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+# Build management site
+npm run build:management
 
-## Build Configuration
+# Build both sites
+npm run build:all
+```
 
-The Vite configuration (`vite.config.ts`) is set up to:
+### Working in Individual Apps
+```bash
+# Work in delivery app
+cd delivery
+npm run dev
 
-- Build to `../apps/staticfiles/react/` (Django static files directory)
-- Proxy API calls to Django backend during development
-- Generate optimized production builds
+# Work in management app
+cd management
+npm run dev
+```
 
-## Notes
+## Docker Integration
 
-- The Django admin interface remains unchanged and accessible at `/admin/`
-- API endpoints are available at `/api/` and `/mgmt/`
-- React routes are handled by Django's catch-all route
-- Static files are collected and served by Django
-- Build process automatically updates Django templates with new asset filenames
-- Development workflow integrates React builds with Django development environment
+The `entrypoint.sh` script automatically handles:
+- Installing dependencies for all apps
+- Running both development servers concurrently in a single container
+- Building both apps in production mode
+
+### Docker Commands
+```bash
+# Development mode - runs both apps on ports 3000 and 3001 in single container
+docker-compose up --build -d
+
+# Production mode - builds both apps
+NODE_ENV=production docker-compose up --build -d
+```
+
+### Single Container Benefits
+- **Efficiency**: One container instead of two
+- **Resource sharing**: Shared node_modules and dependencies
+- **Simpler orchestration**: Single service to manage
+- **Consistent environment**: Both apps run in identical conditions

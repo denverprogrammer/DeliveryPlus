@@ -1,34 +1,40 @@
 {
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite --host",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "axios": "^1.7.9",
-    "bootstrap": "^5.3.3",
-    "react": "^18.3.1",
-    "react-bootstrap": "^2.10.2",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.2",
-    "@types/react-router-dom": "^5.3.3",
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^9.17.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.14",
-    "typescript": "^5.4.2",
-    "vite": "^5.4.10"
-  }
+    "name": "deliveryplus-frontend",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "description": "Split frontend architecture with separate delivery and management apps",
+    "scripts": {
+        "dev": "concurrently \"npm run dev:delivery\" \"npm run dev:management\"",
+        "dev:delivery": "cd delivery && npm run dev -- --port 3000 --host 0.0.0.0",
+        "dev:management": "cd management && npm run dev -- --port 3001 --host 0.0.0.0",
+        "build:delivery": "cd delivery && npm run build",
+        "build:management": "cd management && npm run build",
+        "build:all": "npm run build:delivery && npm run build:management",
+        "install:all": "npm install && cd delivery && npm install && cd ../management && npm install",
+        "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    },
+    "dependencies": {
+        "@types/react": "^18.2.66",
+        "@types/react-dom": "^18.2.22",
+        "axios": "^1.7.9",
+        "bootstrap": "^5.3.3",
+        "react": "^18.3.1",
+        "react-bootstrap": "^2.10.2",
+        "react-dom": "^18.3.1",
+        "react-router-dom": "^6.28.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "@types/react-router-dom": "^5.3.3",
+        "@typescript-eslint/eslint-plugin": "^8.18.0",
+        "@typescript-eslint/parser": "^8.18.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "concurrently": "^9.2.0",
+        "eslint": "^9.17.0",
+        "eslint-plugin-react-hooks": "^5.0.0",
+        "eslint-plugin-react-refresh": "^0.4.14",
+        "typescript": "^5.4.2",
+        "vite": "^5.4.10"
+    }
 }

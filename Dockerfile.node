@@ -1,37 +1,29 @@
 # Dockerfile.node
 FROM node:18-alpine
 
-
-
-
-
-
-
-
-
-
-
-
-
 # Set working directory
 WORKDIR /app
+
+# Copy root package files and install root dependencies
 COPY ./frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
 
+# Copy delivery app package files and install dependencies
+COPY ./frontend/delivery/package*.json ./delivery/
+RUN cd delivery && npm ci --legacy-peer-deps
 
+# Copy management app package files and install dependencies  
+COPY ./frontend/management/package*.json ./management/
+RUN cd management && npm ci --legacy-peer-deps
 
-
-# Copy source code
+# Copy all source code
 COPY frontend/ ./
 
+# Expose both app ports
+EXPOSE 3000 3001
 
-
-EXPOSE 5173
-
-
-
-# Copy entrypoint script
-COPY entrypoint.sh /app/entrypoint.sh
+# Copy entrypoint script from frontend directory
+COPY ./frontend/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]

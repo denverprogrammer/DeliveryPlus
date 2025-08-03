@@ -2,7 +2,7 @@
 # DeliveryPlus Development & Deployment Commands
 # =============================================================================
 
-.PHONY: help local-start local-stop quick-start react-build docker-start docker-stop ergo-start ergo-stop ergo-check docker-check prod prod-config init create deploy status nuke-it docker-logs ergo-logs
+.PHONY: help local-start local-stop quick-start docker-start docker-stop ergo-start ergo-stop ergo-check docker-check prod prod-config init create deploy status nuke-it docker-logs ergo-logs
 
 ifeq ($(build),true)
 BUILD_PARAM = --build --force-recreate
@@ -39,8 +39,6 @@ help: ## Show this help message
 	@echo "  make local-start  - Start development with custom domains"
 	@echo "  make local-stop   - Stop development environment"
 	@echo "  make quick-start  - Quick setup with prerequisites check"
-	@echo "  make react-build  - Build React app in container"
-	@echo "  make react-dev    - Start React dev server in container"
 	@echo "  make docker-start - Start Docker containers only"
 	@echo "  make docker-stop  - Stop Docker containers only"
 	@echo ""
@@ -67,9 +65,9 @@ help: ## Show this help message
 	@echo "  make ergo-logs    - View Ergo logs (follow=true)"
 	@echo ""
 	@echo "🌐 Development Domains:"
-	@echo "  Main App:     http://deliveryplus.local"
-	@echo "  Admin:        http://admin.local"
-	@echo "  Management:   http://mgmt.local"
+	@echo "  Delivery App:  http://deliveryplus.local (port 3000)"
+	@echo "  Management App: http://mgmt.local (port 3001)"
+	@echo "  Admin:         http://admin.local"
 
 # =============================================================================
 # Development Commands
@@ -82,9 +80,9 @@ local-start: ## Start development with custom domains
 	@echo "✅ Development environment deployed!"
 	@echo ""
 	@echo "🌐 Custom Domain Access:"
-	@echo "   Main App:     http://deliveryplus.local"
-	@echo "   Management:   http://mgmt.local"
-	@echo "   Admin:        http://admin.local"
+	@echo "   Delivery App:  http://deliveryplus.local (port 3000)"
+	@echo "   Management App: http://mgmt.local (port 3001)"
+	@echo "   Admin:         http://admin.local"
 	@echo ""
 	@echo "💡 Ergo proxy running (headless)"
 	@echo "   To stop Ergo: make ergo-stop"
@@ -95,14 +93,6 @@ local-stop: docker-stop ergo-stop ## Stop development environment
 	@echo ""
 	@echo "🛑 Docker containers stopped"
 	@echo "🛑 Ergo proxy stopped"
-
-react-build: ## Build React app in container
-	@echo "🔨 Building React app in container..."
-	# @docker compose run --rm -e NODE_ENV=production node
-
-react-dev: ## Start React development server in container
-	@echo "🚀 Starting React development server in container..."
-	@docker compose run --rm -p 5173:5173 -e NODE_ENV=development node
 
 docker-start: ## Start Docker containers only
 	@echo "🐳 Starting Docker containers..."
@@ -170,9 +160,9 @@ quick-start: ergo-check docker-check ## Quick setup with prerequisites check
 	@echo "=================="
 	@echo ""
 	@echo "🌐 Access your application:"
-	@echo "   Main App:     http://deliveryplus.local"
-	@echo "   Admin:        http://admin.local"
-	@echo "   Management:   http://mgmt.local"
+	@echo "   Delivery App:  http://deliveryplus.local (port 3000)"
+	@echo "   Management App: http://mgmt.local (port 3001)"
+	@echo "   Admin:         http://admin.local"
 	@echo ""
 	@echo "📊 Check status: make docker-logs"
 	@echo "📊 View Ergo logs: make ergo-logs"
@@ -191,39 +181,33 @@ prod: ## Start production environment
 	@echo "🌐 Access your application at: http://localhost"
 	@echo "🔧 Admin interface: http://localhost/admin/"
 	@echo "📊 Management API: http://localhost/mgmt/"
-
-# =============================================================================
-# AWS Elastic Beanstalk Commands
-# =============================================================================
-
-init: ## Initialize EB CLI
-	docker compose -f docker-compose.deploy.yml run --rm ebcli init --profile packageparcels
-
-create: ## Create EB environment
-	docker compose -f docker-compose.deploy.yml run --rm ebcli create --profile packageparcels
-
-deploy: ## Deploy to EB
-	docker compose -f docker-compose.deploy.yml run --rm ebcli deploy --profile packageparcels
-
-status: ## Check EB status
-	docker compose -f docker-compose.deploy.yml run --rm ebcli status --profile packageparcels
+	@echo "📱 Delivery app: http://localhost/delivery/"
+	@echo "💼 Management app: http://localhost/management/"
 
 # =============================================================================
 # Utility Commands
 # =============================================================================
 
+docker-logs: ## View Docker logs (area=web, follow=true)
+	@if [ "$(area)" = "web" ]; then \
+		docker compose logs $(FOLLOW_PARAM) web; \
+	elif [ "$(area)" = "frontend" ]; then \
+		docker compose logs $(FOLLOW_PARAM) frontend; \
+	elif [ "$(area)" = "nginx" ]; then \
+		docker compose logs $(FOLLOW_PARAM) nginx; \
+	else \
+		docker compose logs $(FOLLOW_PARAM); \
+	fi
+
+ergo-logs: ## View Ergo logs (follow=true)
+	@if [ "$(follow)" = "true" ]; then \
+		tail -f ergo.log; \
+	else \
+		cat ergo.log; \
+	fi
+
 nuke-it: ## Clean up all Docker resources
-	@$(MAKE) docker-stop container-clean=true volume-clean=true
-	@$(MAKE) ergo-stop >/dev/null 2>&1 || true
 	@echo "🧹 Cleaning up all Docker resources..."
-	@docker volume prune --force
-	@docker network prune --force
-	@docker container prune --force
-	@docker rmi -f $$(docker images -aq)
+	@docker compose down --volumes --remove-orphans
+	@docker system prune -f
 	@echo "✅ Cleanup complete!"
-
-docker-logs: ## View Docker logs with parameters
-	@docker compose logs $(FOLLOW_PARAM) $(AREA_PARAM)
-
-ergo-logs: ## View Ergo logs with parameters
-	@tail $(FOLLOW_PARAM) ergo.log

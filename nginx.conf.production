@@ -146,6 +146,60 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
     }
 
+    # Delivery app static files
+    location /delivery/ {
+        alias /static/delivery/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Vary Accept-Encoding;
+        
+        # Gzip compression for delivery app
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_comp_level 6;
+        gzip_types 
+            text/plain 
+            text/css 
+            text/xml 
+            text/javascript 
+            application/javascript 
+            application/xml+rss 
+            application/json
+            application/xml
+            image/svg+xml;
+        
+        # Security for delivery app
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Management app static files
+    location /management/ {
+        alias /static/management/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Vary Accept-Encoding;
+        
+        # Gzip compression for management app
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_comp_level 6;
+        gzip_types 
+            text/plain 
+            text/css 
+            text/xml 
+            text/javascript 
+            application/javascript 
+            application/xml+rss 
+            application/json
+            application/xml
+            image/svg+xml;
+        
+        # Security for management app
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
     # Media files (if any)
     location /media/ {
         alias /static/media/;
@@ -170,16 +224,16 @@ server {
             image/svg+xml;
     }
 
-    # React app - Catch-all for frontend routes
+    # Delivery app - Catch-all for delivery routes
     location / {
-        # Try to serve static files first (React build)
+        # Try to serve static files first (Delivery app build)
         try_files $uri $uri/ @django;
         
-        # Security for frontend
+        # Security for delivery app
         add_header X-Content-Type-Options "nosniff" always;
     }
 
-    # Fallback to Django for React app
+    # Fallback to Django for delivery app
     location @django {
         proxy_pass http://web;
         proxy_set_header Host $host;
@@ -189,12 +243,12 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
         
-        # React app settings
+        # Delivery app settings
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
         
-        # Security for frontend
+        # Security for delivery app
         proxy_hide_header X-Powered-By;
         proxy_hide_header Server;
     }

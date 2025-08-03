@@ -1,4 +1,3 @@
-deliveryplus http://localhost
-mgmt http://localhost
+deliveryplus http://localhost:3000
+mgmt http://localhost:3001
 admin http://localhost
-api http://localhost

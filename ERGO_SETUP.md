@@ -6,13 +6,12 @@ This guide explains how to use Ergo Proxy with custom local domains for a better
 
 Instead of using paths like `/admin/`, `/mgmt/`, etc., you can now access each component on its own domain:
 
-| Component | Custom Domain |
-|-----------|---------------|
-| Main App | `http://deliveryplus.local` |
-| Admin | `http://admin.local` |
-| Management | `http://mgmt.local` |
-| Tracking | `http://tracking.local` |
-| API | `http://api.local` |
+| Component | Custom Domain | Port | Purpose |
+|-----------|---------------|------|---------|
+| Delivery App | `http://deliveryplus.local` | 3000 | Public tracking and delivery |
+| Management App | `http://mgmt.local` | 3001 | Admin interface |
+| Admin | `http://admin.local` | 80 | Django admin |
+| API | `http://api.local` | 80 | Django API |
 
 ## 🛠️ Setup
 
@@ -38,17 +37,15 @@ ergo run --all
 Once deployed, you can access:
 
 **Primary Access (Recommended):**
-- **Main App**: http://localhost/
+- **Delivery App**: http://localhost:3000/
+- **Management App**: http://localhost:3001/
 - **Admin**: http://localhost/admin/
-- **Management**: http://localhost/mgmt/
-- **Tracking**: http://localhost/tracking/
 - **API**: http://localhost/api/
 
 **Custom Domains (if Ergo DNS resolution works):**
-- **Main App**: http://deliveryplus.local
+- **Delivery App**: http://deliveryplus.local
+- **Management App**: http://mgmt.local
 - **Admin**: http://admin.local
-- **Management**: http://mgmt.local
-- **Tracking**: http://tracking.local
 - **API**: http://api.local
 
 **Note**: Localhost access works immediately. Custom domains require Ergo DNS resolution to be working.
@@ -57,16 +54,15 @@ Once deployed, you can access:
 
 ### Ergo Configuration (`.ergo`)
 ```
-deliveryplus = "http://localhost"
+deliveryplus = "http://localhost:3000"
+mgmt = "http://localhost:3001"
 admin = "http://localhost"
-mgmt = "http://localhost"
-tracking = "http://localhost"
 api = "http://localhost"
 ```
 
-### Nginx Configuration (`nginx.conf.dev`)
+### Nginx Configuration (`nginx.conf`)
 - **Multiple server blocks** for each domain
-- **Domain-specific routing** to Django paths
+- **Domain-specific routing** to separate frontend apps
 - **Static file optimization** for each domain
 - **Security headers** for all domains
 
@@ -96,27 +92,43 @@ make help
 
 ### 1. Request Flow
 ```
-Browser → Ergo Proxy (Port 2000) → Nginx (Port 80) → Django
+Browser → Ergo Proxy (Port 2000) → Nginx (Port 80) → Frontend Container (Ports 3000/3001) + Django
 ```
 
 ### 2. Domain Resolution
 ```
-admin.local → Ergo → localhost:80 → nginx → /admin/
-mgmt.local → Ergo → localhost:80 → nginx → /mgmt/
-tracking.local → Ergo → localhost:80 → nginx → /tracking/
-api.local → Ergo → localhost:80 → nginx → /api/
-deliveryplus.local → Ergo → localhost:80 → nginx → /
+deliveryplus.local → Ergo → localhost:3000 → Frontend Container (Delivery App)
+mgmt.local → Ergo → localhost:3001 → Frontend Container (Management App)
+admin.local → Ergo → localhost:80 → nginx → Django Admin
+api.local → Ergo → localhost:80 → nginx → Django API
 ```
 
-### 3. Nginx Server Blocks
+### 3. Single Container Architecture
+Both frontend apps run in a single container using `concurrently`:
+```bash
+# Inside the frontend container
+npm run dev  # Runs both apps on different ports
+```
+
+### 4. Nginx Server Blocks
 Each domain has its own server block:
 ```nginx
 server {
     listen 80;
-    server_name dev.admin.test;
+    server_name deliveryplus.local;
     
     location / {
-        proxy_pass http://web/admin/;
+        proxy_pass http://frontend:3000;
+        # ... headers and settings
+    }
+}
+
+server {
+    listen 80;
+    server_name mgmt.local;
+    
+    location / {
+        proxy_pass http://frontend:3001;
         # ... headers and settings
     }
 }
@@ -130,19 +142,26 @@ server {
 - Better for development and testing
 
 ### ✅ **Isolated Components**
-- Admin interface completely separate
+- Delivery app completely separate from management
 - API endpoints on their own domain
-- Frontend app isolated
+- Frontend apps isolated
 
 ### ✅ **Better Development Experience**
 - Clear separation of concerns
 - Easier to test individual components
 - More realistic production-like setup
 
-### ✅ **Clean Development Experience**
-- Each component has its own domain
-- No more confusing paths
-- Production deployment unchanged
+### ✅ **Split Frontend Architecture**
+- Delivery app for public tracking
+- Management app for admin interface
+- Shared codebase in `frontend/shared/`
+- Single container efficiency
+
+### ✅ **Single Container Benefits**
+- **Efficiency**: One container instead of two
+- **Resource sharing**: Shared node_modules and dependencies
+- **Simpler orchestration**: Single service to manage
+- **Consistent environment**: Both apps run in identical conditions
 
 ## 🔧 Customization
 
@@ -150,43 +169,48 @@ server {
 
 1. **Update Ergo config** (`.ergo`):
 ```
-newcomponent = "http://localhost"
+newcomponent = "http://localhost:3002"
 ```
 
-2. **Add Nginx server block** (`nginx.conf.dev`):
+2. **Add Nginx server block** (`nginx.conf`):
 ```nginx
 server {
     listen 80;
     server_name dev.newcomponent.test;
     
     location / {
-        proxy_pass http://web/newcomponent/;
+        proxy_pass http://frontend:3002;
         # ... headers and settings
     }
 }
 ```
 
-3. **Add Django URL** (`apps/config/urls.py`):
-```python
-path("newcomponent/", include("newcomponent.urls")),
+3. **Add to frontend container** (`docker-compose.yml`):
+```yaml
+frontend:
+    ports:
+        - "3002:3002"  # Add new port
 ```
 
 ### Changing Ports
 
-Edit `ergo.toml`:
-```toml
-[server]
-port = 3000  # Change from 2000
+Edit `docker-compose.yml`:
+```yaml
+frontend:
+    ports:
+        - "4000:3000"  # Change delivery port
+        - "4001:3001"  # Change management port
 ```
 
 ### Using Different Domains
 
-Edit `ergo.toml`:
-```toml
-[[proxy]]
-name = "admin.localhost"
-port = 80
-host = "127.0.0.1"
+Edit `nginx.conf`:
+```nginx
+server {
+    listen 80;
+    server_name newdomain.local;
+    # ... configuration
+}
 ```
 
 ## 🐛 Troubleshooting
@@ -210,6 +234,17 @@ make status-dev
 
 # Restart Ergo
 make stop-ergo
+make dev
+```
+
+### Frontend Apps Not Starting
+```bash
+# Check if ports are available
+lsof -i :3000
+lsof -i :3001
+
+# Restart all services
+make destroy
 make dev
 ```
 
@@ -240,11 +275,10 @@ make dev
 ```
 
 ### 2. Access Components
-- Open http://dev.deliveryplus.test for main app
-- Open http://dev.admin.test for admin
-- Open http://dev.mgmt.test for management
-- Open http://dev.tracking.test for tracking
-- Open http://dev.api.test for API
+- Open http://deliveryplus.local for delivery app
+- Open http://mgmt.local for management app
+- Open http://admin.local for Django admin
+- Open http://api.local for API
 
 ### 3. Make Changes
 - Edit code in `apps/` or `frontend/`
@@ -254,7 +288,7 @@ make dev
 ### 4. Stop Development
 ```bash
 # Stop Ergo proxy
-make stop-ergo
+make ergo-stop
 
 # Stop all services
 make destroy
@@ -274,12 +308,18 @@ make logs
 
 # Follow logs
 make logs-follow
+
+# Specific service
+docker compose logs frontend
 ```
 
 ### Health Checks
 ```bash
-# Main app
-curl http://dev.deliveryplus.test/health/
+# Delivery app
+curl http://deliveryplus.local/health/
+
+# Management app
+curl http://mgmt.local/health/
 ```
 
 ## 🚀 Production Deployment
@@ -307,6 +347,8 @@ This uses:
 
 **🎯 Key Benefits:**
 - ✅ Clean, separate domains for each component
+- ✅ Split frontend architecture (delivery + management)
+- ✅ Single container efficiency
 - ✅ Better development experience
 - ✅ Easy switching between dev/prod
 - ✅ Isolated component testing
