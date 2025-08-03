@@ -13,6 +13,7 @@ const Navigation = () => {
     // Determine if we're in the delivery section
     const isDeliverySite = location.pathname.startsWith('/tracking') || 
                           location.pathname.startsWith('/redirects') ||
+                          location.pathname.startsWith('/services') ||
                           location.pathname === '/';
 
     return (
@@ -29,16 +30,11 @@ const Navigation = () => {
                                 <Nav.Link 
                                     as={Link} 
                                     to="/tracking" 
-                                    active={location.pathname === '/tracking'}
+                                    active={location.pathname.startsWith('/tracking') || 
+                                           location.pathname.startsWith('/redirects') || 
+                                           location.pathname.startsWith('/services')}
                                 >
                                     Tracking
-                                </Nav.Link>
-                                <Nav.Link 
-                                    as={Link} 
-                                    to="/redirects" 
-                                    active={location.pathname === '/redirects'}
-                                >
-                                    Redirects
                                 </Nav.Link>
                             </>
                         )}

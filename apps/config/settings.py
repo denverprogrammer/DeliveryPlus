@@ -179,6 +179,14 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+# CSRF settings for local development
+CSRF_TRUSTED_ORIGINS = [
+    "http://deliveryplus.local",
+    "https://deliveryplus.local",
+    "http://mgmt.local",
+    "https://mgmt.local",
+]
+
 
 def show_toolbar(_: Any) -> bool:
     return bool(DEBUG)

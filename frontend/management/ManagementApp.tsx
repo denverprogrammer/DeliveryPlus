@@ -18,13 +18,13 @@ function ManagementApp() {
                 <Container className="mt-4">
                     <Routes>
                         {/* Management Routes Only */}
-                        <Route path="/" element={<Dashboard />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/agents" element={<AgentList />} />
                         <Route path="/agents/add" element={<AgentForm />} />
                         <Route path="/agents/:id/edit" element={<AgentForm />} />
                         <Route path="/company/edit" element={<CompanyEdit />} />
+                        <Route path="/" element={<Dashboard />} />
                     </Routes>
                 </Container>
             </div>

@@ -12,13 +12,9 @@ export default defineConfig({
     },
     server: {
         host: true,
-        allowedHosts: ['deliveryplus.local', 'delivery.local'],
+        allowedHosts: ['deliveryplus.local'],
         proxy: {
-            '/api': {
-                target: 'http://web:8080',
-                changeOrigin: true,
-            },
-            '/tracking': {
+            '/api/': {
                 target: 'http://web:8080',
                 changeOrigin: true,
             },
