@@ -6,8 +6,8 @@ services:
         volumes:
             - ./apps:/app
             - django_static:/staticfiles/django
-        ports:
-            - "8000:8000"  # Django admin and API
+        # ports:
+        #     - "8000:8000"  # Django admin and API
         # ports:
         #     - "5678:5678"  # Debug port
         environment:
@@ -29,7 +29,6 @@ services:
         depends_on:
             - database
             - redis
-            - frontend
 
     frontend:
         build:
@@ -45,6 +44,8 @@ services:
         ports:
             - "3000:3000"  # Delivery app
             - "3001:3001"  # Management app
+        depends_on:
+            - web
 
     nginx:
         image: nginx:1.23.2-alpine

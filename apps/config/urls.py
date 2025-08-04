@@ -1,5 +1,5 @@
 # from django.conf.urls import handler403
-from config.views import HostBasedView
+# from config.views import HostBasedView
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include
@@ -16,7 +16,7 @@ urlpatterns = [
     path("api/", include("api.urls")),
     path("select2/", include("django_select2.urls")),
     # React app routes (catch-all for front-end)
-    path("", HostBasedView.as_view()),
+    # path("", HostBasedView.as_view()),
 ]
 
 if settings.DEBUG:
