@@ -7,19 +7,19 @@ export default defineConfig({
     plugins: [react()],
     root: path.resolve(__dirname, '.'),
     build: {
-        outDir: '../../apps/staticfiles/management',
-        emptyOutDir: false,
+        outDir: '/staticfiles/management',
+        emptyOutDir: true,
     },
     server: {
         host: true,
         allowedHosts: ['mgmt.local'],
         proxy: {
             '/api/': {
-                target: 'http://web:8080',
+                target: 'http://web:8000',
                 changeOrigin: true,
             },
             '/admin/': {
-                target: 'http://web:8080',
+                target: 'http://web:8000',
                 changeOrigin: true,
             },
         },

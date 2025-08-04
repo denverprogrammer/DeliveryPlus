@@ -7,15 +7,15 @@ export default defineConfig({
     plugins: [react()],
     root: path.resolve(__dirname, '.'),
     build: {
-        outDir: '../../apps/staticfiles/delivery',
-        emptyOutDir: false,
+        outDir: '/staticfiles/delivery',
+        emptyOutDir: true,
     },
     server: {
         host: true,
         allowedHosts: ['deliveryplus.local'],
         proxy: {
             '/api/': {
-                target: 'http://web:8080',
+                target: 'http://web:8000',
                 changeOrigin: true,
             },
         },

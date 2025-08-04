@@ -29,9 +29,9 @@ if [ "$DEBUG" = 1 ]
 then
     # Use Django's development server in debug mode with debugger enabled
     # Disable frozen modules to fix debugger warnings
-    # python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py runserver 0.0.0.0:8080
+    # python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py runserver 0.0.0.0:8000
     echo "Running development server"
-    python manage.py runserver 0.0.0.0:8080
+    python manage.py runserver 0.0.0.0:8000
 else
     echo "Running production server"
     gunicorn config.asgi:application \
@@ -41,7 +41,7 @@ else
         --workers 3 \
         --timeout 120 \
         --log-level debug \
-        --bind 0.0.0.0:8080
+        --bind 0.0.0.0:8000
 fi
 
 exec "$@"

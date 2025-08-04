@@ -25,10 +25,10 @@ RUN pip install --upgrade pip && \
 COPY ./apps /app/
 
 # Expose ports for web and debugger
-EXPOSE 8080
+EXPOSE 8000
 EXPOSE 5678
 
-# Start Gunicorn server on port 8080
-# CMD ["gunicorn", "packageparcels.wsgi:application", "--bind", "0.0.0.0:8080"]
+# Start Gunicorn server on port 8000
+# CMD ["gunicorn", "packageparcels.wsgi:application", "--bind", "0.0.0.0:8000"]
 ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
 # ENTRYPOINT ["tail", "-f", "/dev/null"]

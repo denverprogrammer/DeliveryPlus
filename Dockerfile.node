@@ -4,6 +4,9 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
+RUN mkdir -p /staticfiles/management
+RUN mkdir -p /staticfiles/delivery
+
 # Copy root package files and install root dependencies
 COPY ./frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
