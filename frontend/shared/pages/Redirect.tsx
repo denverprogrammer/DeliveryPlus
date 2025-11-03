@@ -22,7 +22,7 @@ const Redirect = () => {
     useEffect(() => {
         const finalToken = inputToken || urlToken;
         if (finalToken) {
-            sendPassiveTracking(finalToken, `${import.meta.env.VITE_API_URL || ''}/tracking/redirects`);
+            sendPassiveTracking(finalToken, `/api/packages`);
         }
     }, [inputToken, urlToken]);
 

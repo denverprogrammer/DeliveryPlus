@@ -6,8 +6,8 @@ services:
         volumes:
             - ./apps:/app
             - django_static:/staticfiles/django
-        # ports:
-        #     - "8000:8000"  # Django admin and API
+        ports:
+            - "8000:8000"  # Django admin and API
         # ports:
         #     - "5678:5678"  # Debug port
         environment:

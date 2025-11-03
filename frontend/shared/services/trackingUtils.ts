@@ -128,77 +128,54 @@ export async function prepareTrackingHeader(): Promise<string | null> {
     return trackingHeaderPromise;
 }
 
-// Custom hook for tracking functionality
-export function useTracking() {
-    const sendTrackingData = async (token: string, endpoint: string) => {
-        const headerValue = await prepareTrackingHeader();
-        
-        const formData = new FormData();
-        formData.append('http_method', 'POST');
-        formData.append('token', token);
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'multipart/form-data',
-        };
-
-        if (headerValue) {
-            headers['X-Tracking-Payload'] = headerValue;
-        }
-
-        const response = await fetch(`${endpoint}/${token}/`, {
-            method: 'POST',
-            body: formData,
-            headers,
-        });
-
-        return response.json();
-    };
-
-    const sendPassiveTracking = async (token: string, endpoint: string) => {
-        const headerValue = await prepareTrackingHeader();
-        
-        const formData = new FormData();
-        formData.append('http_method', 'GET');
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'multipart/form-data',
-        };
-
-        if (headerValue) {
-            headers['X-Tracking-Payload'] = headerValue;
-        }
-
-        await fetch(`${endpoint}/${token}/`, {
-            method: 'POST',
-            body: formData,
-            headers,
-        });
-    };
-
-    return {
-        sendTrackingData,
-        sendPassiveTracking,
-    };
-}
-
-// Standalone function for passive tracking
-export async function sendPassiveTracking(token: string, endpoint: string) {
+export const sendTrackingData = async (token: string, endpoint: string) => {
     const headerValue = await prepareTrackingHeader();
-    
-    const formData = new FormData();
-    formData.append('http_method', 'GET');
-
     const headers: Record<string, string> = {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
     };
 
     if (headerValue) {
         headers['X-Tracking-Payload'] = headerValue;
     }
 
-    await fetch(`${endpoint}/${token}/`, {
+    const response = await fetch(`${endpoint}/track/`, {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify({
+			method: 'POST',
+			token: token,
+		}),
         headers,
     });
-} 
+
+    return response.json();
+};
+
+export const sendPassiveTracking = async (token: string, endpoint: string) => {
+    const headerValue = await prepareTrackingHeader();
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    };
+
+    if (headerValue) {
+        headers['X-Tracking-Payload'] = headerValue;
+    }
+
+    await fetch(`${endpoint}/track/`, {
+        method: 'POST',
+        body: JSON.stringify({
+			method: 'GET',
+			token: token,
+		}),
+        headers,
+    });
+};
+
+// Custom hook for tracking functionality
+export function useTracking() {
+    return {
+        sendTrackingData,
+        sendPassiveTracking,
+    };
+}

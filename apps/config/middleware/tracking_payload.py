@@ -16,9 +16,13 @@ class TrackingPayloadMiddleware:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
+        print("start middleare request")
+        print(request)
+        print("end middleare request")
         header_value = request.headers.get("X-Tracking-Payload")
 
         if header_value:
+            logger.debug("X-Tracking-Payload header found")
             try:
                 # Step 1: Decode base64 safely
                 decoded_bytes = base64.b64decode(header_value)
@@ -35,6 +39,7 @@ class TrackingPayloadMiddleware:
                 setattr(request, "header_data ", None)
         else:
             # No header found
+            print("No X-Tracking-Payload header found")
             setattr(request, "header_data ", None)
 
         response = self.get_response(request)

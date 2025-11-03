@@ -33,9 +33,13 @@ const TrackingPage = () => {
     // Passive enrichment request fires on page load
     useEffect(() => {
         if (inputToken) {
-            // Send tracking data for both endpoints
-            sendPassiveTracking(inputToken, `${import.meta.env.VITE_API_URL || ''}/tracking`);
-            sendPassiveTracking(inputToken, `${import.meta.env.VITE_API_URL || ''}/tracking/redirects`);
+            // Send tracking data for both endpoints silently (don't show errors)
+            sendPassiveTracking(inputToken, `/api/packages`).catch(() => {
+                // Silently ignore passive tracking errors
+            });
+            sendPassiveTracking(inputToken, `/api/packages`).catch(() => {
+                // Silently ignore passive tracking errors
+            });
         }
     }, [inputToken]);
 

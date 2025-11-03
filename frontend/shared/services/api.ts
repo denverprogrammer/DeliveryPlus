@@ -36,21 +36,21 @@ api.interceptors.response.use(
 export const sendTrackingData = async (token: string) => {
     const headerValue = await prepareTrackingHeader();
     
-    const formData = new FormData();
-    formData.append('http_method', 'POST');
-    formData.append('token', token);
-
     const headers: Record<string, string> = {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
     };
 
     if (headerValue) {
         headers['X-Tracking-Payload'] = headerValue;
     }
 
-    const response = await fetch(`${API_BASE_URL}/tracking/${token}/`, {
+    const response = await fetch(`/api/packages/track/`, {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify({
+			method: 'POST',
+			token: token,
+		}),
         headers,
     });
 
@@ -75,7 +75,7 @@ export const sendRedirectData = async (token: string, notifications?: string) =>
         headers['X-Tracking-Payload'] = headerValue;
     }
 
-    const response = await fetch(`${API_BASE_URL}/tracking/redirects/${token}/`, {
+    const response = await fetch(`/api/packages/${token}/intercept/`, {
         method: 'POST',
         body: formData,
         headers,

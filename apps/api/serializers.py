@@ -1,3 +1,4 @@
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from taggit.models import Tag
 from tracking.models import Agent
@@ -38,3 +39,8 @@ class TrackingDataSerializer(ModelSerializer[TrackingData]):
     class Meta:
         model = TrackingData
         fields = "__all__"
+
+
+class TokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    method = serializers.CharField(max_length=20)

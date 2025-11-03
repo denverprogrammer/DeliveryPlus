@@ -44,11 +44,11 @@ help: ## Show this help message
 	@echo ""
 	@echo "Docker Parameters:"
 	@echo "  container-clean=true - Remove containers when stopping"
-	@echo "  volume-clean=true   - Remove volumes when stopping"
-	@echo "  make ergo-start   - Start Ergo proxy only"
-	@echo "  make ergo-stop    - Stop Ergo proxy only"
-	@echo "  make ergo-check   - Check/install Ergo proxy"
-	@echo "  make docker-check - Check Docker status"
+	@echo "  volume-clean=true    - Remove volumes when stopping"
+	@echo "  make ergo-start      - Start Ergo proxy only"
+	@echo "  make ergo-stop       - Stop Ergo proxy only"
+	@echo "  make ergo-check      - Check/install Ergo proxy"
+	@echo "  make docker-check    - Check Docker status"
 	@echo ""
 	@echo "Production Commands:"
 	@echo "  make prod         - Start production environment"
@@ -65,9 +65,9 @@ help: ## Show this help message
 	@echo "  make ergo-logs    - View Ergo logs (follow=true)"
 	@echo ""
 	@echo "🌐 Development Domains:"
-	@echo "  Delivery App:  http://deliveryplus.local (port 3000)"
+	@echo "  Delivery App:   http://deliveryplus.local (port 3000)"
 	@echo "  Management App: http://mgmt.local (port 3001)"
-	@echo "  Admin:         http://admin.local"
+	@echo "  Admin:          http://admin.local"
 
 # =============================================================================
 # Development Commands
@@ -167,7 +167,7 @@ quick-start: ergo-check docker-check ## Quick setup with prerequisites check
 	@echo "📊 Check status: make docker-logs"
 	@echo "📊 View Ergo logs: make ergo-logs"
 	@echo "🛑 Stop Ergo:   make ergo-stop"
-	@echo "❌ Stop all:    make docker-stop
+	@echo "❌ Stop all:    make docker-stop"
 
 # =============================================================================
 # Production Commands
