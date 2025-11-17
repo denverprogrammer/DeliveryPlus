@@ -16,12 +16,15 @@ interface NotifyResponse {
 
 const TrackingPage = () => {
     const [queryString] = useSearchParams();
+
     const [inputToken, setInputToken] = useState('');
-    const [phone, setPhone] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [isTrackingLoading, setIsTrackingLoading] = useState(false);
     const [trackingResponse, setTrackingResponse] = useState<TrackingResponse | null>(null);
+    const [trackingError, setTrackingError] = useState<string | null>(null);
+
+    const [phone, setPhone] = useState('');
+    const [isNotificationLoading, setIsNotificationLoading] = useState(false);
     const [notifyResponse, setNotifyResponse] = useState<NotifyResponse | null>(null);
-    const [tokenError, setTokenError] = useState<string | null>(null);
     const [notificationError, setNotificationError] = useState<string | null>(null);
 
     // Update inputToken when URL parameter changes
@@ -36,6 +39,13 @@ const TrackingPage = () => {
             if (inputToken) {
                 await sendTrackingData(inputToken, 'GET').catch(() => {});
             }
+
+            setTrackingResponse(null);
+            setTrackingError(null);
+
+            setPhone('');
+            setNotifyResponse(null);
+            setNotificationError(null);
         };
         fetchData();
     }, [inputToken]);
@@ -43,12 +53,12 @@ const TrackingPage = () => {
     const handleTrackingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputToken.trim()) {
-            setTokenError('Please enter a tracking token');
+            setTrackingError('Please enter a tracking token');
             return;
         }
 
-        setIsLoading(true);
-        setTokenError(null);
+        setIsTrackingLoading(true);
+        setTrackingError(null);
         setTrackingResponse(null);
 
         try {
@@ -59,9 +69,9 @@ const TrackingPage = () => {
                 throw new Error(result.detail || 'Tracking request failed');
             }
         } catch (err) {
-            setTokenError(err instanceof Error ? err.message : 'An error occurred');
+            setTrackingError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
-            setIsLoading(false);
+            setIsTrackingLoading(false);
         }
     };
 
@@ -72,7 +82,7 @@ const TrackingPage = () => {
             return;
         }
 
-        setIsLoading(true);
+        setIsNotificationLoading(true);
         setNotificationError(null);
         setNotifyResponse(null);
 
@@ -86,7 +96,7 @@ const TrackingPage = () => {
         } catch (err) {
             setNotificationError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
-            setIsLoading(false);
+            setIsNotificationLoading(false);
         }
     };
 
@@ -112,11 +122,11 @@ const TrackingPage = () => {
                         <Button 
                             type="submit" 
                             variant="primary" 
-                            disabled={isLoading}
+                            disabled={isTrackingLoading}
                             className="px-4"
                         >
-                            {isLoading ? (
-                                <>
+                            {isTrackingLoading ? (
+                                <div className="d-flex align-items-center gap-3">
                                     <Spinner
                                         as="span"
                                         animation="border"
@@ -126,7 +136,7 @@ const TrackingPage = () => {
                                         className="me-2"
                                     />
                                     Loading...
-                                </>
+                                </div>
                             ) : (
                                 'Check'
                             )}
@@ -134,9 +144,9 @@ const TrackingPage = () => {
                     </div>
                 </Form>
 
-                {tokenError && (
+                {trackingError && (
                     <Alert variant="danger" className="mt-3">
-                        {tokenError}
+                        {trackingError}
                     </Alert>
                 )}
 
@@ -162,11 +172,11 @@ const TrackingPage = () => {
                                     <Button 
                                         type="submit" 
                                         variant="primary" 
-                                        disabled={isLoading}
+                                        disabled={isNotificationLoading}
                                         style={{ whiteSpace: 'nowrap' }}
                                     >
-                                        {isLoading ? (
-                                            <>
+                                        {isNotificationLoading ? (
+                                            <div className="d-flex align-items-center gap-3">
                                                 <Spinner
                                                     as="span"
                                                     animation="border"
@@ -176,7 +186,7 @@ const TrackingPage = () => {
                                                     className="me-2"
                                                 />
                                                 Loading...
-                                            </>
+                                            </div>
                                         ) : (
                                             'Notify Me'
                                         )}
