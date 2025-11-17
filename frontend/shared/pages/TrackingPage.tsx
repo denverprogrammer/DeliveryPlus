@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Form, Alert, Spinner, Accordion } from 'react-bootstrap';
+import { Button, Form, Alert, Spinner } from 'react-bootstrap';
 // import { sendTrackingData, sendRedirectData } from '../services/api';
 import { sendTrackingData, sendNotifyData } from '../services/trackingUtils';
 
@@ -16,16 +16,20 @@ interface NotifyResponse {
 
 const TrackingPage = () => {
     const [queryString] = useSearchParams();
+    const hasRunRef = useRef(false);
+
 
     const [inputToken, setInputToken] = useState('');
     const [isTrackingLoading, setIsTrackingLoading] = useState(false);
     const [trackingResponse, setTrackingResponse] = useState<TrackingResponse | null>(null);
     const [trackingError, setTrackingError] = useState<string | null>(null);
 
+
     const [phone, setPhone] = useState('');
     const [isNotificationLoading, setIsNotificationLoading] = useState(false);
     const [notifyResponse, setNotifyResponse] = useState<NotifyResponse | null>(null);
     const [notificationError, setNotificationError] = useState<string | null>(null);
+
 
     // Update inputToken when URL parameter changes
     useEffect(() => {
@@ -33,22 +37,42 @@ const TrackingPage = () => {
         setInputToken(token ?? '');
     }, [queryString]);
 
-    // Passive enrichment request fires on page load
+
     useEffect(() => {
-        const fetchData = async () => {
-            if (inputToken) {
-                await sendTrackingData(inputToken, 'GET').catch(() => {});
-            }
+        setTrackingResponse(null);
+        setTrackingError(null);
 
-            setTrackingResponse(null);
-            setTrackingError(null);
-
-            setPhone('');
-            setNotifyResponse(null);
-            setNotificationError(null);
-        };
-        fetchData();
+        setPhone('');
+        setNotifyResponse(null);
+        setNotificationError(null);
     }, [inputToken]);
+
+
+    // Passive enrichment request fires only on page load
+    useEffect(() => {
+        if (hasRunRef.current) {
+            return;
+        }
+
+        hasRunRef.current = true;
+
+        const fetchData = async () => {
+            try {
+                const token: string | null = queryString.get('token');
+
+                if (token === null  || token === '' || isTrackingLoading) {
+                    return;
+                }
+
+                await sendTrackingData(token, 'GET');
+                
+            } catch (err) { 
+                // Don't catch any errors here because of passive request.
+            }
+        };
+
+        fetchData();
+    }, []); // Empty dependency array - only run on mount
 
     const handleTrackingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
