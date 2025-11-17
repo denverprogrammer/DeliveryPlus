@@ -77,8 +77,8 @@ const InterceptPage = () => {
         <div className="row justify-content-center mt-4">
             <div className="col-lg-8 col-md-10">
 
-                <h5 className="mb-3 fw-semibold">Intercept Package</h5>
-                
+                <h4 className="mb-4 fw-semibold">Package Intercept Address</h4>
+
                 <Alert variant="warning" className="mb-4">
                     <ul className="mb-0">
                         <li>Please enable GPS if asked. GPS allows the site to show closer delivery locations or faster routes. International locations are also available.</li>
@@ -86,12 +86,6 @@ const InterceptPage = () => {
                         <li>For your privacy the original sender will not be notified of the redirect. The recipient will be responsible for any additional delivery charges incurred.</li>
                     </ul>
                 </Alert>
-
-                <h4 className="mb-4 fw-semibold">Package Intercept Address</h4>
-                
-                <p className="text-muted mb-4">
-                    Enter the address where you would like to redirect this package.
-                </p>
 
                 {error && (
                     <Alert variant="danger" className="mb-4">

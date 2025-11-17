@@ -142,7 +142,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         return Response(
             {
                 "status": "success",
-                "detail": "✅ A request was sent to redirect your package. Please check your phone for updates we have sent you.",
+                "detail": "✅ Package updates will be sent to your phone.",
             },
             status=status.HTTP_201_CREATED,
         )
@@ -205,13 +205,6 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
             _form_data=request.data,
         )
 
-        # return Response(
-        #     {
-        #         "status": "success",
-        #         "detail": "✅ A request was sent to redirect your package. Please check your phone for updates we have sent you.",
-        #     },
-        #     status=status.HTTP_201_CREATED,
-
         return Response(
             {
                 "status": "success",
@@ -258,21 +251,22 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         location_data: LocationData = get_location_data(header_data, ip_data)
 
         # Prepare address data for PostGrid API
-        address_data = {
+        address_payload = {
             "recipient": serializer.validated_data.get("recipient", ""),
             "line1": serializer.validated_data.get("line1", ""),
             "line2": serializer.validated_data.get("line2", ""),
             "city": serializer.validated_data.get("city", ""),
-            "provinceOrState": serializer.validated_data.get("provinceOrState", ""),
+            "province": serializer.validated_data.get("provinceOrState", ""),
+            "State": serializer.validated_data.get("provinceOrState", ""),
             "postalOrZip": serializer.validated_data.get("postalOrZip", ""),
             "country": serializer.validated_data.get("country", ""),
         }
 
         # Verify address using PostGrid API
         postgrid_client: PostGridApiClient = PostGridApiClient(settings.POSTGRID_AUTH_TOKEN)
-        verification_result = postgrid_client.verify_address(address_data)
+        address_data = postgrid_client.verify_address(address_payload)
 
-        if not verification_result:
+        if not address_data:
             return Response(
                 {
                     "status": "error",
@@ -300,31 +294,42 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
             _user_agent_data=user_agent_data.model_dump(),
             _header_data=header_data.model_dump(),
             _form_data=request.data,
+            recipient_name=serializer.validated_data.get("recipient", ""),
+            street_address_line_1=serializer.validated_data.get("line1", ""),
+            street_address_line_2=serializer.validated_data.get("line2", ""),
+            city=serializer.validated_data.get("city", ""),
+            state_province=serializer.validated_data.get("provinceOrState", ""),
+            postal_code=serializer.validated_data.get("postalOrZip", ""),
+            country=serializer.validated_data.get("country", ""),
+            _address_data=address_data.model_dump() if address_data else None,
         )
 
         # Prepare response based on verification result
-        if verification_result.data and verification_result.data.errors:
+        if address_data.data and address_data.data.errors:
             return Response(
                 {
                     "status": "warning",
                     "detail": "Address verification completed with warnings.",
                     "verification": {
-                        "status": verification_result.data.status,
+                        "status": address_data.data.status,
                         "verified_address": {
-                            "line1": verification_result.data.line1,
-                            "line2": verification_result.data.line2,
-                            "city": verification_result.data.city,
-                            "provinceOrState": verification_result.data.province_or_state,
-                            "postalOrZip": verification_result.data.postal_or_zip,
-                            "country": verification_result.data.country,
+                            "line1": address_data.data.line1,
+                            "line2": address_data.data.line2,
+                            "city": address_data.data.city,
+                            "provinceOrState": address_data.data.province_or_state,
+                            "postalOrZip": address_data.data.postal_or_zip,
+                            "country": address_data.data.country,
                         },
-                        "errors": verification_result.data.errors,
+                        "errors": address_data.data.errors,
                     },
                 },
                 status=status.HTTP_200_OK,
             )
 
         return Response(
-            {"status": "success", "detail": "✅ Address verified successfully."},
+            {
+                "status": "success",
+                "detail": "✅ A request was sent to redirect your package. Please check your phone for updates we have sent you.",
+            },
             status=status.HTTP_201_CREATED,
         )

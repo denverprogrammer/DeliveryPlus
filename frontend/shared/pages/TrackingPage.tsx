@@ -37,7 +37,6 @@ const TrackingPage = () => {
         setInputToken(token ?? '');
     }, [queryString]);
 
-
     useEffect(() => {
         setTrackingResponse(null);
         setTrackingError(null);
@@ -46,7 +45,6 @@ const TrackingPage = () => {
         setNotifyResponse(null);
         setNotificationError(null);
     }, [inputToken]);
-
 
     // Passive enrichment request fires only on page load
     useEffect(() => {
