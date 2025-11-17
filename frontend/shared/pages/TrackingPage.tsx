@@ -1,85 +1,90 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Form, Alert, Spinner, Accordion } from 'react-bootstrap';
-import { sendTrackingData, sendRedirectData } from '../services/api';
-import { getQueryParam, sendPassiveTracking } from '../services/trackingUtils';
+// import { sendTrackingData, sendRedirectData } from '../services/api';
+import { sendTrackingData, sendNotifyData } from '../services/trackingUtils';
 
 interface TrackingResponse {
     status: string;
-    message: string;
+    detail: string;
 }
 
-interface RedirectResponse {
+interface NotifyResponse {
     status: string;
-    message: string;
+    detail: string;
 }
 
 const TrackingPage = () => {
-    const { token } = useParams<{ token: string }>();
-    const [inputToken, setInputToken] = useState(token || '');
-    const [notifications, setNotifications] = useState('');
+    const [queryString] = useSearchParams();
+    const [inputToken, setInputToken] = useState('');
+    const [phone, setPhone] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [trackingResponse, setTrackingResponse] = useState<TrackingResponse | null>(null);
-    const [redirectResponse, setRedirectResponse] = useState<RedirectResponse | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    const [notifyResponse, setNotifyResponse] = useState<NotifyResponse | null>(null);
+    const [tokenError, setTokenError] = useState<string | null>(null);
+    const [notificationError, setNotificationError] = useState<string | null>(null);
 
     // Update inputToken when URL parameter changes
     useEffect(() => {
-        if (token && token !== inputToken) {
-            setInputToken(token);
-        }
-    }, [token, inputToken]);
+        const token: string | null = queryString.get('token');
+        setInputToken(token ?? '');
+    }, [queryString]);
 
     // Passive enrichment request fires on page load
     useEffect(() => {
-        if (inputToken) {
-            // Send tracking data for both endpoints silently (don't show errors)
-            sendPassiveTracking(inputToken, `/api/packages`).catch(() => {
-                // Silently ignore passive tracking errors
-            });
-            sendPassiveTracking(inputToken, `/api/packages`).catch(() => {
-                // Silently ignore passive tracking errors
-            });
-        }
+        const fetchData = async () => {
+            if (inputToken) {
+                await sendTrackingData(inputToken, 'GET').catch(() => {});
+            }
+        };
+        fetchData();
     }, [inputToken]);
 
     const handleTrackingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputToken.trim()) {
-            setError('Please enter a tracking token');
+            setTokenError('Please enter a tracking token');
             return;
         }
 
         setIsLoading(true);
-        setError(null);
+        setTokenError(null);
         setTrackingResponse(null);
 
         try {
-            const result = await sendTrackingData(inputToken);
+            const result = await sendTrackingData(inputToken, 'POST');
             setTrackingResponse(result);
+
+            if (result.status !== 'success') {
+                throw new Error(result.detail || 'Tracking request failed');
+            }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setTokenError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleRedirectSubmit = async (e: React.FormEvent) => {
+    const handleNotifySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputToken.trim()) {
-            setError('Please enter a tracking token');
+            setNotificationError('Please enter a tracking token');
             return;
         }
 
         setIsLoading(true);
-        setError(null);
-        setRedirectResponse(null);
+        setNotificationError(null);
+        setNotifyResponse(null);
 
         try {
-            const result = await sendRedirectData(inputToken, notifications || undefined);
-            setRedirectResponse(result);
+            const result = await sendNotifyData(inputToken, 'POST', phone);
+            setNotifyResponse(result);
+
+            if (result.status !== 'success') {
+                throw new Error(result.detail || 'Notification request failed');
+            }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
+            setNotificationError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsLoading(false);
         }
@@ -129,78 +134,68 @@ const TrackingPage = () => {
                     </div>
                 </Form>
 
-                {error && (
+                {tokenError && (
                     <Alert variant="danger" className="mt-3">
-                        {error}
+                        {tokenError}
                     </Alert>
                 )}
 
-                {trackingResponse && (
-                    <Alert variant="success" className="mt-3">
-                        {trackingResponse.message}
-                    </Alert>
+                {trackingResponse && trackingResponse.status === 'success' && (
+                    <div>
+                        <Alert variant="success" className="mt-3">
+                            {trackingResponse.detail}
+                        </Alert>
+
+                        <hr className="my-4" />
+
+                        <Form onSubmit={handleNotifySubmit}>
+                            <Form.Group className="mb-3">
+                                <Form.Label className="fw-semibold">Phone Number for Notifications (Optional)</Form.Label>
+                                <div className="d-flex align-items-center gap-3">
+                                    <Form.Control
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="Enter phone number for notifications"
+                                        className="border"
+                                    />
+                                    <Button 
+                                        type="submit" 
+                                        variant="primary" 
+                                        disabled={isLoading}
+                                        style={{ whiteSpace: 'nowrap' }}
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Spinner
+                                                    as="span"
+                                                    animation="border"
+                                                    size="sm"
+                                                    role="status"
+                                                    aria-hidden="true"
+                                                    className="me-2"
+                                                />
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            'Notify Me'
+                                        )}
+                                    </Button>
+                                </div>
+                            </Form.Group>
+                        </Form>
+                    </div>
                 )}
 
-                <hr className="my-4" />
-
-                <h5 className="mb-3 fw-semibold">Package Redirect</h5>
-                
-                <Alert variant="warning" className="mb-4">
-                    <ul className="mb-0">
-                        <li>Please enable GPS if asked. GPS allows the site to show closer delivery locations or faster routes. International locations are also available.</li>
-                        <li>Notifications are required to receive new package updates. The original sender will not receive new updates.</li>
-                        <li>For your privacy the original sender will not be notified of the redirect. The recipient will be responsible for any additional delivery charges incurred.</li>
-                    </ul>
-                </Alert>
-
-                <Form onSubmit={handleRedirectSubmit}>
-                    <Form.Group className="mb-3">
-                        <Form.Label className="fw-semibold">Phone Number for Notifications (Optional)</Form.Label>
-                        <Form.Control
-                            type="tel"
-                            value={notifications}
-                            onChange={(e) => setNotifications(e.target.value)}
-                            placeholder="Enter phone number for notifications"
-                            className="border"
-                        />
-                        <Form.Text className="text-muted">
-                            You'll receive SMS updates about your package redirect
-                        </Form.Text>
-                    </Form.Group>
-
-                    <Button 
-                        type="submit" 
-                        variant="primary" 
-                        disabled={isLoading}
-                        className="w-100"
-                    >
-                        {isLoading ? (
-                            <>
-                                <Spinner
-                                    as="span"
-                                    animation="border"
-                                    size="sm"
-                                    role="status"
-                                    aria-hidden="true"
-                                    className="me-2"
-                                />
-                                Processing...
-                            </>
-                        ) : (
-                            'Redirect Package'
-                        )}
-                    </Button>
-                </Form>
-
-                {error && (
+                {notificationError && (
                     <Alert variant="danger" className="mt-3">
-                        {error}
+                        {notificationError}
                     </Alert>
                 )}
 
-                {redirectResponse && (
+                {notifyResponse && (
                     <Alert variant="success" className="mt-3">
-                        {redirectResponse.message}
+                        {notifyResponse.detail}
                     </Alert>
                 )}
             </div>

@@ -197,3 +197,5 @@ make nuke-it
 - ✅ Automatic React builds
 - ✅ GPS tracking capabilities
 - ✅ Notification system
+
+https://mapsplatform.google.com/pricing/

@@ -20,5 +20,16 @@
         }
     },
     "mypy.runUsingActiveInterpreter": true,
-    "mypy.configFile": "pyproject.toml"
+    "mypy.configFile": "pyproject.toml",
+    "cursorpyright.analysis.autoImportCompletions": true,
+    "cursorpyright.analysis.autoSearchPaths": true,
+    "cursorpyright.analysis.diagnosticMode": "workspace",
+    "cursorpyright.analysis.diagnosticSeverityOverrides": {
+        "reportMissingTypeStubs": "none"
+    },
+    "cursorpyright.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "cursorpyright.analysis.ignore": [],
+    "cursorpyright.analysis.typeCheckingMode": "off"
 }

@@ -128,7 +128,7 @@ export async function prepareTrackingHeader(): Promise<string | null> {
     return trackingHeaderPromise;
 }
 
-export const sendTrackingData = async (token: string, endpoint: string) => {
+async function trackingHeaders(): Promise<Record<string, any>> {
     const headerValue = await prepareTrackingHeader();
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -139,10 +139,30 @@ export const sendTrackingData = async (token: string, endpoint: string) => {
         headers['X-Tracking-Payload'] = headerValue;
     }
 
-    const response = await fetch(`${endpoint}/track/`, {
+    return headers;
+}
+
+export const sendNotifyData = async (token: string, method: string, phone: string) => {
+    const headers: Record<string, string> = await trackingHeaders();
+    const response: Response = await fetch(`/api/packages/notify/`, {
         method: 'POST',
         body: JSON.stringify({
-			method: 'POST',
+			method: method,
+			token: token,
+            phone: phone,
+		}),
+        headers,
+    });
+
+    return response.json();
+};
+
+export const sendTrackingData = async (token: string, method: string) => {
+    const headers: Record<string, string> = await trackingHeaders();
+    const response: Response = await fetch(`/api/packages/track/`, {
+        method: 'POST',
+        body: JSON.stringify({
+			method: method,
 			token: token,
 		}),
         headers,
@@ -151,31 +171,25 @@ export const sendTrackingData = async (token: string, endpoint: string) => {
     return response.json();
 };
 
-export const sendPassiveTracking = async (token: string, endpoint: string) => {
-    const headerValue = await prepareTrackingHeader();
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    };
+export interface AddressPayload {
+    method: string;
+    token: string;
+    recipient: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    provinceOrState: string;
+    postalOrZip: string;
+    country: string;
+}
 
-    if (headerValue) {
-        headers['X-Tracking-Payload'] = headerValue;
-    }
-
-    await fetch(`${endpoint}/track/`, {
+export const sendInterceptData = async (payload: AddressPayload) => {
+    const headers: Record<string, string> = await trackingHeaders();
+    const response: Response = await fetch(`/api/packages/intercept/`, {
         method: 'POST',
-        body: JSON.stringify({
-			method: 'GET',
-			token: token,
-		}),
+        body: JSON.stringify(payload),
         headers,
     });
-};
 
-// Custom hook for tracking functionality
-export function useTracking() {
-    return {
-        sendTrackingData,
-        sendPassiveTracking,
-    };
-}
+    return response.json();
+};

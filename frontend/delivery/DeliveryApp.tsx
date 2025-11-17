@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Navigation from '../shared/components/Navigation';
 import Home from '../shared/pages/Home';
 import TrackingPage from '../shared/pages/TrackingPage';
+import InterceptPage from '../shared/pages/InterceptPage';
 
 function DeliveryApp() {
     return (
@@ -16,7 +17,7 @@ function DeliveryApp() {
                     <Routes>
                         {/* Public/Delivery Routes Only */}
                         <Route path="/tracking" element={<TrackingPage />} />
-                        <Route path="/tracking/:token" element={<TrackingPage />} />
+                        <Route path="/notification/:token" element={<InterceptPage />} />
                         <Route path="/" element={<Home />} />
                     </Routes>
                 </Container>

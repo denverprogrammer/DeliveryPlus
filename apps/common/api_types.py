@@ -129,31 +129,31 @@ class IpStackResponse(BaseModel):
 class CallerName(BaseModel):
     """Caller name information from Twilio Lookup."""
 
-    caller_name: Optional[str]
-    caller_type: Optional[str]
-    error_code: Optional[int]
+    caller_name: Optional[str] = None
+    caller_type: Optional[str] = None
+    error_code: Optional[int] = None
 
 
 class CarrierInfo(BaseModel):
     """Carrier information from Twilio Lookup."""
 
-    mobile_country_code: Optional[str]
-    mobile_network_code: Optional[str]
-    name: Optional[str]
-    type: Optional[str]
-    error_code: Optional[int]
+    mobile_country_code: Optional[str] = None
+    mobile_network_code: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[str] = None
+    error_code: Optional[int] = None
 
 
 class TwilioLookupResponse(BaseModel):
     """Response model for Twilio Lookup API."""
 
-    caller_name: Optional[CallerName]
-    country_code: Optional[str]
+    caller_name: Optional[CallerName] = None
+    country_code: Optional[str] = None
     phone_number: str
-    national_format: Optional[str]
-    carrier: Optional[CarrierInfo]
-    add_ons: Optional[Dict[str, Any]]
-    url: Optional[str]
+    national_format: Optional[str] = None
+    carrier: Optional[CarrierInfo] = None
+    add_ons: Optional[Dict[str, Any]] = None
+    url: Optional[str] = None
 
 
 class OSInfo(BaseModel):
@@ -292,6 +292,105 @@ class VpnApiResponse(BaseModel):
 
     ip: str
     security: SecurityInfo = Field(default_factory=SecurityInfo)
+
+
+class PostGridDetails(BaseModel):
+    """Detailed address information from PostGrid API."""
+
+    street_name: Optional[str] = Field(None, alias="streetName")
+    street_direction: Optional[str] = Field(None, alias="streetDirection")
+    box_id: Optional[str] = Field(None, alias="boxID")
+    delivery_installation_area_name: Optional[str] = Field(
+        None, alias="deliveryInstallationAreaName"
+    )
+    delivery_installation_type: Optional[str] = Field(None, alias="deliveryInstallationType")
+    delivery_installation_qualifier: Optional[str] = Field(
+        None, alias="deliveryInstallationQualifier"
+    )
+    rural_route_number: Optional[str] = Field(None, alias="ruralRouteNumber")
+    rural_route_type: Optional[str] = Field(None, alias="ruralRouteType")
+    extra_info: Optional[str] = Field(None, alias="extraInfo")
+    street_type: Optional[str] = Field(None, alias="streetType")
+    street_number: Optional[str] = Field(None, alias="streetNumber")
+    suite_id: Optional[str] = Field(None, alias="suiteID")
+    county: Optional[str] = None
+    county_num: Optional[str] = Field(None, alias="countyNum")
+    us_census_cmsa: Optional[str] = Field(None, alias="usCensusCMSA")
+    us_census_block_number: Optional[str] = Field(None, alias="usCensusBlockNumber")
+    us_census_tract_number: Optional[str] = Field(None, alias="usCensusTractNumber")
+    us_census_ma: Optional[str] = Field(None, alias="usCensusMA")
+    us_census_msa: Optional[str] = Field(None, alias="usCensusMSA")
+    us_census_pmsa: Optional[str] = Field(None, alias="usCensusPMSA")
+    us_has_daylight_savings: Optional[bool] = Field(None, alias="usHasDaylightSavings")
+    us_time_zone: Optional[str] = Field(None, alias="usTimeZone")
+    us_congressional_district_number: Optional[str] = Field(
+        None, alias="usCongressionalDistrictNumber"
+    )
+    us_state_legislative_lower: Optional[str] = Field(None, alias="usStateLegislativeLower")
+    us_state_legislative_upper: Optional[str] = Field(None, alias="usStateLegislativeUpper")
+    us_mailings_carrier_route: Optional[str] = Field(None, alias="usMailingsCarrierRoute")
+    us_mailings_default_flag: Optional[bool] = Field(None, alias="usMailingsDefaultFlag")
+    us_mailings_delivery_point: Optional[str] = Field(None, alias="usMailingsDeliveryPoint")
+    us_mailings_dpv_confirmation_indicator: Optional[str] = Field(
+        None, alias="usMailingsDpvConfirmationIndicator"
+    )
+    us_mailings_dpv_crma_indicator: Optional[str] = Field(None, alias="usMailingsDpvCrmaIndicator")
+    us_mailings_dpv_footnote1: Optional[str] = Field(None, alias="usMailingsDpvFootnote1")
+    us_mailings_dpv_footnote2: Optional[str] = Field(None, alias="usMailingsDpvFootnote2")
+    us_mailings_elot_asc_desc: Optional[str] = Field(None, alias="usMailingsElotAscDesc")
+    us_mailings_elot_sequence_number: Optional[str] = Field(
+        None, alias="usMailingsElotSequenceNumber"
+    )
+    us_mailings_ews_flag: Optional[str] = Field(None, alias="usMailingsEWSFlag")
+    us_mailings_record_type_code: Optional[str] = Field(None, alias="usMailingsRecordTypeCode")
+    residential: Optional[bool] = None
+    vacant: Optional[bool] = None
+    us_mailings_lacs_flag: Optional[str] = Field(None, alias="usMailingsLACSFlag")
+    us_mailing_check_digit: Optional[str] = Field(None, alias="usMailingCheckDigit")
+    us_mailings_dpv_footnote3: Optional[str] = Field(None, alias="usMailingsDpvFootnote3")
+    us_mailings_lacs_return_code: Optional[str] = Field(None, alias="usMailingsLACSReturnCode")
+    us_mailings_suite_link_return_code: Optional[str] = Field(
+        None, alias="usMailingsSuiteLinkReturnCode"
+    )
+    suite_key: Optional[str] = Field(None, alias="suiteKey")
+    us_area_code: Optional[str] = Field(None, alias="usAreaCode")
+    pre_direction: Optional[str] = Field(None, alias="preDirection")
+    post_direction: Optional[str] = Field(None, alias="postDirection")
+    us_census_fips: Optional[str] = Field(None, alias="usCensusFIPS")
+    us_postnet_barcode: Optional[str] = Field(None, alias="usPostnetBarcode")
+    us_mailings_lacs_indicator: Optional[str] = Field(None, alias="usMailingsLACSIndicator")
+    us_intelligent_mail_barcode_key: Optional[str] = Field(
+        None, alias="usIntelligentMailBarcodeKey"
+    )
+
+    class Config:
+        populate_by_name = True
+
+
+class PostGridVerificationData(BaseModel):
+    """Verification data from PostGrid API."""
+
+    city: Optional[str] = None
+    country: Optional[str] = None
+    details: Optional[PostGridDetails] = None
+    errors: Optional[Dict[str, List[str]]] = None
+    line1: Optional[str] = None
+    line2: Optional[str] = None
+    postal_or_zip: Optional[str] = Field(None, alias="postalOrZip")
+    province_or_state: Optional[str] = Field(None, alias="provinceOrState")
+    status: Optional[str] = None  # e.g., "corrected", "verified", etc.
+    recipient: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
+
+
+class PostGridApiResponse(BaseModel):
+    """Response model for PostGrid Address Verification API."""
+
+    status: str  # e.g., "success", "error"
+    message: Optional[str] = None
+    data: Optional[PostGridVerificationData] = None
 
 
 SelectType = TypeVar("SelectType", bound=BaseModel | str)

@@ -11,6 +11,7 @@ const Home = () => {
                     <li>DHL</li>
                     <li>FedEx</li>
                     <li>More than 223 international carriers (excluding China and New Jersey)</li>
+                    <li>Get package updates sent directly to your phone.</li>
                     <li>Redirect packages in transit to a alternative address (domestic or international).</li>
                 </ul>
             </div>

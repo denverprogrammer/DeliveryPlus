@@ -174,6 +174,8 @@ IP_GEO_LOCATION_KEY: str = os.environ.get("IP_GEO_LOCATION_KEY", "")
 TWILIO_ACCOUNT_SID: str = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN: str = os.environ.get("TWILIO_AUTH_TOKEN", "")
 
+POSTGRID_AUTH_TOKEN: str = os.environ.get("POSTGRID_AUTH_TOKEN", "")
+
 # Debug Toolbar settings
 INTERNAL_IPS = [
     "127.0.0.1",

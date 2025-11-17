@@ -16,6 +16,7 @@ import requests
 
 from common.api_types import IPGeolocationResponse
 from common.api_types import IpStackResponse
+from common.api_types import PostGridApiResponse
 from common.api_types import TwilioLookupResponse
 from common.api_types import UserStackResponse
 from common.api_types import VpnApiResponse
@@ -220,8 +221,11 @@ class TwilioApiClient(BaseApiClient[TwilioLookupResponse]):
         """
         try:
             cache_data = self.get_cache_data(identifier)
+
             if cache_data:
                 return cache_data
+
+            print("after cache_data: ", cache_data)
 
             v2 = cast(V2, self.client.lookups.v2)
             phone_numbers = cast(PhoneNumberList, v2.phone_numbers)
@@ -418,4 +422,146 @@ class VpnApiClient(BaseApiClient[VpnApiResponse]):
             return None
         except Exception as e:
             print(f"Error parsing VPN API.io response: {e}")
+            return None
+
+
+##########################
+#  PostGrid API models  ##
+##########################
+
+
+class PostGridApiClient(BaseApiClient[PostGridApiResponse]):
+    """Client for PostGrid Address Verification API with Redis caching."""
+
+    BASE_URL = "https://api.postgrid.com/v1/addver/verifications"
+
+    def __init__(self, api_key: str) -> None:
+        """Initialize the PostGrid API client.
+
+        Args:
+            api_key: PostGrid API key
+        """
+        super().__init__(redis_db=6, redis_prefix="postgrid_address")
+        self.api_key = api_key
+
+    def _get_response_model(self) -> type[PostGridApiResponse]:
+        """Get the response model class for this API client."""
+        return PostGridApiResponse
+
+    def _get_cache_identifier(self, address_data: Dict[str, Any]) -> str:
+        """Generate a cache identifier from address data.
+
+        Args:
+            address_data: Dictionary containing address fields
+
+        Returns:
+            A string identifier for caching
+        """
+        # Create a consistent cache key from address components
+        parts = [
+            address_data.get("line1", ""),
+            address_data.get("line2", ""),
+            address_data.get("city", ""),
+            address_data.get("provinceOrState", address_data.get("province_or_state", "")),
+            address_data.get("postalOrZip", address_data.get("postal_or_zip", "")),
+            address_data.get("country", address_data.get("country_code", "")),
+            address_data.get("recipient", ""),
+        ]
+        return "|".join(str(p).strip().lower() for p in parts if p)
+
+    def get_data(self, identifier: str) -> Optional[PostGridApiResponse]:
+        """Get address verification data from PostGrid API.
+
+        Note: This method signature matches the base class, but PostGrid requires
+        structured address data. Use verify_address() instead for proper usage.
+
+        Args:
+            identifier: This parameter is not used for PostGrid API
+
+        Returns:
+            None (use verify_address() method instead)
+        """
+        # This method is required by the base class but PostGrid uses POST with structured data
+        # Use verify_address() method instead
+        return None
+
+    def verify_address(
+        self,
+        address_data: Dict[str, Any],
+        include_details: bool = True,
+        geocode: bool = True,
+    ) -> Optional[PostGridApiResponse]:
+        """Verify a structured address using PostGrid API.
+
+        Args:
+            address_data: Dictionary containing address fields:
+                - line1: Street address line 1 (required)
+                - line2: Street address line 2 (optional)
+                - city: City name (required)
+                - provinceOrState: State or province code (required, use camelCase)
+                - postalOrZip: Postal or ZIP code (optional, use camelCase)
+                - country: Two-letter country code (required, e.g., "US", "CA", use camelCase)
+                - recipient: Recipient name (optional)
+            include_details: Whether to include detailed address information (default: True)
+            geocode: Whether to include geocoding information (default: True)
+
+        Returns:
+            Address verification data or None if not found or error occurred
+        """
+        try:
+            cache_identifier = self._get_cache_identifier(address_data)
+            cache_data = self.get_cache_data(cache_identifier)
+            if cache_data:
+                return cache_data
+
+            # Build query parameters
+            params = {
+                "includeDetails": "true" if include_details else "false",
+                "geocode": "true" if geocode else "false",
+            }
+
+            # Build form data with nested address structure
+            # Map keys to PostGrid API format (camelCase)
+            key_mapping = {
+                "line1": "line1",
+                "line2": "line2",
+                "city": "city",
+                "province_or_state": "provinceOrState",
+                "provinceOrState": "provinceOrState",
+                "postal_or_zip": "postalOrZip",
+                "postalOrZip": "postalOrZip",
+                "country_code": "country",
+                "country": "country",
+                "recipient": "recipient",
+            }
+
+            form_data = {}
+            for key, value in address_data.items():
+                # Convert to camelCase key for PostGrid API
+                camel_key = key_mapping.get(key, key)
+                form_data[f"address[{camel_key}]"] = value if value is not None else ""
+
+            headers = {
+                "x-api-key": self.api_key,
+            }
+
+            response = requests.post(
+                self.BASE_URL,
+                params=params,
+                data=form_data,
+                headers=headers,
+                timeout=10,
+            )
+
+            response.raise_for_status()
+            response_data = response.json()
+
+            self.put_cache_data(cache_identifier, response_data)
+            return self._parse_response(response_data)
+
+        except requests.RequestException as e:
+            print(f"Error querying PostGrid API: {e}")
+            return None
+        except Exception as e:
+            print(f"Error parsing PostGrid API response: {e}")
             return None

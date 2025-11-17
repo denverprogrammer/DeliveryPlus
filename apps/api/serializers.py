@@ -44,3 +44,21 @@ class TrackingDataSerializer(ModelSerializer[TrackingData]):
 class TokenSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=255)
     method = serializers.CharField(max_length=20)
+
+
+class NotificationSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    method = serializers.CharField(max_length=20)
+    phone = serializers.CharField(max_length=20)
+
+
+class AddressSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    method = serializers.CharField(max_length=20)
+    line1 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    line2 = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    provinceOrState = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    postalOrZip = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    country = serializers.CharField(max_length=2, required=False, allow_blank=True)
+    recipient = serializers.CharField(max_length=255, required=False, allow_blank=True)
