@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Form, Alert, Spinner } from 'react-bootstrap';
+import PhoneInput, { CountryData } from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 // import { sendTrackingData, sendRedirectData } from '../services/api';
 import { sendTrackingData, sendNotifyData } from '../services/trackingUtils';
 
@@ -25,6 +27,8 @@ const TrackingPage = () => {
     const [trackingError, setTrackingError] = useState<string | null>(null);
 
 
+    const [countryCode, setCountryCode] = useState('us');
+    const [dialCode, setDialCode] = useState('');
     const [phone, setPhone] = useState('');
     const [isNotificationLoading, setIsNotificationLoading] = useState(false);
     const [notifyResponse, setNotifyResponse] = useState<NotifyResponse | null>(null);
@@ -74,6 +78,7 @@ const TrackingPage = () => {
 
     const handleTrackingSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!inputToken.trim()) {
             setTrackingError('Please enter a tracking token');
             return;
@@ -99,8 +104,14 @@ const TrackingPage = () => {
 
     const handleNotifySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!inputToken.trim()) {
-            setNotificationError('Please enter a tracking token');
+            setTrackingError('Please enter a tracking token');
+            return;
+        }
+
+        if (!phone.trim()) {
+            setNotificationError('Please enter a phone number');
             return;
         }
 
@@ -184,13 +195,33 @@ const TrackingPage = () => {
                             <Form.Group className="mb-3">
                                 <Form.Label className="fw-semibold">Phone Number for Notifications (Optional)</Form.Label>
                                 <div className="d-flex align-items-center gap-3">
-                                    <Form.Control
-                                        type="tel"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                        placeholder="Enter phone number for notifications"
-                                        className="border"
-                                    />
+                                    <div style={{ flex: 1 }}>
+                                        <PhoneInput
+                                            country={countryCode}
+                                            value={phone}
+                                            onChange={(value: string, data: CountryData | {}, event: React.ChangeEvent<HTMLInputElement>, formattedValue: string) => {
+                                                setCountryCode((data as CountryData).countryCode ?? '');
+                                                setDialCode((data as CountryData).dialCode ?? '');
+                                                setPhone(value);
+                                            }}
+                                            placeholder="Enter phone number for notifications"
+                                            countryCodeEditable={false}
+                                            disableCountryCode={false}
+                                            enableSearch={true}
+                                            disableDropdown={false}
+                                            containerStyle={{
+                                                width: '100%'
+                                            }}
+                                            inputStyle={{
+                                                width: '100%',
+                                                border: '1px solid #ced4da',
+                                                borderRadius: '0.375rem',
+                                                padding: '0.375rem 0.75rem',
+                                                paddingLeft: '3.5rem',
+                                                fontSize: '1rem'
+                                            }}
+                                        />
+                                    </div>
                                     <Button 
                                         type="submit" 
                                         variant="primary" 
