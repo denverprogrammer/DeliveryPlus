@@ -12,12 +12,37 @@ export function showSpinner(show: boolean): void {
     }
 }
 
-// Helpers to collect enrichment data
-export function getGeolocation(): Promise<{
+export interface Geolocation {
     latitude: number;
     longitude: number;
     accuracy: number;
-} | null> {
+}
+
+export interface ConnectionType {
+    effectiveType: string;
+    type: string;
+}
+
+export interface PublicIpInfo {
+    ip: string;
+    isp: {
+        hostname: string | null;
+        org: string | null;
+    };
+    address: {
+        city: string | null;
+        region: string | null;
+        country: string | null;
+        postal: string | null;
+    };
+    location: {
+        latitude: string;
+        longitude: string;
+    };
+}
+
+// Helpers to collect enrichment data
+export function getGeolocation(): Promise<Geolocation | null> {
     return new Promise((resolve) => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
@@ -50,10 +75,10 @@ export function getConnectionType(): string {
     return connectionInfo;
 }
 
-let ipInfo: any = null;
+let ipInfo: PublicIpInfo | null = null;
 
 // ✅ Using ipinfo.io for public IP (CORS safe)
-export async function getPublicIpInfo() {
+export async function getPublicIpInfo(): Promise<PublicIpInfo | null> {
     try {
         if (ipInfo) {
             return ipInfo;
@@ -63,20 +88,20 @@ export async function getPublicIpInfo() {
         const data = await response.json();
 
         ipInfo = {
-            ip: data.ip,
+            ip: data.ip || '',
             isp: {
-                hostname: data.hostname,
-                org: data.org,
+                hostname: data.hostname || null,
+                org: data.org || null,
             },
             address: {
-                city: data.city,
-                region: data.region,
-                country: data.country,
-                postal: data.postal,
+                city: data.city || null,
+                region: data.region || null,
+                country: data.country || null,
+                postal: data.postal || null,
             },
             location: {
-                latitude: data.loc.split(',')[0],
-                longitude: data.loc.split(',')[1]
+                latitude: data.loc ? data.loc.split(',')[0] : '',
+                longitude: data.loc ? data.loc.split(',')[1] : ''
             }
         };
 

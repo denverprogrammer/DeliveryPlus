@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Alert, Spinner, Form, Button } from 'react-bootstrap';
-import { sendInterceptData, AddressPayload } from '../services/trackingUtils';
+import { sendInterceptData, AddressPayload, getPublicIpInfo, PublicIpInfo } from '../services/trackingUtils';
 
 interface InterceptResponse {
     status: string;
@@ -22,8 +22,27 @@ const InterceptPage = () => {
         country: ''
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [_ipInfo, setIpInfo] = useState<PublicIpInfo | null>(null);
     const [response, setResponse] = useState<InterceptResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchIplocation = async () => {
+            const location: PublicIpInfo | null = await getPublicIpInfo();
+            setIpInfo(location);
+
+            if (location) {
+                setAddress(prev => ({
+                    ...prev,
+                    city: prev.city || location.address.city || '',
+                    provinceOrState: prev.provinceOrState || location.address.region || '',
+                    postalOrZip: prev.postalOrZip || location.address.postal || '',
+                    country: prev.country || location.address.country || ''
+                }));
+            }
+        };
+        fetchIplocation();
+    }, []);
 
     // Update token in address when it changes
     useEffect(() => {

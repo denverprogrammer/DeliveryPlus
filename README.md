@@ -199,3 +199,4 @@ make nuke-it
 - ✅ Notification system
 
 https://mapsplatform.google.com/pricing/
+https://my.opencellid.org/dashboard#accesstoken

@@ -3,15 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Form, Alert, Spinner } from 'react-bootstrap';
 import PhoneInput, { CountryData } from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-// import { sendTrackingData, sendRedirectData } from '../services/api';
-import { sendTrackingData, sendNotifyData } from '../services/trackingUtils';
+import { sendTrackingData, sendNotifyData, getPublicIpInfo, PublicIpInfo } from '../services/trackingUtils';
 
-interface TrackingResponse {
-    status: string;
-    detail: string;
-}
-
-interface NotifyResponse {
+interface ApiResponse {
     status: string;
     detail: string;
 }
@@ -20,18 +14,19 @@ const TrackingPage = () => {
     const [queryString] = useSearchParams();
     const hasRunRef = useRef(false);
 
+    const [ipInfo, setIpInfo] = useState<PublicIpInfo | null>(null);
 
     const [inputToken, setInputToken] = useState('');
     const [isTrackingLoading, setIsTrackingLoading] = useState(false);
-    const [trackingResponse, setTrackingResponse] = useState<TrackingResponse | null>(null);
+    const [trackingResponse, setTrackingResponse] = useState<ApiResponse | null>(null);
     const [trackingError, setTrackingError] = useState<string | null>(null);
 
 
-    const [countryCode, setCountryCode] = useState('us');
+    const [countryCode, setCountryCode] = useState( ipInfo?.address?.country?.toLowerCase() ?? 'us');
     const [dialCode, setDialCode] = useState('');
     const [phone, setPhone] = useState('');
     const [isNotificationLoading, setIsNotificationLoading] = useState(false);
-    const [notifyResponse, setNotifyResponse] = useState<NotifyResponse | null>(null);
+    const [notifyResponse, setNotifyResponse] = useState<ApiResponse | null>(null);
     const [notificationError, setNotificationError] = useState<string | null>(null);
 
 
@@ -58,7 +53,16 @@ const TrackingPage = () => {
 
         hasRunRef.current = true;
 
-        const fetchData = async () => {
+        const fetchIplocation = async () => {
+            const location: PublicIpInfo | null = await getPublicIpInfo();
+            const country: string = location?.address?.country?.toLowerCase() ?? 'us';
+            setIpInfo(location);
+            setCountryCode(country);
+        };
+
+        fetchIplocation();
+
+        const fetchTrackingData = async () => {
             try {
                 const token: string | null = queryString.get('token');
 
@@ -73,7 +77,7 @@ const TrackingPage = () => {
             }
         };
 
-        fetchData();
+        fetchTrackingData();
     }, []); // Empty dependency array - only run on mount
 
     const handleTrackingSubmit = async (e: React.FormEvent) => {
