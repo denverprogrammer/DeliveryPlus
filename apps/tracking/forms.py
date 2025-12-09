@@ -6,11 +6,11 @@ from django import forms
 # from taggit.forms import TagWidget
 from django_select2.forms import ModelSelect2TagWidget
 from taggit.models import Tag
-from tracking.models import Agent
 from tracking.models import Campaign
+from tracking.models import Recipient
 
 
-class CampaignAdminForm(forms.ModelForm[Campaign]):
+class CampaignSubAdminForm(forms.ModelForm[Campaign]):
     publishing_type = forms.MultipleChoiceField(
         choices=PublishingType.choices(), required=False, widget=forms.CheckboxSelectMultiple
     )
@@ -178,8 +178,8 @@ class TaggitSelect2Widget(ModelSelect2TagWidget):
         return cleaned_values
 
 
-class AgentAdminForm(forms.ModelForm[Agent]):
+class RecipientSubAdminForm(forms.ModelForm[Recipient]):
     class Meta:
-        model = Agent
+        model = Recipient
         fields = "__all__"
         widgets = {"tags": autocomplete.TaggitSelect2(url="tag-autocomplete")}

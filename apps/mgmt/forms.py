@@ -2,27 +2,26 @@
 from typing import Any
 from django import forms
 from mgmt.models import Company
-from tracking.models import Agent
-from tracking.models import Campaign
+from tracking.models import Recipient
 
 
-class AgentForm(forms.ModelForm[Agent]):
+class RecipientForm(forms.ModelForm[Recipient]):
     class Meta:
-        model = Agent
+        model = Recipient
         fields = [
-            "campaign",
-            "token",
+            "company",
             "first_name",
             "last_name",
             "email",
             "phone_number",
             "status",
+            "tags",
         ]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        if "campaign" in self.fields and hasattr(self.fields["campaign"], "queryset"):
-            self.fields["campaign"].queryset = Campaign.objects.all()
+        if "company" in self.fields and hasattr(self.fields["company"], "queryset"):
+            self.fields["company"].queryset = Company.objects.all()
 
 
 class CompanyForm(forms.ModelForm[Company]):

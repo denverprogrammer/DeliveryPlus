@@ -10,7 +10,7 @@ from common.api_types import HeaderData
 from common.api_types import IpData
 from common.api_types import UserAgentData
 from common.api_types import WarningStatus
-from common.enums import AgentStatus
+from common.enums import RecipientStatus
 from common.enums import TrackingType
 from django.db import models
 from django.db.models import Manager
@@ -105,12 +105,10 @@ class Campaign(models.Model):
         return self.name
 
 
-class Agent(models.Model):
-    campaign: models.ForeignKey[Campaign, Campaign] = models.ForeignKey(
-        Campaign, on_delete=models.CASCADE, related_name="agents"
+class Recipient(models.Model):
+    company: models.ForeignKey[Company, Optional[Company]] = models.ForeignKey(
+        "mgmt.Company", on_delete=models.CASCADE, related_name="recipients"
     )
-
-    token: models.CharField[str, str] = models.CharField(max_length=255)
 
     first_name: models.CharField[str, Optional[str]] = models.CharField(
         max_length=100, blank=True, null=True
@@ -127,21 +125,46 @@ class Agent(models.Model):
     )
 
     status: models.CharField[str, str] = models.CharField(
-        max_length=10, choices=AgentStatus.choices(), default=AgentStatus.ACTIVE.value
+        max_length=10, choices=RecipientStatus.choices(), default=RecipientStatus.ACTIVE.value
     )
 
     tags = TaggableManager(
-        help_text="Enter tags to categorize this agent (max 10 tags)",
+        help_text="Enter tags to categorize this recipient (max 10 tags)",
         blank=True,
     )
 
-    objects: Manager[Agent] = Manager["Agent"]()
+    objects: Manager[Recipient] = Manager["Recipient"]()
 
     class Meta(TypedModelMeta):
-        verbose_name_plural = "Agents"
+        verbose_name_plural = "Recipients"
 
     def __str__(self) -> str:
-        return f'{self.first_name or ""} {self.last_name or ""}'.strip() or self.token
+        name = f'{self.first_name or ""} {self.last_name or ""}'.strip()
+        return name or f"Recipient #{self.id}"
+
+
+class Tracking(models.Model):
+    campaign: models.ForeignKey[Campaign, Campaign] = models.ForeignKey(
+        Campaign, on_delete=models.CASCADE, related_name="tracking"
+    )
+
+    recipient: models.ForeignKey[Recipient, Recipient] = models.ForeignKey(
+        Recipient, on_delete=models.CASCADE, related_name="tracking"
+    )
+
+    company: models.ForeignKey[Company, Optional[Company]] = models.ForeignKey(
+        "mgmt.Company", on_delete=models.CASCADE, related_name="tracking"
+    )
+
+    token: models.CharField[str, str] = models.CharField(max_length=255, unique=True)
+
+    objects: Manager[Tracking] = Manager["Tracking"]()
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Tracking"
+
+    def __str__(self) -> str:
+        return f"Tracking #{self.id}"
 
 
 class BaseTrackingData(models.Model):
@@ -326,8 +349,8 @@ class BaseTrackingData(models.Model):
 
 class TrackingData(BaseTrackingData):
 
-    agent: models.ForeignKey[Agent, Agent] = models.ForeignKey(
-        Agent, related_name="tracking", on_delete=models.CASCADE
+    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
+        Tracking, related_name="tracking_data", on_delete=models.CASCADE
     )
 
     objects: Manager[TrackingData] = Manager["TrackingData"]()
@@ -336,13 +359,13 @@ class TrackingData(BaseTrackingData):
         verbose_name_plural = "Tracking Data"
 
     def __str__(self) -> str:
-        return f'{self.agent} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
+        return f'{self.tracking} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
 
 
 class NotificationData(BaseTrackingData):
 
-    agent: models.ForeignKey[Agent, Agent] = models.ForeignKey(
-        Agent, related_name="notification", on_delete=models.CASCADE
+    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
+        Tracking, related_name="notification_data", on_delete=models.CASCADE
     )
 
     _phone_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
@@ -355,12 +378,12 @@ class NotificationData(BaseTrackingData):
         verbose_name_plural = "Notification Data"
 
     def __str__(self) -> str:
-        return f'{self.agent} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
+        return f'{self.tracking} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
 
 
 class InterceptionData(BaseTrackingData):
-    agent: models.ForeignKey[Agent, Agent] = models.ForeignKey(
-        Agent, related_name="interception", on_delete=models.CASCADE
+    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
+        Tracking, related_name="interception_data", on_delete=models.CASCADE
     )
 
     recipient_name = models.CharField(max_length=255)

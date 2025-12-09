@@ -30,9 +30,9 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from tracking.models import Agent
 from tracking.models import InterceptionData
 from tracking.models import NotificationData
+from tracking.models import Tracking
 from tracking.models import TrackingData
 
 
@@ -89,7 +89,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         token = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
         phone = serializer.validated_data["phone"]
-        agent = get_object_or_404(Agent, token=token)
+        tracking = get_object_or_404(Tracking, token=token)
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -119,7 +119,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         # Create tracking data
         NotificationData.objects.create(
-            agent=agent,
+            tracking=tracking,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
@@ -162,7 +162,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         token = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
-        agent = get_object_or_404(Agent, token=token)
+        tracking = get_object_or_404(Tracking, token=token)
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -186,7 +186,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         # Create tracking data
         TrackingData.objects.create(
-            agent=agent,
+            tracking=tracking,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
@@ -228,7 +228,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         token = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
-        agent = get_object_or_404(Agent, token=token)
+        tracking = get_object_or_404(Tracking, token=token)
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -277,7 +277,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         # Create tracking data
         InterceptionData.objects.create(
-            agent=agent,
+            tracking=tracking,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,

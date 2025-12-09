@@ -15,7 +15,7 @@ class TrackingType(str, Enum):
         return [(key.value, key.name.title()) for key in cls]
 
 
-class AgentStatus(str, Enum):
+class RecipientStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
 

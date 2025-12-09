@@ -12,15 +12,15 @@ from tracking.filters import FirstNameFilter
 from tracking.filters import LastNameFilter
 from tracking.filters import PhoneNumberFilter
 from tracking.filters import TagFilter
-from tracking.filters import TokenFilter
-from tracking.forms import AgentAdminForm
-from tracking.forms import CampaignAdminForm
-from tracking.models import Agent
+from tracking.forms import CampaignSubAdminForm
+from tracking.forms import RecipientSubAdminForm
 from tracking.models import Campaign
+from tracking.models import Recipient
+from tracking.models import Tracking
 from tracking.models import TrackingData
 
 
-class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
+class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
     model = TrackingData
     extra = 0
     can_delete = False
@@ -46,8 +46,14 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
     list_filter = ("http_method",)
     list_per_page = 20
 
+    def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
+    def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
+        return False
+
     @admin.display(description="Details")
-    def view_details(self, obj: Agent) -> str:
+    def view_details(self, obj: Tracking) -> str:
         """Return a comma-separated list of tags."""
         url = reverse("tracking_data_dialog", args=[obj.pk])
         return format_html(
@@ -56,33 +62,47 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Agent]):
             "return showRelatedObjectLookupPopup(this);",
         )
 
-    def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
-        return False
-
-    def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
-        return False
-
     def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
-        return super().get_queryset(request).select_related("agent")
+        return super().get_queryset(request).select_related("tracking")
 
 
-# TODO: SubAdmin when to version that allows Django 5.2
-class AgentAdmin(SubAdmin[Agent]):
-    model = Agent
-    form = AgentAdminForm
+class TrackingSubAdmin(SubAdmin[Tracking]):
+    model = Tracking
+    extra = 1
+    fields = (
+        "recipient",
+        "campaign",
+        "token",
+    )
+    list_display = (
+        "id",
+        "recipient__first_name",
+        "recipient__last_name",
+        "recipient__email",
+        "recipient__phone_number",
+        "recipient__status",
+        "campaign__name",
+        "token",
+    )
+    list_per_page = 20
+    show_change_link = True
+    inlines = (TrackingDataInline,)
+
+
+class RecipientSubAdmin(SubAdmin[Recipient]):
+    model = Recipient
+    form = RecipientSubAdminForm
     fieldsets = (
         (None, {"fields": ("first_name", "last_name", "status")}),
-        ("Contact", {"fields": ("token", "email", "phone_number")}),
+        ("Contact", {"fields": ("email", "phone_number")}),
         ("Metadata", {"fields": ("tags",)}),
     )
-
     list_display = ("first_name", "last_name", "email", "phone_number", "status", "display_tags")
     list_filter = (
         FirstNameFilter,
         LastNameFilter,
         EmailFilter,
         PhoneNumberFilter,
-        TokenFilter,
         TagFilter,
         "status",
     )
@@ -91,15 +111,14 @@ class AgentAdmin(SubAdmin[Agent]):
         "last_name",
         "email",
         "phone_number",
-        "token",
         "status",
         "tags__name",
     )
     ordering = ("first_name", "last_name", "email", "phone_number", "status")
-    inlines = (TrackingDataInline,)
+    # inlines = (RecipientTrackingInline,)
 
     @admin.display(description="Tags")
-    def display_tags(self, obj: Agent) -> SafeString:
+    def display_tags(self, obj: Recipient) -> SafeString:
         """Display tags with color coding based on status"""
         if not obj.tags.exists():
             return format_html("-")
@@ -111,9 +130,9 @@ class AgentAdmin(SubAdmin[Agent]):
         return format_html(", ".join(tags_html))
 
 
-class CampaignAdmin(SubAdmin[Campaign]):
+class CampaignSubAdmin(SubAdmin[Campaign]):
     model = Campaign
-    form = CampaignAdminForm
+    form = CampaignSubAdminForm
     fieldsets = (
         (None, {"fields": ("name", "description")}),
         ("Website Details", {"fields": ("publishing_type", "landing_page_url", "tracking_pixel")}),
@@ -130,4 +149,5 @@ class CampaignAdmin(SubAdmin[Campaign]):
             },
         ),
     )
-    subadmins = [AgentAdmin]
+    ordering = ("name",)
+    # inlines = (CampaignTrackingInline,)

@@ -58,7 +58,7 @@ def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
 
     context = {
         "form": form,
-        "title": f"Tracking Data for {tracking_data.agent}",
+        "title": f"Tracking Data for {tracking_data.tracking}",
         "json_fields": ["ip_data", "user_agent_data", "header_data", "form_data"],
         "warnings": tracking_data.all_warnings,
     }

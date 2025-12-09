@@ -10,12 +10,16 @@ from django.http import HttpRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from mgmt.forms import AgentForm
 from mgmt.forms import CompanyForm
+from mgmt.forms import RecipientForm
+from mgmt.models import Company
 from mgmt.models import User
 from taggit.models import Tag
-from tracking.models import Agent
-from tracking.models import Campaign
+from tracking.models import Recipient
+
+
+# from tracking.models import Campaign
+# from tracking.models import Tracking
 
 
 @login_required
@@ -61,51 +65,53 @@ def edit_company_view(request: HttpRequest) -> JsonResponse:
 
 
 @login_required
-def agent_list_view(request: HttpRequest) -> JsonResponse:
+def recipient_list_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
-    agents = Agent.objects.filter(campaign__company=user.company)
+    recipients = Recipient.objects.filter(company=user.company)
 
-    agents_data = []
-    for agent in agents:
-        agents_data.append(
+    recipients_data = []
+    for recipient in recipients:
+        recipients_data.append(
             {
-                "id": agent.id,
-                "first_name": agent.first_name,
-                "last_name": agent.last_name,
-                "email": agent.email,
-                "status": agent.status,
+                "id": recipient.id,
+                "first_name": recipient.first_name,
+                "last_name": recipient.last_name,
+                "email": recipient.email,
+                "status": recipient.status,
             }
         )
 
-    return JsonResponse({"agents": agents_data})
+    return JsonResponse({"recipients": recipients_data})
 
 
 @login_required
-def agent_create_view(request: HttpRequest) -> JsonResponse:
+def recipient_create_view(request: HttpRequest) -> JsonResponse:
     if not isinstance(request.user, User):
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
 
     if request.method == "POST":
-        form = AgentForm(request.POST)
-        if hasattr(form.fields["campaign"], "queryset"):
-            form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
+        form = RecipientForm(request.POST)
+        if hasattr(form.fields["company"], "queryset") and user.company:
+            form.fields["company"].queryset = Company.objects.filter(id=user.company.id)
+        elif hasattr(form.fields["company"], "queryset"):
+            form.fields["company"].queryset = Company.objects.none()
 
         if form.is_valid():
-            agent = form.save()
+            recipient = form.save()
             return JsonResponse(
                 {
                     "success": True,
-                    "agent": {
-                        "id": agent.id,
-                        "first_name": agent.first_name,
-                        "last_name": agent.last_name,
-                        "email": agent.email,
-                        "status": agent.status,
+                    "recipient": {
+                        "id": recipient.id,
+                        "first_name": recipient.first_name,
+                        "last_name": recipient.last_name,
+                        "email": recipient.email,
+                        "status": recipient.status,
                     },
                 }
             )
@@ -115,43 +121,45 @@ def agent_create_view(request: HttpRequest) -> JsonResponse:
 
 
 @login_required
-def agent_edit_view(request: HttpRequest, agent_id: int) -> JsonResponse:
+def recipient_edit_view(request: HttpRequest, recipient_id: int) -> JsonResponse:
     if not isinstance(request.user, User):
         return JsonResponse({"error": "Unauthorized"}, status=401)
 
     user: User = request.user
-    agent = get_object_or_404(Agent, id=agent_id, campaign__company=user.company)
+    recipient = get_object_or_404(Recipient, id=recipient_id, company=user.company)
 
     if request.method == "GET":
         return JsonResponse(
             {
-                "agent": {
-                    "id": agent.id,
-                    "first_name": agent.first_name,
-                    "last_name": agent.last_name,
-                    "email": agent.email,
-                    "phone_number": agent.phone_number,
-                    "status": agent.status,
+                "recipient": {
+                    "id": recipient.id,
+                    "first_name": recipient.first_name,
+                    "last_name": recipient.last_name,
+                    "email": recipient.email,
+                    "phone_number": recipient.phone_number,
+                    "status": recipient.status,
                 }
             }
         )
 
     if request.method == "POST":
-        form = AgentForm(request.POST, instance=agent)
-        if hasattr(form.fields["campaign"], "queryset"):
-            form.fields["campaign"].queryset = Campaign.objects.filter(company=user.company)
+        form = RecipientForm(request.POST, instance=recipient)
+        if hasattr(form.fields["company"], "queryset") and user.company:
+            form.fields["company"].queryset = Company.objects.filter(id=user.company.id)
+        elif hasattr(form.fields["company"], "queryset"):
+            form.fields["company"].queryset = Company.objects.none()
 
         if form.is_valid():
-            agent = form.save()
+            recipient = form.save()
             return JsonResponse(
                 {
                     "success": True,
-                    "agent": {
-                        "id": agent.id,
-                        "first_name": agent.first_name,
-                        "last_name": agent.last_name,
-                        "email": agent.email,
-                        "status": agent.status,
+                    "recipient": {
+                        "id": recipient.id,
+                        "first_name": recipient.first_name,
+                        "last_name": recipient.last_name,
+                        "email": recipient.email,
+                        "status": recipient.status,
                     },
                 }
             )
@@ -191,11 +199,11 @@ class CompanyTagAutocomplete(LoginRequiredMixin, autocomplete.Select2QuerySetVie
 
         # Filter by company if company_id is provided
         if company_id:
-            # Get tags that are used by agents belonging to this company's campaigns
+            # Get tags that are used by recipients belonging to this company
             qs = qs.filter(
-                taggit_taggeditem_items__content_type__model="agent",
-                taggit_taggeditem_items__object_id__in=Agent.objects.filter(
-                    campaign__company_id=company_id
+                taggit_taggeditem_items__content_type__model="recipient",
+                taggit_taggeditem_items__object_id__in=Recipient.objects.filter(
+                    company_id=company_id
                 ).values_list("id", flat=True),
             ).distinct()
 

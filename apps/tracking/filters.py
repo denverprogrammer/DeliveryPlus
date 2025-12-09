@@ -4,7 +4,7 @@ from typing import Tuple
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
-from tracking.models import Agent
+from tracking.models import Recipient
 
 
 class BaseTextFieldFilter(admin.SimpleListFilter):
@@ -16,7 +16,7 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
     def lookups(self, request: HttpRequest, model_admin: Any) -> List[Tuple[str, str]]:
         return [(self.field_name, str(self.title))]
 
-    def queryset(self, request: HttpRequest, queryset: QuerySet[Agent]) -> QuerySet[Agent]:
+    def queryset(self, request: HttpRequest, queryset: QuerySet[Recipient]) -> QuerySet[Recipient]:
         if self.value():
             search_term = request.GET.get(f"{self.parameter_name}_term", "")
             if search_term:
@@ -25,7 +25,7 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
 
 
 class TagFilter(BaseTextFieldFilter):
-    """Filter agents by tag name."""
+    """Filter recipients by tag name."""
 
     title = "Tags"
     parameter_name = "tags"
@@ -59,4 +59,4 @@ class PhoneNumberFilter(BaseTextFieldFilter):
 class TokenFilter(BaseTextFieldFilter):
     title = "Token"
     parameter_name = "token"
-    field_name = "token"
+    field_name = "tracking__token"

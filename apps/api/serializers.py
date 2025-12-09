@@ -1,31 +1,43 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from taggit.models import Tag
-from tracking.models import Agent
 from tracking.models import Campaign
+from tracking.models import Recipient
+from tracking.models import Tracking
 from tracking.models import TrackingData
 
 
-class AgentTagSerializer(ModelSerializer[Tag]):
+class RecipientTagSerializer(ModelSerializer[Tag]):
     class Meta:
         model = Tag
         fields = ("id", "name")
 
 
-class AgentSerializer(ModelSerializer[Agent]):
-    tags = AgentTagSerializer(many=True, read_only=True)
+class RecipientSerializer(ModelSerializer[Recipient]):
+    tags = RecipientTagSerializer(many=True, read_only=True)
 
     class Meta:
-        model = Agent
+        model = Recipient
         fields = [
             "id",
             "first_name",
             "last_name",
             "email",
             "phone_number",
-            "token",
             "status",
             "tags",
+        ]
+
+
+class TrackingSerializer(ModelSerializer[Tracking]):
+    class Meta:
+        model = Tracking
+        fields = [
+            "id",
+            "token",
+            "campaign",
+            "recipient",
+            "company",
         ]
 
 
