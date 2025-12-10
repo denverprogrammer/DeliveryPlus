@@ -7,13 +7,20 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 from subadmin import SubAdmin
-from tracking.filters import EmailFilter
-from tracking.filters import FirstNameFilter
-from tracking.filters import LastNameFilter
-from tracking.filters import PhoneNumberFilter
-from tracking.filters import TagFilter
+from tracking.filters import RecipientEmailFilter
+from tracking.filters import RecipientFirstNameFilter
+from tracking.filters import RecipientLastNameFilter
+from tracking.filters import RecipientPhoneNumberFilter
+from tracking.filters import RecipientTagsFilter
+from tracking.filters import TrackingCampaignNameFilter
+from tracking.filters import TrackingEmailFilter
+from tracking.filters import TrackingFirstNameFilter
+from tracking.filters import TrackingLastNameFilter
+from tracking.filters import TrackingPhoneNumberFilter
+from tracking.filters import TrackingTokenFilter
 from tracking.forms import CampaignSubAdminForm
 from tracking.forms import RecipientSubAdminForm
+from tracking.forms import TrackingSubAdminForm
 from tracking.models import Campaign
 from tracking.models import Recipient
 from tracking.models import Tracking
@@ -68,25 +75,89 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
 
 class TrackingSubAdmin(SubAdmin[Tracking]):
     model = Tracking
+    form = TrackingSubAdminForm
     extra = 1
-    fields = (
-        "recipient",
-        "campaign",
-        "token",
-    )
     list_display = (
         "id",
+        "recipient_name",
+        "recipient_email",
+        "recipient_phone",
+        "recipient_status",
+        "campaign_name",
+        "token",
+    )
+    list_filter = (
+        "recipient__status",
+        TrackingTokenFilter,
+        TrackingFirstNameFilter,
+        TrackingLastNameFilter,
+        TrackingEmailFilter,
+        TrackingPhoneNumberFilter,
+        TrackingCampaignNameFilter,
+    )
+    search_fields = (
+        "token",
         "recipient__first_name",
         "recipient__last_name",
         "recipient__email",
         "recipient__phone_number",
-        "recipient__status",
         "campaign__name",
-        "token",
     )
     list_per_page = 20
     show_change_link = True
     inlines = (TrackingDataInline,)
+
+    @admin.display(description="Recipient")
+    def recipient_name(self, obj: Tracking) -> SafeString:
+        """Display recipient full name as a link."""
+        if not obj.recipient or not obj.company:
+            return format_html("-")
+        name = f'{obj.recipient.first_name or ""} {obj.recipient.last_name or ""}'.strip()
+        if not name:
+            name = f"Recipient #{obj.recipient.id}"
+        # Construct URL using SubAdmin nested pattern
+        # Recipient is a subadmin of Company, so URL is: mgmt_company_recipient_change
+        try:
+            url = reverse(
+                "admin:mgmt_company_recipient_change",
+                args=[obj.company.pk, obj.recipient.pk],
+            )
+        except Exception:
+            # Fallback if URL pattern doesn't exist
+            url = f"/admin/mgmt/company/{obj.company.pk}/recipient/{obj.recipient.pk}/change/"
+        return format_html('<a href="{}">{}</a>', url, name)
+
+    @admin.display(description="Email")
+    def recipient_email(self, obj: Tracking) -> str:
+        """Display recipient email."""
+        return obj.recipient.email if obj.recipient and obj.recipient.email else "-"
+
+    @admin.display(description="Phone")
+    def recipient_phone(self, obj: Tracking) -> str:
+        """Display recipient phone number."""
+        return obj.recipient.phone_number if obj.recipient and obj.recipient.phone_number else "-"
+
+    @admin.display(description="Status")
+    def recipient_status(self, obj: Tracking) -> str:
+        """Display recipient status."""
+        return obj.recipient.status if obj.recipient else "-"
+
+    @admin.display(description="Campaign")
+    def campaign_name(self, obj: Tracking) -> SafeString:
+        """Display campaign name as a link."""
+        if not obj.campaign or not obj.company:
+            return format_html("-")
+        # Construct URL using SubAdmin nested pattern
+        # Campaign is a subadmin of Company, so URL is: mgmt_company_campaign_change
+        try:
+            url = reverse(
+                "admin:mgmt_company_campaign_change",
+                args=[obj.company.pk, obj.campaign.pk],
+            )
+        except Exception:
+            # Fallback if URL pattern doesn't exist
+            url = f"/admin/mgmt/company/{obj.company.pk}/campaign/{obj.campaign.pk}/change/"
+        return format_html('<a href="{}">{}</a>', url, obj.campaign.name)
 
 
 class RecipientSubAdmin(SubAdmin[Recipient]):
@@ -99,11 +170,11 @@ class RecipientSubAdmin(SubAdmin[Recipient]):
     )
     list_display = ("first_name", "last_name", "email", "phone_number", "status", "display_tags")
     list_filter = (
-        FirstNameFilter,
-        LastNameFilter,
-        EmailFilter,
-        PhoneNumberFilter,
-        TagFilter,
+        RecipientFirstNameFilter,
+        RecipientLastNameFilter,
+        RecipientEmailFilter,
+        RecipientPhoneNumberFilter,
+        RecipientTagsFilter,
         "status",
     )
     search_fields = (

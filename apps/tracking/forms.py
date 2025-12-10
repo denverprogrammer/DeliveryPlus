@@ -8,6 +8,7 @@ from django_select2.forms import ModelSelect2TagWidget
 from taggit.models import Tag
 from tracking.models import Campaign
 from tracking.models import Recipient
+from tracking.models import Tracking
 
 
 class CampaignSubAdminForm(forms.ModelForm[Campaign]):
@@ -183,3 +184,10 @@ class RecipientSubAdminForm(forms.ModelForm[Recipient]):
         model = Recipient
         fields = "__all__"
         widgets = {"tags": autocomplete.TaggitSelect2(url="tag-autocomplete")}
+
+
+class TrackingSubAdminForm(forms.ModelForm[Tracking]):
+    class Meta:
+        model = Tracking
+        fields = ("recipient", "campaign", "token")
+        # Note: 'company' is excluded as it's automatically set from the parent CompanyAdmin
