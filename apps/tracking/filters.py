@@ -1,6 +1,7 @@
 from typing import Any
 from typing import List
 from typing import Tuple
+from typing import Type
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -22,67 +23,73 @@ class BaseTextFieldFilter(admin.SimpleListFilter):
         return queryset
 
 
-class TrackingFirstNameFilter(BaseTextFieldFilter):
-    title = "First Name"
-    parameter_name = "first_name"
-    field_name = "recipient__first_name"
+def process_list_filter(list_filter: tuple | list) -> tuple[Any, ...]:
+    """
+    Process list_filter to convert tuple syntax to configured filter classes.
+
+    Converts ("field_name", BaseTextFieldFilter) to a configured filter class.
+
+    Args:
+        list_filter: The list_filter tuple/list from admin class
+
+    Returns:
+        Processed list_filter with tuples converted to filter classes
+
+    Usage in admin.py:
+        list_filter = process_list_filter([
+            ("first_name", BaseTextFieldFilter),
+            ("recipient__email", BaseTextFieldFilter),
+            "status",  # Built-in filters pass through unchanged
+        ])
+    """
+    processed: list[Any] = []
+    for item in list_filter:
+        if isinstance(item, tuple) and len(item) == 2:
+            field_path, filter_class = item
+            if filter_class is BaseTextFieldFilter:
+                # Convert tuple to configured filter class
+                processed.append(text_field_filter(field_path))
+            else:
+                # Pass through other tuple filters unchanged
+                processed.append(item)
+        else:
+            # Pass through non-tuple filters unchanged
+            processed.append(item)
+    return tuple(processed)
 
 
-class TrackingLastNameFilter(BaseTextFieldFilter):
-    title = "Last Name"
-    parameter_name = "last_name"
-    field_name = "recipient__last_name"
+def text_field_filter(field_path: str, title: str | None = None) -> Type[BaseTextFieldFilter]:
+    """
+    Factory function to create a text field filter class for a given field path.
 
+    Args:
+        field_path: The field path to filter on (e.g., "first_name", "recipient__email")
+        title: Optional display title (defaults to field_path with underscores replaced)
 
-class TrackingPhoneNumberFilter(BaseTextFieldFilter):
-    title = "Phone Number"
-    parameter_name = "phone_number"
-    field_name = "recipient__phone_number"
+    Returns:
+        A filter class configured for the specified field
 
+    Usage in admin.py:
+        list_filter = [
+            text_field_filter("first_name"),
+            text_field_filter("recipient__email", "Recipient Email"),
+        ]
+    """
+    # Extract parameter name from field path (last part after __)
+    parameter_name = field_path.split("__")[-1]
 
-class TrackingTokenFilter(BaseTextFieldFilter):
-    title = "Token"
-    parameter_name = "token"
-    field_name = "token"
+    # Generate title from parameter name if not provided
+    if title is None:
+        title = parameter_name.replace("_", " ").title()
 
-
-class TrackingEmailFilter(BaseTextFieldFilter):
-    title = "Email"
-    parameter_name = "email"
-    field_name = "recipient__email"
-
-
-class TrackingCampaignNameFilter(BaseTextFieldFilter):
-    title = "Campaign Name"
-    parameter_name = "campaign_name"
-    field_name = "campaign__name"
-
-
-class RecipientFirstNameFilter(BaseTextFieldFilter):
-    title = "First Name"
-    parameter_name = "first_name"
-    field_name = "first_name"
-
-
-class RecipientLastNameFilter(BaseTextFieldFilter):
-    title = "Last Name"
-    parameter_name = "last_name"
-    field_name = "last_name"
-
-
-class RecipientPhoneNumberFilter(BaseTextFieldFilter):
-    title = "Phone"
-    parameter_name = "phone_number"
-    field_name = "phone_number"
-
-
-class RecipientTagsFilter(BaseTextFieldFilter):
-    title = "Tags"
-    parameter_name = "tags"
-    field_name = "tags__name"
-
-
-class RecipientEmailFilter(BaseTextFieldFilter):
-    title = "Email"
-    parameter_name = "email"
-    field_name = "email"
+    # Create a new class dynamically
+    filter_class = type(
+        f"{parameter_name.title().replace(' ', '').replace('_', '')}Filter",
+        (BaseTextFieldFilter,),
+        {
+            "title": title,
+            "parameter_name": parameter_name,
+            "field_name": field_path,
+        },
+    )
+    return filter_class

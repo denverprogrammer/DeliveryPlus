@@ -7,17 +7,8 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 from subadmin import SubAdmin
-from tracking.filters import RecipientEmailFilter
-from tracking.filters import RecipientFirstNameFilter
-from tracking.filters import RecipientLastNameFilter
-from tracking.filters import RecipientPhoneNumberFilter
-from tracking.filters import RecipientTagsFilter
-from tracking.filters import TrackingCampaignNameFilter
-from tracking.filters import TrackingEmailFilter
-from tracking.filters import TrackingFirstNameFilter
-from tracking.filters import TrackingLastNameFilter
-from tracking.filters import TrackingPhoneNumberFilter
-from tracking.filters import TrackingTokenFilter
+from tracking.filters import BaseTextFieldFilter
+from tracking.filters import process_list_filter
 from tracking.forms import CampaignSubAdminForm
 from tracking.forms import RecipientSubAdminForm
 from tracking.forms import TrackingSubAdminForm
@@ -86,14 +77,16 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
         "campaign_name",
         "token",
     )
-    list_filter = (
-        "recipient__status",
-        TrackingTokenFilter,
-        TrackingFirstNameFilter,
-        TrackingLastNameFilter,
-        TrackingEmailFilter,
-        TrackingPhoneNumberFilter,
-        TrackingCampaignNameFilter,
+    list_filter = process_list_filter(
+        (
+            "recipient__status",
+            ("token", BaseTextFieldFilter),
+            ("recipient__first_name", BaseTextFieldFilter),
+            ("recipient__last_name", BaseTextFieldFilter),
+            ("recipient__email", BaseTextFieldFilter),
+            ("recipient__phone_number", BaseTextFieldFilter),
+            ("campaign__name", BaseTextFieldFilter),
+        )
     )
     search_fields = (
         "token",
@@ -169,13 +162,15 @@ class RecipientSubAdmin(SubAdmin[Recipient]):
         ("Metadata", {"fields": ("tags",)}),
     )
     list_display = ("first_name", "last_name", "email", "phone_number", "status", "display_tags")
-    list_filter = (
-        RecipientFirstNameFilter,
-        RecipientLastNameFilter,
-        RecipientEmailFilter,
-        RecipientPhoneNumberFilter,
-        RecipientTagsFilter,
-        "status",
+    list_filter = process_list_filter(
+        (
+            ("first_name", BaseTextFieldFilter),
+            ("last_name", BaseTextFieldFilter),
+            ("email", BaseTextFieldFilter),
+            ("phone_number", BaseTextFieldFilter),
+            ("tags__name", BaseTextFieldFilter),
+            "status",
+        )
     )
     search_fields = (
         "first_name",
