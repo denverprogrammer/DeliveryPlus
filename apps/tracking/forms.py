@@ -189,5 +189,4 @@ class RecipientSubAdminForm(forms.ModelForm[Recipient]):
 class TrackingSubAdminForm(forms.ModelForm[Tracking]):
     class Meta:
         model = Tracking
-        fields = ("recipient", "campaign", "token")
-        # Note: 'company' is excluded as it's automatically set from the parent CompanyAdmin
+        fields = ("recipient", "campaign")

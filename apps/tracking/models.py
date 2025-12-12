@@ -11,6 +11,7 @@ from common.api_types import IpData
 from common.api_types import UserAgentData
 from common.api_types import WarningStatus
 from common.enums import RecipientStatus
+from common.enums import TokenStatus
 from common.enums import TrackingType
 from django.db import models
 from django.db.models import Manager
@@ -143,6 +144,38 @@ class Recipient(models.Model):
         return name or f"Recipient #{self.id}"
 
 
+class Token(models.Model):
+    tracking: models.ForeignKey["Tracking", "Tracking"] = models.ForeignKey(
+        "Tracking", on_delete=models.CASCADE, related_name="tokens"
+    )
+
+    value: models.CharField[str, str] = models.CharField(max_length=255, unique=True)
+
+    status: models.CharField[str, str] = models.CharField(
+        max_length=10, choices=TokenStatus.choices(), default=TokenStatus.ACTIVE.value
+    )
+
+    created_on: models.DateTimeField[datetime.datetime, datetime.datetime] = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    deleted_on: models.DateTimeField[Optional[datetime.datetime], Optional[datetime.datetime]] = (
+        models.DateTimeField(null=True, blank=True)
+    )
+
+    last_used: models.DateTimeField[Optional[datetime.datetime], Optional[datetime.datetime]] = (
+        models.DateTimeField(null=True, blank=True)
+    )
+
+    objects: Manager[Token] = Manager["Token"]()
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Tokens"
+
+    def __str__(self) -> str:
+        return self.value
+
+
 class Tracking(models.Model):
     campaign: models.ForeignKey[Campaign, Campaign] = models.ForeignKey(
         Campaign, on_delete=models.CASCADE, related_name="tracking"
@@ -155,8 +188,6 @@ class Tracking(models.Model):
     company: models.ForeignKey[Company, Optional[Company]] = models.ForeignKey(
         "mgmt.Company", on_delete=models.CASCADE, related_name="tracking"
     )
-
-    token: models.CharField[str, str] = models.CharField(max_length=255, unique=True)
 
     objects: Manager[Tracking] = Manager["Tracking"]()
 
@@ -232,6 +263,10 @@ class BaseTrackingData(models.Model):
 
     _form_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
         models.JSONField(null=True, blank=True, db_column="form_data")
+    )
+
+    token: models.ForeignKey["Token", "Token"] = models.ForeignKey(
+        "Token", related_name="%(class)s_entries", on_delete=models.CASCADE
     )
 
     class Meta(TypedModelMeta):

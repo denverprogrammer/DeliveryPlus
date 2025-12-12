@@ -31,3 +31,13 @@ class PublishingType(str, Enum):
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:
         return [(key.value, key.name.title()) for key in cls]
+
+
+class TokenStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DELETED = "deleted"
+
+    @classmethod
+    def choices(cls) -> List[Tuple[str, str]]:
+        return [(key.value, key.name.title()) for key in cls]

@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from mgmt.models import Company
 from tracking.models import Campaign
 from tracking.models import Recipient
+from tracking.models import Token
 from tracking.models import Tracking
 
 
@@ -55,15 +56,31 @@ class Command(BaseCommand):
 
         # Get or create the tracking
         tracking, created = Tracking.objects.get_or_create(
-            token=self.testToken,
             campaign=campaign,
             recipient=recipient,
             company=company,
         )
 
         if created:
-            self.stdout.write(self.style.SUCCESS(f"Created tracking with token abc123: {tracking}"))
+            self.stdout.write(self.style.SUCCESS(f"Created tracking: {tracking}"))
         else:
-            self.stdout.write(
-                self.style.WARNING(f"Tracking with token abc123 already exists: {tracking}")
-            )
+            self.stdout.write(self.style.WARNING(f"Tracking already exists: {tracking}"))
+
+        # Get or create the token
+        token, created = Token.objects.get_or_create(
+            value=self.testToken,
+            defaults={"tracking": tracking, "status": "active"},
+        )
+
+        if created:
+            self.stdout.write(self.style.SUCCESS(f"Created token abc123 for tracking: {token}"))
+        else:
+            # Update token if it exists but doesn't have the tracking
+            if token.tracking != tracking:
+                token.tracking = tracking
+                token.save()
+                self.stdout.write(
+                    self.style.WARNING(f"Updated existing token abc123 to use tracking: {token}")
+                )
+            else:
+                self.stdout.write(self.style.WARNING(f"Token abc123 already exists: {token}"))

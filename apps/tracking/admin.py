@@ -14,6 +14,7 @@ from tracking.forms import RecipientSubAdminForm
 from tracking.forms import TrackingSubAdminForm
 from tracking.models import Campaign
 from tracking.models import Recipient
+from tracking.models import Token
 from tracking.models import Tracking
 from tracking.models import TrackingData
 
@@ -61,26 +62,58 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
         )
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
+        return super().get_queryset(request).select_related("tracking", "token")
+
+
+class TokenInline(admin.TabularInline[Token, Tracking]):
+    model = Token
+    extra = 0
+    fields = ("value", "status", "created_on", "last_used", "used", "deleted_on")
+    readonly_fields = ("created_on", "last_used", "used", "deleted_on")
+    ordering = ("-last_used", "-created_on")
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Token]:
         return super().get_queryset(request).select_related("tracking")
+
+    @admin.display(description="Used")
+    def used(self, obj: Token) -> int:
+        """Count the total number of records that reference this token."""
+        if not obj.pk:
+            return 0
+        # Count all tracking data entries that use this token
+        # Access via the related_name pattern created by %(class)s: trackingdata_entries, notificationdata_entries, interceptiondata_entries
+        # Using getattr since the linter doesn't recognize dynamic related_name from %(class)s pattern
+        return (
+            getattr(obj, "trackingdata_entries", type(obj).objects.none()).count()
+            + getattr(obj, "notificationdata_entries", type(obj).objects.none()).count()
+            + getattr(obj, "interceptiondata_entries", type(obj).objects.none()).count()
+        )
 
 
 class TrackingSubAdmin(SubAdmin[Tracking]):
     model = Tracking
     form = TrackingSubAdminForm
     extra = 1
+
+    def get_readonly_fields(
+        self, request: HttpRequest, obj: Optional[Tracking] = None
+    ) -> tuple[str, ...]:
+        """Make recipient and campaign readonly when editing existing objects."""
+        if obj:  # Editing an existing object
+            return ("recipient", "campaign")
+        return ()  # Creating a new object - fields are editable
+
     list_display = (
         "id",
         "recipient_name",
         "recipient_email",
         "recipient_phone",
         "recipient_status",
-        "campaign_name",
-        "token",
     )
     list_filter = process_list_filter(
         (
             "recipient__status",
-            ("token", BaseTextFieldFilter),
+            ("tokens__value", BaseTextFieldFilter),
             ("recipient__first_name", BaseTextFieldFilter),
             ("recipient__last_name", BaseTextFieldFilter),
             ("recipient__email", BaseTextFieldFilter),
@@ -89,7 +122,7 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
         )
     )
     search_fields = (
-        "token",
+        "tokens__value",
         "recipient__first_name",
         "recipient__last_name",
         "recipient__email",
@@ -98,7 +131,7 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
     )
     list_per_page = 20
     show_change_link = True
-    inlines = (TrackingDataInline,)
+    inlines = (TokenInline, TrackingDataInline)
 
     @admin.display(description="Recipient")
     def recipient_name(self, obj: Tracking) -> SafeString:
@@ -152,6 +185,14 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
             url = f"/admin/mgmt/company/{obj.company.pk}/campaign/{obj.campaign.pk}/change/"
         return format_html('<a href="{}">{}</a>', url, obj.campaign.name)
 
+    @admin.display(description="Token")
+    def token_value(self, obj: Tracking) -> str:
+        """Display token values (comma-separated if multiple)."""
+        tokens = obj.tokens.all()
+        if not tokens.exists():
+            return "-"
+        return ", ".join(token.value for token in tokens)
+
 
 class RecipientSubAdmin(SubAdmin[Recipient]):
     model = Recipient
@@ -181,7 +222,6 @@ class RecipientSubAdmin(SubAdmin[Recipient]):
         "tags__name",
     )
     ordering = ("first_name", "last_name", "email", "phone_number", "status")
-    # inlines = (RecipientTrackingInline,)
 
     @admin.display(description="Tags")
     def display_tags(self, obj: Recipient) -> SafeString:
@@ -216,4 +256,3 @@ class CampaignSubAdmin(SubAdmin[Campaign]):
         ),
     )
     ordering = ("name",)
-    # inlines = (CampaignTrackingInline,)

@@ -3,6 +3,7 @@ from rest_framework.serializers import ModelSerializer
 from taggit.models import Tag
 from tracking.models import Campaign
 from tracking.models import Recipient
+from tracking.models import Token
 from tracking.models import Tracking
 from tracking.models import TrackingData
 
@@ -29,16 +30,36 @@ class RecipientSerializer(ModelSerializer[Recipient]):
         ]
 
 
+class TokenSerializer(ModelSerializer[Token]):
+    class Meta:
+        model = Token
+        fields = [
+            "id",
+            "value",
+            "status",
+            "created_on",
+            "deleted_on",
+        ]
+
+
 class TrackingSerializer(ModelSerializer[Tracking]):
+    tokens = TokenSerializer(many=True, read_only=True)
+    token_values = serializers.SerializerMethodField()
+
     class Meta:
         model = Tracking
         fields = [
             "id",
-            "token",
+            "tokens",
+            "token_values",
             "campaign",
             "recipient",
             "company",
         ]
+
+    def get_token_values(self, obj: Tracking) -> list[str]:
+        """Return list of token values."""
+        return [token.value for token in obj.tokens.all()]
 
 
 class CampaignSerializer(ModelSerializer[Campaign]):
@@ -53,7 +74,7 @@ class TrackingDataSerializer(ModelSerializer[TrackingData]):
         fields = "__all__"
 
 
-class TokenSerializer(serializers.Serializer):
+class RequestSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=255)
     method = serializers.CharField(max_length=20)
 

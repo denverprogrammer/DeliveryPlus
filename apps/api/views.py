@@ -5,7 +5,7 @@ import logging
 from typing import Optional
 from api.serializers import AddressSerializer
 from api.serializers import NotificationSerializer
-from api.serializers import TokenSerializer
+from api.serializers import RequestSerializer
 from api.serializers import TrackingDataSerializer
 from common.api_clients import PostGridApiClient
 from common.api_clients import TwilioApiClient
@@ -23,6 +23,7 @@ from common.functions import get_time_data
 from common.functions import get_user_agent_data
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
@@ -32,7 +33,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from tracking.models import InterceptionData
 from tracking.models import NotificationData
-from tracking.models import Tracking
+from tracking.models import Token
 from tracking.models import TrackingData
 
 
@@ -86,10 +87,11 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         if not serializer.is_valid(raise_exception=True):
             return Response(self.NO_TOKEN_OR_PHONE_ERROR, status=status.HTTP_400_BAD_REQUEST)
 
-        token = serializer.validated_data["token"]
+        token_value = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
         phone = serializer.validated_data["phone"]
-        tracking = get_object_or_404(Tracking, token=token)
+        token_obj = get_object_or_404(Token, value=token_value)
+        tracking = token_obj.tracking
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -117,9 +119,14 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         )
         phone_data: Optional[TwilioLookupResponse] = twilio_client.get_data(phone)
 
+        # Update token last_used
+        token_obj.last_used = timezone.now()
+        token_obj.save(update_fields=["last_used"])
+
         # Create tracking data
         NotificationData.objects.create(
             tracking=tracking,
+            token=token_obj,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
@@ -152,17 +159,18 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         methods=["post"],
         url_path="track",
         url_name="track",
-        serializer_class=TokenSerializer,
+        serializer_class=RequestSerializer,
     )
     def track(self, request: Request) -> Response:
-        serializer = TokenSerializer(data=request.data)
+        serializer = RequestSerializer(data=request.data)
 
         if not serializer.is_valid(raise_exception=True):
             return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
 
-        token = serializer.validated_data["token"]
+        token_value = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
-        tracking = get_object_or_404(Tracking, token=token)
+        token_obj = get_object_or_404(Token, value=token_value)
+        tracking = token_obj.tracking
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -184,9 +192,14 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         # Get location data
         location_data: LocationData = get_location_data(header_data, ip_data)
 
+        # Update token last_used
+        token_obj.last_used = timezone.now()
+        token_obj.save(update_fields=["last_used"])
+
         # Create tracking data
         TrackingData.objects.create(
             tracking=tracking,
+            token=token_obj,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
@@ -226,9 +239,10 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         if not serializer.is_valid(raise_exception=True):
             return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
 
-        token = serializer.validated_data["token"]
+        token_value = serializer.validated_data["token"]
         http_method = serializer.validated_data["method"]
-        tracking = get_object_or_404(Tracking, token=token)
+        token_obj = get_object_or_404(Token, value=token_value)
+        tracking = token_obj.tracking
         header_data: Optional[HeaderData] = self.getHeaderData(request)
 
         if not header_data:
@@ -275,9 +289,14 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # Update token last_used
+        token_obj.last_used = timezone.now()
+        token_obj.save(update_fields=["last_used"])
+
         # Create tracking data
         InterceptionData.objects.create(
             tracking=tracking,
+            token=token_obj,
             http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
