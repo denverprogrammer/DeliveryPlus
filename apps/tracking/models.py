@@ -12,10 +12,12 @@ from common.api_types import UserAgentData
 from common.api_types import WarningStatus
 from common.enums import RecipientStatus
 from common.enums import TokenStatus
+from common.enums import TrackingDataType
 from common.enums import TrackingType
 from django.db import models
 from django.db.models import Manager
 from django.db.models import Model
+from django.db.models import QuerySet
 from django_stubs_ext.db.models import TypedModelMeta
 from mgmt.models import Company
 from taggit.managers import TaggableManager
@@ -198,7 +200,8 @@ class Tracking(models.Model):
         return f"Tracking #{self.id}"
 
 
-class BaseTrackingData(models.Model):
+class AbstractRequestData(models.Model):
+    # Common fields
     http_method: models.CharField[str, str] = models.CharField(max_length=10)
 
     server_timestamp: models.DateTimeField[datetime.datetime, datetime.datetime] = (
@@ -263,10 +266,6 @@ class BaseTrackingData(models.Model):
 
     _form_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
         models.JSONField(null=True, blank=True, db_column="form_data")
-    )
-
-    token: models.ForeignKey["Token", "Token"] = models.ForeignKey(
-        "Token", related_name="%(class)s_entries", on_delete=models.CASCADE
     )
 
     class Meta(TypedModelMeta):
@@ -382,67 +381,120 @@ class BaseTrackingData(models.Model):
         return "Tracking data"
 
 
-class TrackingData(BaseTrackingData):
+class TrackingDataManager(Manager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(data_type=TrackingDataType.TRACKING.value)
 
-    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
-        Tracking, related_name="tracking_data", on_delete=models.CASCADE
+
+class NotificationDataManager(Manager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(data_type=TrackingDataType.NOTIFICATION.value)
+
+
+class InterceptionDataManager(Manager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(data_type=TrackingDataType.INTERCEPTION.value)
+
+
+class TrackingRequestData(AbstractRequestData):
+    # Discriminator field to identify the record type
+    data_type: models.CharField[str, str] = models.CharField(
+        max_length=20, choices=TrackingDataType.choices(), db_index=True
     )
 
-    objects: Manager[TrackingData] = Manager["TrackingData"]()
-
-    class Meta(TypedModelMeta):
-        verbose_name_plural = "Tracking Data"
-
-    def __str__(self) -> str:
-        return f'{self.tracking} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
-
-
-class NotificationData(BaseTrackingData):
-
     tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
-        Tracking, related_name="notification_data", on_delete=models.CASCADE
+        Tracking, related_name="request_data", on_delete=models.CASCADE
     )
 
+    token: models.ForeignKey["Token", "Token"] = models.ForeignKey(
+        Token, related_name="request_data", on_delete=models.CASCADE
+    )
+
+    # NotificationData-specific fields
     _phone_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
         models.JSONField(null=True, blank=True, db_column="phone_data")
     )
 
-    objects: Manager[NotificationData] = Manager["NotificationData"]()
-
-    class Meta(TypedModelMeta):
-        verbose_name_plural = "Notification Data"
-
-    def __str__(self) -> str:
-        return f'{self.tracking} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
-
-
-class InterceptionData(BaseTrackingData):
-    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
-        Tracking, related_name="interception_data", on_delete=models.CASCADE
+    # InterceptionData-specific fields
+    recipient_name: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True
     )
 
-    recipient_name = models.CharField(max_length=255)
+    street_address_line_1: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True
+    )
 
-    street_address_line_1 = models.CharField(max_length=255)
+    street_address_line_2: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True
+    )
 
-    street_address_line_2 = models.CharField(max_length=255, blank=True, null=True)
+    city: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=100, blank=True, null=True
+    )
 
-    city = models.CharField(max_length=100)
+    state_province: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=100, blank=True, null=True
+    )
 
-    state_province = models.CharField(max_length=100, blank=True, null=True)
+    postal_code: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=20, blank=True, null=True
+    )
 
-    postal_code = models.CharField(max_length=20)
-
-    country = models.CharField(max_length=100)
+    country: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=100, blank=True, null=True
+    )
 
     _address_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
         models.JSONField(null=True, blank=True, db_column="address_data")
     )
 
-    objects: Manager[InterceptionData] = Manager["InterceptionData"]()
+    objects: Manager["TrackingRequestData"] = Manager["TrackingRequestData"]()
 
     class Meta(TypedModelMeta):
-        verbose_name_plural = "Interception Data"
+        verbose_name_plural = "Tracking Request Data"
+        indexes = [
+            models.Index(fields=["data_type", "tracking"]),
+            models.Index(fields=["data_type", "token"]),
+        ]
 
     def __str__(self) -> str:
-        return f"{self.recipient_name}, {self.street_address_line_1}, {self.city}, {self.country}"
+        return ""
+
+
+class TrackingData(TrackingRequestData):
+    objects = TrackingDataManager()
+
+    class Meta(TypedModelMeta):
+        proxy = True
+        verbose_name_plural = "Tracking Data"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.data_type = TrackingDataType.TRACKING.value
+        super().save(*args, **kwargs)
+
+
+class NotificationData(TrackingRequestData):
+    objects = NotificationDataManager()
+
+    class Meta(TypedModelMeta):
+        proxy = True
+        verbose_name_plural = "Notification Data"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.data_type = TrackingDataType.NOTIFICATION.value
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f'{self.tracking} @ {self.server_timestamp.strftime("%Y-%m-%d %H:%M:%S")}'
+
+
+class InterceptionData(TrackingRequestData):
+    objects = InterceptionDataManager()
+
+    class Meta(TypedModelMeta):
+        proxy = True
+        verbose_name_plural = "Interception Data"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.data_type = TrackingDataType.INTERCEPTION.value
+        super().save(*args, **kwargs)

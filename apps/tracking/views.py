@@ -11,13 +11,13 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from taggit.models import Tag
 from tracking.forms import TrackingDataViewForm
-from tracking.models import TrackingData
+from tracking.models import TrackingRequestData
 
 
 @staff_member_required
 def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
     """View for displaying tracking data in a read-only format."""
-    tracking_data = get_object_or_404(TrackingData, pk=pk)
+    tracking_data = get_object_or_404(TrackingRequestData, pk=pk)
 
     form = TrackingDataViewForm(
         initial={

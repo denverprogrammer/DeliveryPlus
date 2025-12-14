@@ -12,23 +12,27 @@ from tracking.filters import process_list_filter
 from tracking.forms import CampaignSubAdminForm
 from tracking.forms import RecipientSubAdminForm
 from tracking.forms import TrackingSubAdminForm
+
+# from tracking.models import TrackingData
 from tracking.models import Campaign
 from tracking.models import Recipient
 from tracking.models import Token
 from tracking.models import Tracking
-from tracking.models import TrackingData
+from tracking.models import TrackingRequestData
 
 
-class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
-    model = TrackingData
+class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
+    model = TrackingRequestData
     extra = 0
     can_delete = False
     show_change_link = False
     fields = (
-        "server_timestamp",
+        "timestamp",
+        # "server_timestamp",
+        "data_type",
         "http_method",
         "ip_address",
-        "ip_source",
+        # "ip_source",
         "os",
         "browser",
         "platform",
@@ -37,8 +41,7 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
         "client_timezone",
         "latitude",
         "longitude",
-        "location_source",
-        "view_details",
+        # "location_source"
     )
     readonly_fields = fields
     search_fields = ("http_method",)
@@ -51,17 +54,16 @@ class TrackingDataInline(admin.TabularInline[TrackingData, Tracking]):
     def has_change_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
         return False
 
-    @admin.display(description="Details")
-    def view_details(self, obj: Tracking) -> str:
-        """Return a comma-separated list of tags."""
-        url = reverse("tracking_data_dialog", args=[obj.pk])
+    @admin.display(description="Timestamp")
+    def timestamp(self, obj: TrackingRequestData) -> str:
         return format_html(
-            '<a href="{}" class="button" onclick="{}">View Details</a>',
-            f"{url}?_popup=1",
+            '<a href="{}" class="button" onclick="{}">{}</a>',
+            f"{reverse('tracking_data_dialog', args=[obj.pk])}?_popup=1",
             "return showRelatedObjectLookupPopup(this);",
+            obj.server_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingData]:
+    def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingRequestData]:
         return super().get_queryset(request).select_related("tracking", "token")
 
 
@@ -80,14 +82,8 @@ class TokenInline(admin.TabularInline[Token, Tracking]):
         """Count the total number of records that reference this token."""
         if not obj.pk:
             return 0
-        # Count all tracking data entries that use this token
-        # Access via the related_name pattern created by %(class)s: trackingdata_entries, notificationdata_entries, interceptiondata_entries
-        # Using getattr since the linter doesn't recognize dynamic related_name from %(class)s pattern
-        return (
-            getattr(obj, "trackingdata_entries", type(obj).objects.none()).count()
-            + getattr(obj, "notificationdata_entries", type(obj).objects.none()).count()
-            + getattr(obj, "interceptiondata_entries", type(obj).objects.none()).count()
-        )
+
+        return int(TrackingRequestData.objects.filter(token=obj).count())
 
 
 class TrackingSubAdmin(SubAdmin[Tracking]):

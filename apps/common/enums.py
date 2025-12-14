@@ -41,3 +41,13 @@ class TokenStatus(str, Enum):
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:
         return [(key.value, key.name.title()) for key in cls]
+
+
+class TrackingDataType(str, Enum):
+    TRACKING = "tracking"
+    NOTIFICATION = "notification"
+    INTERCEPTION = "interception"
+
+    @classmethod
+    def choices(cls) -> List[Tuple[str, str]]:
+        return [(key.value, key.name.title()) for key in cls]
