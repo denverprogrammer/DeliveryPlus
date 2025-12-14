@@ -29,10 +29,11 @@ class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
     fields = (
         "timestamp",
         # "server_timestamp",
+        # "ip_source",
+        # "location_source"
         "data_type",
         "http_method",
         "ip_address",
-        # "ip_source",
         "os",
         "browser",
         "platform",
@@ -41,7 +42,6 @@ class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
         "client_timezone",
         "latitude",
         "longitude",
-        # "location_source"
     )
     readonly_fields = fields
     search_fields = ("http_method",)
