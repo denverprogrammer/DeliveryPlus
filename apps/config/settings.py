@@ -187,7 +187,13 @@ CSRF_TRUSTED_ORIGINS = [
     "https://deliveryplus.local",
     "http://mgmt.local",
     "https://mgmt.local",
+    "http://imagereview.local",
+    "https://imagereview.local",
 ]
+
+# File upload settings for image uploads
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 
 
 def show_toolbar(_: Any) -> bool:

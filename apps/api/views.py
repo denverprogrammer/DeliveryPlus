@@ -2,8 +2,10 @@ import base64
 import json
 import logging
 
+from typing import Any
 from typing import Optional
 from api.serializers import AddressSerializer
+from api.serializers import ImageUploadSerializer
 from api.serializers import NotificationSerializer
 from api.serializers import RequestSerializer
 from api.serializers import TrackingDataSerializer
@@ -31,6 +33,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from tracking.models import ExifData
 from tracking.models import InterceptionData
 from tracking.models import NotificationData
 from tracking.models import Token
@@ -349,6 +352,115 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
             {
                 "status": "success",
                 "detail": "✅ A request was sent to redirect your package. Please check your phone for updates we have sent you.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ImageReviewView(mixins.CreateModelMixin, GenericViewSet):
+    """ViewSet for image review and EXIF data uploads."""
+
+    queryset = ExifData.objects.all()
+    serializer_class = ImageUploadSerializer
+    permission_classes = [AllowAny]
+
+    NO_HEADER_ERROR = {"detail": "Could not determin header data"}
+    NO_TOKEN_ERROR = {"detail": "Token is required"}
+
+    def getHeaderData(self, request: Request) -> Optional[HeaderData]:
+        header_value = request.headers.get("X-Tracking-Payload")
+
+        if header_value:
+            logger.debug("X-Tracking-Payload header found")
+            try:
+                # Step 1: Decode base64 safely
+                decoded_bytes = base64.b64decode(header_value)
+                decoded_str = decoded_bytes.decode("utf-8")
+
+                # Step 2: Parse JSON
+                payload: HeaderData = HeaderData(**json.loads(decoded_str))
+
+                # Step 3: Return payload
+                return payload
+            except (ValueError, json.JSONDecodeError) as e:
+                logger.warning(f"Invalid tracking payload: {e}")
+                return None
+        else:
+            # No header found
+            logger.debug("No X-Tracking-Payload header found")
+            return None
+
+    def create(self, request: Request) -> Response:
+        """Handle image upload with EXIF data extraction."""
+        serializer = ImageUploadSerializer(data=request.data)
+
+        if not serializer.is_valid(raise_exception=True):
+            return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
+
+        token_value = serializer.validated_data["token"]
+        image_file = serializer.validated_data["image"]
+        token_obj = get_object_or_404(Token, value=token_value)
+        tracking = token_obj.tracking
+        header_data: Optional[HeaderData] = self.getHeaderData(request)
+
+        if not header_data:
+            return Response(self.NO_HEADER_ERROR, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get IP data
+        ip_data: IpData = get_ip_data(request, header_data)
+
+        # Get user agent data
+        user_agent_data: UserAgentData = get_user_agent_data(request, header_data)
+
+        # Get locale data
+        locale_data: LocaleData = get_locale_data(request, header_data)
+
+        # Get time data
+        time_data: TimeData = get_time_data(header_data, ip_data)
+
+        # Get location data
+        location_data: LocationData = get_location_data(header_data, ip_data)
+
+        # Update token last_used
+        token_obj.last_used = timezone.now()
+        token_obj.save(update_fields=["last_used"])
+
+        # Prepare form data for JSON storage (exclude file objects)
+        form_data_dict: dict[str, Any] = {}
+        for key, value in request.data.items():
+            # Skip file objects as they can't be serialized to JSON
+            if hasattr(value, "read"):
+                form_data_dict[key] = str(value.name) if hasattr(value, "name") else "file"
+            else:
+                form_data_dict[key] = value
+
+        # Create EXIF data record
+        ExifData.objects.create(
+            tracking=tracking,
+            token=token_obj,
+            image=image_file,
+            http_method="POST",
+            ip_address=ip_data.getSelectedAddress(),
+            ip_source=ip_data.source,
+            os=user_agent_data.get_os_name(),
+            browser=user_agent_data.get_browser_name(),
+            platform=user_agent_data.get_platform_type(),
+            locale=locale_data.selected,
+            client_time=time_data.info,
+            client_timezone=time_data.getTimezone(),
+            latitude=location_data.getLatitude(),
+            longitude=location_data.getLongitude(),
+            location_source=location_data.source,
+            _ip_data=ip_data.model_dump(),
+            _user_agent_data=user_agent_data.model_dump(),
+            _header_data=header_data.model_dump(),
+            _form_data=form_data_dict,
+        )
+
+        return Response(
+            {
+                "status": "success",
+                "detail": "✅ Image uploaded successfully. EXIF data will be extracted and stored.",
             },
             status=status.HTTP_201_CREATED,
         )

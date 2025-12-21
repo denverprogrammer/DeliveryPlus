@@ -10,6 +10,8 @@ from common.api_types import HeaderData
 from common.api_types import IpData
 from common.api_types import UserAgentData
 from common.api_types import WarningStatus
+from common.enums import CampaignDataType
+from common.enums import ImageDataType
 from common.enums import RecipientStatus
 from common.enums import TokenStatus
 from common.enums import TrackingDataType
@@ -98,6 +100,14 @@ class Campaign(models.Model):
         default=list, blank=True, null=True
     )
     # has_phone = models.BooleanField(default=False)
+    campaign_type: models.CharField[str, str] = models.CharField(
+        max_length=20,
+        choices=CampaignDataType.choices(),
+        db_index=True,
+        default=CampaignDataType.PACKAGES.value,
+        blank=False,
+        null=False,
+    )
 
     objects: Manager[Campaign] = Manager["Campaign"]()
 
@@ -196,11 +206,27 @@ class Tracking(models.Model):
     class Meta(TypedModelMeta):
         verbose_name_plural = "Tracking"
 
-    def __str__(self) -> str:
-        return f"Tracking #{self.id}"
+        def __str__(self) -> str:
+            return f"Tracking #{self.id}"
+
+
+##############################
+#  Abstract Tracking Models  #
+##############################
 
 
 class AbstractRequestData(models.Model):
+
+    RELATED_NAME = "abstract_request_data"
+
+    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
+        Tracking, related_name=RELATED_NAME, on_delete=models.CASCADE
+    )
+
+    token: models.ForeignKey["Token", "Token"] = models.ForeignKey(
+        Token, related_name=RELATED_NAME, on_delete=models.CASCADE
+    )
+
     # Common fields
     http_method: models.CharField[str, str] = models.CharField(max_length=10)
 
@@ -381,6 +407,11 @@ class AbstractRequestData(models.Model):
         return "Tracking data"
 
 
+###############################
+#  Package Tracking Managers  #
+###############################
+
+
 class TrackingDataManager(Manager):
     def get_queryset(self) -> QuerySet:
         return super().get_queryset().filter(data_type=TrackingDataType.TRACKING.value)
@@ -396,18 +427,26 @@ class InterceptionDataManager(Manager):
         return super().get_queryset().filter(data_type=TrackingDataType.INTERCEPTION.value)
 
 
+#############################
+#  Package Tracking Models  #
+#############################
+
+
 class TrackingRequestData(AbstractRequestData):
+
+    RELATED_NAME = "tracking_request_data"
+
     # Discriminator field to identify the record type
     data_type: models.CharField[str, str] = models.CharField(
         max_length=20, choices=TrackingDataType.choices(), db_index=True
     )
 
     tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
-        Tracking, related_name="request_data", on_delete=models.CASCADE
+        Tracking, related_name=RELATED_NAME, on_delete=models.CASCADE
     )
 
-    token: models.ForeignKey["Token", "Token"] = models.ForeignKey(
-        Token, related_name="request_data", on_delete=models.CASCADE
+    token: models.ForeignKey[Token, Token] = models.ForeignKey(
+        Token, related_name=RELATED_NAME, on_delete=models.CASCADE
     )
 
     # NotificationData-specific fields
@@ -491,6 +530,9 @@ class NotificationData(TrackingRequestData):
 class InterceptionData(TrackingRequestData):
     objects = InterceptionDataManager()
 
+    def __str__(self) -> str:
+        return ""
+
     class Meta(TypedModelMeta):
         proxy = True
         verbose_name_plural = "Interception Data"
@@ -498,3 +540,171 @@ class InterceptionData(TrackingRequestData):
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.data_type = TrackingDataType.INTERCEPTION.value
         super().save(*args, **kwargs)
+
+
+#############################
+#  Image Tracking Managers  #
+#############################
+
+
+class ImagenDataManager(Manager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(data_type=ImageDataType.TRACKING.value)
+
+
+class ExifDataManager(Manager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(data_type=ImageDataType.REVIEW.value)
+
+
+##########################
+# Image Tracking Models  #
+##########################
+
+
+class ImageRequestData(AbstractRequestData):
+
+    RELATED_NAME = "image_request_data"
+
+    data_type: models.CharField[str, str] = models.CharField(
+        max_length=20, choices=ImageDataType.choices(), db_index=True
+    )
+
+    tracking: models.ForeignKey[Tracking, Tracking] = models.ForeignKey(
+        Tracking, related_name=RELATED_NAME, on_delete=models.CASCADE
+    )
+
+    token: models.ForeignKey[Token, Token] = models.ForeignKey(
+        Token, related_name=RELATED_NAME, on_delete=models.CASCADE
+    )
+
+    # Image file
+    image = models.ImageField(
+        upload_to="exif_images/%Y/%m/%d/",
+        help_text="Upload an image to extract EXIF data",
+        null=True,
+        blank=True,
+    )
+
+    # GPS Coordinates (altitude is EXIF-specific, latitude/longitude inherited from AbstractRequestData)
+    altitude: models.FloatField[Optional[float], Optional[float]] = models.FloatField(
+        null=True, blank=True, help_text="Altitude from EXIF GPS data (in meters)"
+    )
+
+    # Camera/Device Information
+    make: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Camera/device manufacturer"
+    )
+
+    model: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Camera/device model"
+    )
+
+    software: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=255, blank=True, null=True, help_text="Software used to create/edit image"
+    )
+
+    # Image Properties
+    width: models.IntegerField[Optional[int], Optional[int]] = models.IntegerField(
+        null=True, blank=True, help_text="Image width in pixels"
+    )
+
+    height: models.IntegerField[Optional[int], Optional[int]] = models.IntegerField(
+        null=True, blank=True, help_text="Image height in pixels"
+    )
+
+    orientation: models.IntegerField[Optional[int], Optional[int]] = models.IntegerField(
+        null=True, blank=True, help_text="Image orientation (1-8)"
+    )
+
+    # Timestamps
+    datetime_original: models.DateTimeField[
+        Optional[datetime.datetime], Optional[datetime.datetime]
+    ] = models.DateTimeField(
+        null=True, blank=True, help_text="Date and time when image was taken (from EXIF)"
+    )
+
+    datetime_digitized: models.DateTimeField[
+        Optional[datetime.datetime], Optional[datetime.datetime]
+    ] = models.DateTimeField(
+        null=True, blank=True, help_text="Date and time when image was digitized (from EXIF)"
+    )
+
+    # Camera Settings
+    exposure_time: models.CharField[str, Optional[str]] = models.CharField(
+        max_length=50, blank=True, null=True, help_text="Exposure time (e.g., '1/125')"
+    )
+
+    f_number: models.FloatField[Optional[float], Optional[float]] = models.FloatField(
+        null=True, blank=True, help_text="F-number (aperture)"
+    )
+
+    iso_speed: models.IntegerField[Optional[int], Optional[int]] = models.IntegerField(
+        null=True, blank=True, help_text="ISO speed rating"
+    )
+
+    focal_length: models.FloatField[Optional[float], Optional[float]] = models.FloatField(
+        null=True, blank=True, help_text="Focal length (in mm)"
+    )
+
+    flash: models.BooleanField[Optional[bool], Optional[bool]] = models.BooleanField(
+        null=True, blank=True, help_text="Flash fired"
+    )
+
+    # Raw EXIF data stored as JSON for any additional fields
+    raw_exif_data: models.JSONField[Optional[dict[str, Any]], Optional[dict[str, Any]]] = (
+        models.JSONField(null=True, blank=True, help_text="Complete raw EXIF data as JSON")
+    )
+
+    # Metadata
+    created_on: models.DateTimeField[datetime.datetime, datetime.datetime] = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_on: models.DateTimeField[datetime.datetime, datetime.datetime] = models.DateTimeField(
+        auto_now=True
+    )
+
+    objects: Manager["ImageRequestData"] = Manager["ImageRequestData"]()
+
+    class Meta(TypedModelMeta):
+        verbose_name_plural = "Image Request Data"
+        indexes = [
+            models.Index(fields=["data_type", "tracking"]),
+            models.Index(fields=["data_type", "token"]),
+        ]
+
+    def __str__(self) -> str:
+        return ""
+
+
+class ImageData(ImageRequestData):
+    objects = ImagenDataManager()
+
+    class Meta(TypedModelMeta):
+        proxy = True
+        verbose_name_plural = "Image Data"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.data_type = ImageDataType.TRACKING.value
+        super().save(*args, **kwargs)
+
+
+class ExifData(ImageRequestData):
+    """Proxy model for EXIF data (REVIEW type)."""
+
+    objects = ExifDataManager()
+
+    class Meta(TypedModelMeta):
+        proxy = True
+        verbose_name_plural = "EXIF Data"
+        ordering = ["-created_on"]
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        self.data_type = ImageDataType.REVIEW.value
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        if self.make and self.model:
+            return f"{self.make} {self.model} - {self.created_on.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"EXIF Data - {self.created_on.strftime('%Y-%m-%d %H:%M:%S')}"

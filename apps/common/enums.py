@@ -51,3 +51,27 @@ class TrackingDataType(str, Enum):
     @classmethod
     def choices(cls) -> List[Tuple[str, str]]:
         return [(key.value, key.name.title()) for key in cls]
+
+
+class CampaignDataType(str, Enum):
+    IMAGES = "images"
+    PACKAGES = "packages"
+    INVITES = "invites"
+    DIRECTIONS = "directions"
+    SPEEDTEST = "speedtest"
+    ADDSENSE = "addsense"
+    CHAT = "chat"
+    VPN = "vpn"
+
+    @classmethod
+    def choices(cls) -> List[Tuple[str, str]]:
+        return [(key.value, key.name.title()) for key in cls]
+
+
+class ImageDataType(str, Enum):
+    TRACKING = "tracking"
+    REVIEW = "review"
+
+    @classmethod
+    def choices(cls) -> List[Tuple[str, str]]:
+        return [(key.value, key.name.title()) for key in cls]

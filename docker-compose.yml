@@ -40,11 +40,13 @@ services:
             - /app/node_modules # Anonymous volume to prevent host override
             - delivery_build:/staticfiles/delivery
             - management_build:/staticfiles/management
+            - imagereview_build:/staticfiles/imagereview
         environment:
             - NODE_ENV=${NODE_ENV}
         ports:
             - "3000:3000"  # Delivery app
             - "3001:3001"  # Management app
+            - "3002:3002"  # Image review app
         depends_on:
             - web
 
@@ -59,6 +61,7 @@ services:
             - django_static:/static/django
             - delivery_build:/static/delivery
             - management_build:/static/management
+            - imagereview_build:/static/imagereview
         depends_on:
             - web
             - frontend
@@ -101,4 +104,5 @@ volumes:
     static_files:
     delivery_build:
     management_build:
+    imagereview_build:
     django_static:

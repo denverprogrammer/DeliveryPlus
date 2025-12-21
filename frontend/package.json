@@ -5,13 +5,15 @@
     "type": "module",
     "description": "Split frontend architecture with separate delivery and management apps",
     "scripts": {
-        "dev": "concurrently \"npm run dev:delivery\" \"npm run dev:management\"",
+        "dev": "concurrently \"npm run dev:delivery\" \"npm run dev:management\" \"npm run dev:imagereview\"",
         "dev:delivery": "cd delivery && npm run dev -- --port 3000 --host 0.0.0.0",
         "dev:management": "cd management && npm run dev -- --port 3001 --host 0.0.0.0",
+        "dev:imagereview": "cd imagereview && npm run dev -- --port 3002 --host 0.0.0.0",
         "build:delivery": "cd delivery && npm run build",
         "build:management": "cd management && npm run build",
-        "build:all": "npm run build:delivery && npm run build:management",
-        "install:all": "npm install && cd delivery && npm install && cd ../management && npm install",
+        "build:imagereview": "cd imagereview && npm run build",
+        "build:all": "npm run build:delivery && npm run build:management && npm run build:imagereview",
+        "install:all": "npm install && cd delivery && npm install && cd ../management && npm install && cd ../imagereview && npm install",
         "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
     },
     "dependencies": {

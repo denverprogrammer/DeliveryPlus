@@ -21,7 +21,8 @@ if [ "$NODE_ENV" = "development" ]; then
     echo "🚀 Starting development servers..."
     echo "📱 Delivery app will be available on port 3000"
     echo "💼 Management app will be available on port 3001"
-    # Run both apps concurrently in a single container
+    echo "📸 Image review app will be available on port 3002"
+    # Run all apps concurrently in a single container
     npm run dev
 else
     echo "🏗️ Building all apps..."

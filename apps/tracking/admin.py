@@ -1,5 +1,6 @@
 from typing import Any
 from typing import Optional
+from common.enums import CampaignDataType
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -14,23 +15,43 @@ from tracking.forms import RecipientSubAdminForm
 from tracking.forms import TrackingSubAdminForm
 
 # from tracking.models import TrackingData
+from tracking.models import AbstractRequestData
 from tracking.models import Campaign
+from tracking.models import ExifData
 from tracking.models import Recipient
 from tracking.models import Token
 from tracking.models import Tracking
 from tracking.models import TrackingRequestData
 
 
-class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
-    model = TrackingRequestData
+class TokenInline(admin.TabularInline[Token, Tracking]):
+    model = Token
+    extra = 0
+    fields = ("value", "status", "created_on", "last_used", "used", "deleted_on")
+    readonly_fields = ("created_on", "last_used", "used", "deleted_on")
+    ordering = ("-last_used", "-created_on")
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Token]:
+        return super().get_queryset(request).select_related("tracking")
+
+    @admin.display(description="Used")
+    def used(self, obj: Token) -> int:
+        """Count the total number of records that reference this token."""
+        if not obj.pk:
+            return 0
+
+        return int(TrackingRequestData.objects.filter(token=obj).count())
+
+
+class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracking]):
+    """Inline for displaying TrackingRequestData (for PACKAGES campaigns)."""
+
+    model = AbstractRequestData
     extra = 0
     can_delete = False
     show_change_link = False
     fields = (
         "timestamp",
-        # "server_timestamp",
-        # "ip_source",
-        # "location_source"
         "data_type",
         "http_method",
         "ip_address",
@@ -55,7 +76,7 @@ class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
         return False
 
     @admin.display(description="Timestamp")
-    def timestamp(self, obj: TrackingRequestData) -> str:
+    def timestamp(self, obj: AbstractRequestData) -> str:
         return format_html(
             '<a href="{}" class="button" onclick="{}">{}</a>',
             f"{reverse('tracking_data_dialog', args=[obj.pk])}?_popup=1",
@@ -63,27 +84,22 @@ class TrackingDataInline(admin.TabularInline[TrackingRequestData, Tracking]):
             obj.server_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet[TrackingRequestData]:
+    def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
         return super().get_queryset(request).select_related("tracking", "token")
 
 
-class TokenInline(admin.TabularInline[Token, Tracking]):
-    model = Token
-    extra = 0
-    fields = ("value", "status", "created_on", "last_used", "used", "deleted_on")
-    readonly_fields = ("created_on", "last_used", "used", "deleted_on")
-    ordering = ("-last_used", "-created_on")
+class TrackingDataInline(AbstractTrackingDataInline):
+    model = TrackingRequestData
 
-    def get_queryset(self, request: HttpRequest) -> QuerySet[Token]:
-        return super().get_queryset(request).select_related("tracking")
+    # def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
+    #     return super().get_queryset(request).select_related("tracking", "token")
 
-    @admin.display(description="Used")
-    def used(self, obj: Token) -> int:
-        """Count the total number of records that reference this token."""
-        if not obj.pk:
-            return 0
 
-        return int(TrackingRequestData.objects.filter(token=obj).count())
+class ExifDataInline(AbstractTrackingDataInline):
+    model = ExifData
+
+    # def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
+    #     return super().get_queryset(request).select_related("tracking", "token")
 
 
 class TrackingSubAdmin(SubAdmin[Tracking]):
@@ -101,6 +117,7 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
 
     list_display = (
         "id",
+        "campaign_name",
         "recipient_name",
         "recipient_email",
         "recipient_phone",
@@ -127,7 +144,20 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
     )
     list_per_page = 20
     show_change_link = True
-    inlines = (TokenInline, TrackingDataInline)
+    # Default inlines - will be overridden by get_inlines based on campaign type
+
+    def get_inlines(
+        self, request: HttpRequest, obj: Optional[Tracking]
+    ) -> tuple[type[admin.TabularInline[Any, Any]], ...]:
+
+        campaign = obj.campaign if obj else None
+
+        if campaign and campaign.campaign_type == CampaignDataType.IMAGES.value:
+            return (TokenInline, ExifDataInline)
+        elif campaign and campaign.campaign_type == CampaignDataType.PACKAGES.value:
+            return (TokenInline, TrackingDataInline)
+
+        return (TokenInline,)
 
     @admin.display(description="Recipient")
     def recipient_name(self, obj: Tracking) -> SafeString:
@@ -236,7 +266,7 @@ class CampaignSubAdmin(SubAdmin[Campaign]):
     model = Campaign
     form = CampaignSubAdminForm
     fieldsets = (
-        (None, {"fields": ("name", "description")}),
+        (None, {"fields": ("campaign_type", "name", "description")}),
         ("Website Details", {"fields": ("publishing_type", "landing_page_url", "tracking_pixel")}),
         (
             "Tracking Configuration",

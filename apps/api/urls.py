@@ -1,5 +1,6 @@
 # urls.py
 from rest_framework.routers import DefaultRouter
+from .views import ImageReviewView
 from .views import PackagesView
 
 
@@ -8,6 +9,7 @@ from .views import PackagesView
 
 router = DefaultRouter()
 router.register(r"packages", PackagesView, basename="packages")
+router.register(r"images", ImageReviewView, basename="images")
 
 
 urlpatterns = router.urls

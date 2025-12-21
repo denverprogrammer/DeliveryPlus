@@ -95,3 +95,8 @@ class AddressSerializer(serializers.Serializer):
     postalOrZip = serializers.CharField(max_length=20, required=False, allow_blank=True)
     country = serializers.CharField(max_length=2, required=False, allow_blank=True)
     recipient = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class ImageUploadSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    image = serializers.ImageField()

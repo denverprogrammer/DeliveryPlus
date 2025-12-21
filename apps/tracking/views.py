@@ -17,6 +17,10 @@ from tracking.models import TrackingRequestData
 @staff_member_required
 def tracking_data_modal(request: HttpRequest, pk: int) -> TemplateResponse:
     """View for displaying tracking data in a read-only format."""
+
+    print(f"pk: {pk}************************************************")
+    print(f"request: {request}")
+
     tracking_data = get_object_or_404(TrackingRequestData, pk=pk)
 
     form = TrackingDataViewForm(
