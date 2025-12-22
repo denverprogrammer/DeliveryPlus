@@ -5,6 +5,7 @@ from common.enums import CampaignDataType
 from dal import autocomplete
 
 # from config import settings
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import QuerySet
@@ -59,11 +60,21 @@ def tracking_data_modal(request: HttpRequest, campaign_type: str, pk: int) -> Te
         }
     )
 
+    # Check if object is ImageRequestData and has an image
+    image_url = None
+    if isinstance(obj, ImageRequestData) and hasattr(obj, "image") and obj.image:
+        # Ensure MEDIA_URL is prepended to the image URL
+        image_path = obj.image.url
+        if not image_path.startswith(settings.MEDIA_URL):
+            image_path = settings.MEDIA_URL + image_path.lstrip("/")
+        image_url = request.build_absolute_uri(image_path)
+
     context = {
         "form": form,
         "title": f"Request Data for {obj.tracking}",
         "json_fields": ["ip_data", "user_agent_data", "header_data", "form_data"],
         "warnings": obj.all_warnings,
+        "image_url": image_url,
     }
 
     return TemplateResponse(request, "tracking/tracking_data_modal.html", context)

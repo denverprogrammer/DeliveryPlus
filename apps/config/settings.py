@@ -153,6 +153,12 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = "/staticfiles/django"
 
+# Media files (user uploaded files)
+MEDIA_URL = "/media/"
+# Note: Files are stored in apps/exif_images/ but MEDIA_ROOT should point to apps/
+# so that upload_to="exif_images/%Y/%m/%d/" resolves correctly
+MEDIA_ROOT = BASE_DIR
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

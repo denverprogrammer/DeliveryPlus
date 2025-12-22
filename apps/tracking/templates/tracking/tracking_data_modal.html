@@ -247,6 +247,14 @@
                     {% if field.name in json_fields and field.value %}
                     <div class="tab-pane" id="{{ field.name }}" role="tabpanel" aria-labelledby="{{ field.name }}-tab">
                         <fieldset class="module aligned">
+                            {% if field.name == "form_data" and image_url %}
+                            <div class="form-row" style="margin-bottom: 20px;">
+                                <label>Image:</label>
+                                <div>
+                                    <img src="{{ image_url }}" alt="Uploaded Image" style="max-width: 100%; max-height: 500px; border: 1px solid #ddd; border-radius: 4px; padding: 5px; background-color: #fff;">
+                                </div>
+                            </div>
+                            {% endif %}
                             <div class="form-row">
                                 <div id="{{ field.name }}-editor" style="height: 300px;" data-json='{{ field.value|safe }}'></div>
                             </div>
