@@ -34,6 +34,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from tracking.models import ExifData
+from tracking.models import ImageData
 from tracking.models import InterceptionData
 from tracking.models import NotificationData
 from tracking.models import Token
@@ -400,7 +401,14 @@ class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet)
     NO_HEADER_ERROR = {"detail": "Could not determin header data"}
     NO_TOKEN_ERROR = {"detail": "Token is required"}
 
-    def create(self, request: Request) -> Response:
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="upload",
+        url_name="upload",
+        serializer_class=ImageUploadSerializer,
+    )
+    def upload(self, request: Request) -> Response:
         """Handle image upload with EXIF data extraction."""
         serializer = ImageUploadSerializer(data=request.data)
         result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_ERROR)
@@ -457,6 +465,63 @@ class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet)
             {
                 "status": "success",
                 "detail": "✅ Image uploaded successfully. EXIF data will be extracted and stored.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="track",
+        url_name="track",
+        serializer_class=RequestSerializer,
+    )
+    def track(self, request: Request) -> Response:
+        """Handle image tracking data."""
+        serializer = RequestSerializer(data=request.data)
+        result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_ERROR)
+
+        if isinstance(result, Response):
+            return result
+
+        (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        ) = result
+
+        # Create image tracking data
+        ImageData.objects.create(
+            tracking=tracking,
+            token=token_obj,
+            http_method=http_method,
+            ip_address=ip_data.getSelectedAddress(),
+            ip_source=ip_data.source,
+            os=user_agent_data.get_os_name(),
+            browser=user_agent_data.get_browser_name(),
+            platform=user_agent_data.get_platform_type(),
+            locale=locale_data.selected,
+            client_time=time_data.info,
+            client_timezone=time_data.getTimezone(),
+            latitude=location_data.getLatitude(),
+            longitude=location_data.getLongitude(),
+            location_source=location_data.source,
+            _ip_data=ip_data.model_dump(),
+            _user_agent_data=user_agent_data.model_dump(),
+            _header_data=header_data.model_dump(),
+            _form_data=request.data,
+        )
+
+        return Response(
+            {
+                "status": "success",
+                "detail": "✅ Image tracking data recorded successfully.",
             },
             status=status.HTTP_201_CREATED,
         )
