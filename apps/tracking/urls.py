@@ -5,7 +5,11 @@ from . import views
 
 
 urlpatterns = [
-    path("tracking-dialog/<int:pk>/", views.tracking_data_modal, name="tracking_data_dialog"),
+    path(
+        "tracking-dialog/<str:campaign_type>/<int:pk>/",
+        views.tracking_data_modal,
+        name="tracking_data_dialog",
+    ),
     path(
         "admin/tag-autocomplete/",
         admin.site.admin_view(TagAutocomplete.as_view()),

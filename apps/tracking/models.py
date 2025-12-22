@@ -203,6 +203,18 @@ class Tracking(models.Model):
 
     objects: Manager[Tracking] = Manager["Tracking"]()
 
+    @property
+    def count_requests(self) -> Optional[int]:
+        """Count the total number of records that reference this token."""
+        if not self.pk or not self.campaign:
+            return None
+        elif self.campaign.campaign_type == CampaignDataType.PACKAGES.value:
+            return int(self.tracking_request_data.count())
+        elif self.campaign.campaign_type == CampaignDataType.IMAGES.value:
+            return int(self.image_request_data.count())
+        else:
+            return None
+
     class Meta(TypedModelMeta):
         verbose_name_plural = "Tracking"
 

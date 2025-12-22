@@ -35,12 +35,8 @@ class TokenInline(admin.TabularInline[Token, Tracking]):
         return super().get_queryset(request).select_related("tracking")
 
     @admin.display(description="Used")
-    def used(self, obj: Token) -> int:
-        """Count the total number of records that reference this token."""
-        if not obj.pk:
-            return 0
-
-        return int(TrackingRequestData.objects.filter(token=obj).count())
+    def used(self, obj: Token) -> int | str:
+        return obj.tracking.count_requests or "-"
 
 
 class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracking]):
@@ -78,9 +74,8 @@ class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracki
     @admin.display(description="Timestamp")
     def timestamp(self, obj: AbstractRequestData) -> str:
         return format_html(
-            '<a href="{}" class="button" onclick="{}">{}</a>',
-            f"{reverse('tracking_data_dialog', args=[obj.pk])}?_popup=1",
-            "return showRelatedObjectLookupPopup(this);",
+            '<a href="{}" class="button">{}</a>',
+            f"{reverse('tracking_data_dialog', args=[obj.tracking.campaign.campaign_type, obj.pk])}?_popup=1",
             obj.server_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
