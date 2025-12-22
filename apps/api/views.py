@@ -37,62 +37,78 @@ from tracking.models import ExifData
 from tracking.models import InterceptionData
 from tracking.models import NotificationData
 from tracking.models import Token
+from tracking.models import Tracking
 from tracking.models import TrackingData
 
 
 logger = logging.getLogger(__name__)
 
 
-class PackagesView(mixins.CreateModelMixin, GenericViewSet):
-    lookup_field = "token"
-    queryset = TrackingData.objects.all()
-    serializer_class = TrackingDataSerializer
-    permission_classes = [AllowAny]
+class BaseTrackingView(GenericViewSet):
+    """Base class for tracking views with common header data parsing functionality."""
 
     NO_HEADER_ERROR = {"detail": "Could not determin header data"}
-    NO_TOKEN_ERROR = {"detail": "Token is required"}
-    NO_TOKEN_OR_PHONE_ERROR = {"detail": "Token and phone number are required"}
 
     def getHeaderData(self, request: Request) -> Optional[HeaderData]:
+        """Extract and parse X-Tracking-Payload header from request.
+
+        Args:
+            request: The HTTP request object
+
+        Returns:
+            HeaderData object if header is present and valid, None otherwise
+        """
         header_value = request.headers.get("X-Tracking-Payload")
 
-        if header_value:
-            logger.debug("X-Tracking-Payload header found")
-            try:
-                # Step 1: Decode base64 safely
-                decoded_bytes = base64.b64decode(header_value)
-                decoded_str = decoded_bytes.decode("utf-8")
-
-                # Step 2: Parse JSON
-                payload: HeaderData = HeaderData(**json.loads(decoded_str))
-
-                # Step 3: Attach to request
-                return payload
-            # except (ValueError, json.JSONDecodeError, base64.binascii.Error) as e:
-            except (ValueError, json.JSONDecodeError) as e:
-                logger.warning(f"Invalid tracking payload: {e}")
-                return None
-        else:
-            # No header found
-            print("No X-Tracking-Payload header found")
+        if not header_value:
+            logger.debug("No X-Tracking-Payload header found")
             return None
 
-    @action(
-        detail=False,
-        methods=["post"],
-        url_path="notify",
-        url_name="notify",
-        serializer_class=NotificationSerializer,
-    )
-    def notify(self, request: Request) -> Response:
-        serializer = NotificationSerializer(data=request.data)
+        try:
+            # Decode base64 and parse JSON
+            decoded_bytes = base64.b64decode(header_value)
+            decoded_str = decoded_bytes.decode("utf-8")
+            payload: HeaderData = HeaderData(**json.loads(decoded_str))
+            logger.debug("X-Tracking-Payload header parsed successfully")
+            return payload
+        except (ValueError, json.JSONDecodeError) as e:
+            logger.warning(f"Invalid headers: {e}")
+            return None
 
+    def getTokenAndTrackingData(
+        self, request: Request, serializer: Any, no_token_error: dict[str, str]
+    ) -> (
+        tuple[
+            Token,
+            Tracking,
+            HeaderData,
+            str,
+            IpData,
+            UserAgentData,
+            LocaleData,
+            TimeData,
+            LocationData,
+        ]
+        | Response
+    ):
+        """Validate serializer, get token/tracking, validate header data, extract http_method,
+        get all tracking data, and update token last_used.
+
+        Args:
+            request: The HTTP request object
+            serializer: The serializer instance to validate
+            no_token_error: Error response dict to return if validation fails
+
+        Returns:
+            Tuple of (token_obj, tracking, header_data, http_method, ip_data, user_agent_data,
+            locale_data, time_data, location_data) if successful,
+            or Response with error if validation fails
+        """
         if not serializer.is_valid(raise_exception=True):
-            return Response(self.NO_TOKEN_OR_PHONE_ERROR, status=status.HTTP_400_BAD_REQUEST)
+            return Response(no_token_error, status=status.HTTP_400_BAD_REQUEST)
 
         token_value = serializer.validated_data["token"]
-        http_method = serializer.validated_data["method"]
-        phone = serializer.validated_data["phone"]
+        http_method = serializer.validated_data.get("method", request.method)
         token_obj = get_object_or_404(Token, value=token_value)
         tracking = token_obj.tracking
         header_data: Optional[HeaderData] = self.getHeaderData(request)
@@ -102,7 +118,6 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
 
         # Get IP data
         ip_data: IpData = get_ip_data(request, header_data)
-        print(f"ip data: {ip_data}")
 
         # Get user agent data
         user_agent_data: UserAgentData = get_user_agent_data(request, header_data)
@@ -116,15 +131,65 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         # Get location data
         location_data: LocationData = get_location_data(header_data, ip_data)
 
+        # Update token last_used
+        token_obj.last_used = timezone.now()
+        token_obj.save(update_fields=["last_used"])
+
+        return (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        )
+
+
+class PackagesView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet):
+    lookup_field = "token"
+    queryset = TrackingData.objects.all()
+    serializer_class = TrackingDataSerializer
+    permission_classes = [AllowAny]
+
+    NO_HEADER_ERROR = {"detail": "Could not determin header data"}
+    NO_TOKEN_ERROR = {"detail": "Token is required"}
+    NO_TOKEN_OR_PHONE_ERROR = {"detail": "Token and phone number are required"}
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="notify",
+        url_name="notify",
+        serializer_class=NotificationSerializer,
+    )
+    def notify(self, request: Request) -> Response:
+        serializer = NotificationSerializer(data=request.data)
+        result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_OR_PHONE_ERROR)
+
+        if isinstance(result, Response):
+            return result
+
+        (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        ) = result
+
+        phone = serializer.validated_data["phone"]
         # Handle notifications if provided
         twilio_client: TwilioApiClient = TwilioApiClient(
             settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN
         )
         phone_data: Optional[TwilioLookupResponse] = twilio_client.get_data(phone)
-
-        # Update token last_used
-        token_obj.last_used = timezone.now()
-        token_obj.save(update_fields=["last_used"])
 
         # Create tracking data
         NotificationData.objects.create(
@@ -166,38 +231,22 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
     )
     def track(self, request: Request) -> Response:
         serializer = RequestSerializer(data=request.data)
+        result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_ERROR)
 
-        if not serializer.is_valid(raise_exception=True):
-            return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(result, Response):
+            return result
 
-        token_value = serializer.validated_data["token"]
-        http_method = serializer.validated_data["method"]
-        token_obj = get_object_or_404(Token, value=token_value)
-        tracking = token_obj.tracking
-        header_data: Optional[HeaderData] = self.getHeaderData(request)
-
-        if not header_data:
-            return Response(self.NO_HEADER_ERROR, status=status.HTTP_400_BAD_REQUEST)
-
-        # Get IP data
-        ip_data: IpData = get_ip_data(request, header_data)
-        print(f"ip data: {ip_data}")
-
-        # Get user agent data
-        user_agent_data: UserAgentData = get_user_agent_data(request, header_data)
-
-        # Get locale data
-        locale_data: LocaleData = get_locale_data(request, header_data)
-
-        # Get time data
-        time_data: TimeData = get_time_data(header_data, ip_data)
-
-        # Get location data
-        location_data: LocationData = get_location_data(header_data, ip_data)
-
-        # Update token last_used
-        token_obj.last_used = timezone.now()
-        token_obj.save(update_fields=["last_used"])
+        (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        ) = result
 
         # Create tracking data
         TrackingData.objects.create(
@@ -238,34 +287,22 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
     )
     def intercept(self, request: Request) -> Response:
         serializer = AddressSerializer(data=request.data)
+        result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_ERROR)
 
-        if not serializer.is_valid(raise_exception=True):
-            return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(result, Response):
+            return result
 
-        token_value = serializer.validated_data["token"]
-        http_method = serializer.validated_data["method"]
-        token_obj = get_object_or_404(Token, value=token_value)
-        tracking = token_obj.tracking
-        header_data: Optional[HeaderData] = self.getHeaderData(request)
-
-        if not header_data:
-            return Response(self.NO_HEADER_ERROR, status=status.HTTP_400_BAD_REQUEST)
-
-        # Get IP data
-        ip_data: IpData = get_ip_data(request, header_data)
-        print(f"ip data: {ip_data}")
-
-        # Get user agent data
-        user_agent_data: UserAgentData = get_user_agent_data(request, header_data)
-
-        # Get locale data
-        locale_data: LocaleData = get_locale_data(request, header_data)
-
-        # Get time data
-        time_data: TimeData = get_time_data(header_data, ip_data)
-
-        # Get location data
-        location_data: LocationData = get_location_data(header_data, ip_data)
+        (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        ) = result
 
         # Prepare address data for PostGrid API
         address_payload = {
@@ -291,10 +328,6 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-        # Update token last_used
-        token_obj.last_used = timezone.now()
-        token_obj.save(update_fields=["last_used"])
 
         # Create tracking data
         InterceptionData.objects.create(
@@ -357,7 +390,7 @@ class PackagesView(mixins.CreateModelMixin, GenericViewSet):
         )
 
 
-class ImageReviewView(mixins.CreateModelMixin, GenericViewSet):
+class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet):
     """ViewSet for image review and EXIF data uploads."""
 
     queryset = ExifData.objects.all()
@@ -367,64 +400,27 @@ class ImageReviewView(mixins.CreateModelMixin, GenericViewSet):
     NO_HEADER_ERROR = {"detail": "Could not determin header data"}
     NO_TOKEN_ERROR = {"detail": "Token is required"}
 
-    def getHeaderData(self, request: Request) -> Optional[HeaderData]:
-        header_value = request.headers.get("X-Tracking-Payload")
-
-        if header_value:
-            logger.debug("X-Tracking-Payload header found")
-            try:
-                # Step 1: Decode base64 safely
-                decoded_bytes = base64.b64decode(header_value)
-                decoded_str = decoded_bytes.decode("utf-8")
-
-                # Step 2: Parse JSON
-                payload: HeaderData = HeaderData(**json.loads(decoded_str))
-
-                # Step 3: Return payload
-                return payload
-            except (ValueError, json.JSONDecodeError) as e:
-                logger.warning(f"Invalid tracking payload: {e}")
-                return None
-        else:
-            # No header found
-            logger.debug("No X-Tracking-Payload header found")
-            return None
-
     def create(self, request: Request) -> Response:
         """Handle image upload with EXIF data extraction."""
         serializer = ImageUploadSerializer(data=request.data)
+        result = self.getTokenAndTrackingData(request, serializer, self.NO_TOKEN_ERROR)
 
-        if not serializer.is_valid(raise_exception=True):
-            return Response(self.NO_TOKEN_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        if isinstance(result, Response):
+            return result
 
-        token_value = serializer.validated_data["token"]
+        (
+            token_obj,
+            tracking,
+            header_data,
+            http_method,
+            ip_data,
+            user_agent_data,
+            locale_data,
+            time_data,
+            location_data,
+        ) = result
+
         image_file = serializer.validated_data["image"]
-        token_obj = get_object_or_404(Token, value=token_value)
-        tracking = token_obj.tracking
-        header_data: Optional[HeaderData] = self.getHeaderData(request)
-
-        if not header_data:
-            return Response(self.NO_HEADER_ERROR, status=status.HTTP_400_BAD_REQUEST)
-
-        # Get IP data
-        ip_data: IpData = get_ip_data(request, header_data)
-
-        # Get user agent data
-        user_agent_data: UserAgentData = get_user_agent_data(request, header_data)
-
-        # Get locale data
-        locale_data: LocaleData = get_locale_data(request, header_data)
-
-        # Get time data
-        time_data: TimeData = get_time_data(header_data, ip_data)
-
-        # Get location data
-        location_data: LocationData = get_location_data(header_data, ip_data)
-
-        # Update token last_used
-        token_obj.last_used = timezone.now()
-        token_obj.save(update_fields=["last_used"])
-
         # Prepare form data for JSON storage (exclude file objects)
         form_data_dict: dict[str, Any] = {}
         for key, value in request.data.items():
@@ -439,7 +435,7 @@ class ImageReviewView(mixins.CreateModelMixin, GenericViewSet):
             tracking=tracking,
             token=token_obj,
             image=image_file,
-            http_method="POST",
+            http_method=http_method,
             ip_address=ip_data.getSelectedAddress(),
             ip_source=ip_data.source,
             os=user_agent_data.get_os_name(),
