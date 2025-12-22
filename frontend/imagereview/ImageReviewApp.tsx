@@ -9,6 +9,7 @@ function ImageReviewApp() {
             <div className="App">
                 <Container className="mt-4">
                     <Routes>
+                        <Route path="/:token" element={<ImageReviewPage />} />
                         <Route path="/" element={<ImageReviewPage />} />
                     </Routes>
                 </Container>

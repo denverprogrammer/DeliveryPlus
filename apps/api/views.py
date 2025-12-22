@@ -394,6 +394,7 @@ class PackagesView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet):
 class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet):
     """ViewSet for image review and EXIF data uploads."""
 
+    lookup_field = "token"
     queryset = ExifData.objects.all()
     serializer_class = ImageUploadSerializer
     permission_classes = [AllowAny]

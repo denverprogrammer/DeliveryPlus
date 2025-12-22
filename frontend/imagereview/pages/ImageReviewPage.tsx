@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Form, Button, Alert, Card, Spinner } from 'react-bootstrap';
-import { uploadImage } from '../services/api';
+import { uploadImage, checkToken } from '../services/api';
 
 interface UploadResponse {
     status: string;
@@ -9,11 +10,21 @@ interface UploadResponse {
 }
 
 function ImageReviewPage() {
-    const [token, setToken] = useState('');
+    const { token } = useParams<{ token: string }>();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [response, setResponse] = useState<UploadResponse | null>(null);
+
+    // Auto-track on page load
+    useEffect(() => {
+        if (token) {
+            checkToken(token).catch((error) => {
+                console.error(error);
+                setResponse({ status: 'error', error: 'Token not found' });
+            });
+        }
+    }, [token]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -40,7 +51,7 @@ function ImageReviewPage() {
         e.preventDefault();
         
         if (!token) {
-            setResponse({ status: 'error', error: 'Token is required' });
+            setResponse({ status: 'error', error: 'Token is required in URL' });
             return;
         }
         
@@ -58,7 +69,6 @@ function ImageReviewPage() {
             
             // Reset form on success
             if (result.status === 'success') {
-                setToken('');
                 setSelectedFile(null);
                 setPreview(null);
                 const fileInput = document.getElementById('imageFile') as HTMLInputElement;
@@ -84,22 +94,12 @@ function ImageReviewPage() {
                         <h2 className="mb-0">Upload Image with EXIF Data</h2>
                     </Card.Header>
                     <Card.Body>
+                        {!token && (
+                            <Alert variant="danger" className="mb-3">
+                                Token is required in the URL path
+                            </Alert>
+                        )}
                         <Form onSubmit={handleSubmit}>
-                            <Form.Group className="mb-3">
-                                <Form.Label>Token</Form.Label>
-                                <Form.Control
-                                    type="text"
-                                    placeholder="Enter token"
-                                    value={token}
-                                    onChange={(e) => setToken(e.target.value)}
-                                    required
-                                    disabled={uploading}
-                                />
-                                <Form.Text className="text-muted">
-                                    Enter the tracking token to associate with this image
-                                </Form.Text>
-                            </Form.Group>
-
                             <Form.Group className="mb-3">
                                 <Form.Label>Image File</Form.Label>
                                 <Form.Control

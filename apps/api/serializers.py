@@ -99,4 +99,5 @@ class AddressSerializer(serializers.Serializer):
 
 class ImageUploadSerializer(serializers.Serializer):
     token = serializers.CharField(max_length=255)
+    method = serializers.CharField(max_length=20)
     image = serializers.ImageField()

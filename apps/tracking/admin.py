@@ -14,10 +14,11 @@ from tracking.forms import CampaignSubAdminForm
 from tracking.forms import RecipientSubAdminForm
 from tracking.forms import TrackingSubAdminForm
 
+# from tracking.models import ExifData
 # from tracking.models import TrackingData
 from tracking.models import AbstractRequestData
 from tracking.models import Campaign
-from tracking.models import ExifData
+from tracking.models import ImageRequestData
 from tracking.models import Recipient
 from tracking.models import Token
 from tracking.models import Tracking
@@ -91,7 +92,7 @@ class TrackingDataInline(AbstractTrackingDataInline):
 
 
 class ExifDataInline(AbstractTrackingDataInline):
-    model = ExifData
+    model = ImageRequestData
 
     # def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
     #     return super().get_queryset(request).select_related("tracking", "token")

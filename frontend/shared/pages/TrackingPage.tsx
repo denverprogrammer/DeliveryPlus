@@ -73,6 +73,7 @@ const TrackingPage = () => {
                 await sendTrackingData(token, 'GET');
                 
             } catch (err) { 
+                console.error(err);
                 // Don't catch any errors here because of passive request.
             }
         };
