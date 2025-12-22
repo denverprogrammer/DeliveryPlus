@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 
+from datetime import datetime
 from typing import Any
 from typing import Optional
 from api.serializers import AddressSerializer
@@ -26,6 +27,9 @@ from common.functions import get_user_agent_data
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from PIL import Image
+from PIL.ExifTags import GPSTAGS
+from PIL.ExifTags import TAGS
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
@@ -43,6 +47,109 @@ from tracking.models import TrackingData
 
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_exif_tag(tag: Any, value: Any, exif_data: dict[str, Any]) -> None:  # noqa: C901
+    """Parse a single EXIF tag and update exif_data dictionary."""
+    tag_str = str(tag)
+    if tag_str == "Make":
+        exif_data["make"] = str(value) if value else None
+    elif tag_str == "Model":
+        exif_data["model"] = str(value) if value else None
+    elif tag_str == "Software":
+        exif_data["software"] = str(value) if value else None
+    elif tag_str == "Orientation":
+        exif_data["orientation"] = int(value) if value else None
+    elif tag_str == "ExposureTime":
+        exif_data["exposure_time"] = str(value) if value else None
+    elif tag_str == "FNumber":
+        exif_data["f_number"] = float(value) if value else None
+    elif tag_str == "ISOSpeedRatings":
+        exif_data["iso_speed"] = int(value) if value else None
+    elif tag_str == "FocalLength":
+        exif_data["focal_length"] = float(value) if value else None
+    elif tag_str == "Flash":
+        exif_data["flash"] = bool(value) if value is not None else None
+    elif tag_str == "DateTimeOriginal":
+        try:
+            exif_data["datetime_original"] = datetime.strptime(str(value), "%Y:%m:%d %H:%M:%S")
+        except (ValueError, TypeError):
+            pass
+    elif tag_str == "DateTimeDigitized":
+        try:
+            exif_data["datetime_digitized"] = datetime.strptime(str(value), "%Y:%m:%d %H:%M:%S")
+        except (ValueError, TypeError):
+            pass
+
+
+def _parse_gps_data(gps_info: dict, exif_data: dict[str, Any], raw_exif: dict[str, Any]) -> None:
+    """Parse GPS data from EXIF and update exif_data dictionary."""
+    for key, val in gps_info.items():
+        gps_tag = GPSTAGS.get(key, key)
+        raw_exif[f"GPS_{gps_tag}"] = val
+
+    lat = gps_info.get(2)  # GPSLatitude
+    lat_ref = gps_info.get(1)  # GPSLatitudeRef
+    lon = gps_info.get(4)  # GPSLongitude
+    lon_ref = gps_info.get(3)  # GPSLongitudeRef
+    alt = gps_info.get(6)  # GPSAltitude
+
+    if lat and lon:
+        lat_decimal = float(lat[0]) + float(lat[1]) / 60.0 + float(lat[2]) / 3600.0
+        if lat_ref == "S":
+            lat_decimal = -lat_decimal
+        exif_data["latitude"] = lat_decimal
+
+        lon_decimal = float(lon[0]) + float(lon[1]) / 60.0 + float(lon[2]) / 3600.0
+        if lon_ref == "W":
+            lon_decimal = -lon_decimal
+        exif_data["longitude"] = lon_decimal
+
+    if alt:
+        exif_data["altitude"] = float(alt)
+
+
+def extract_exif_data(image_file: Any) -> dict[str, Any]:
+    """
+    Extract EXIF data from an uploaded image file.
+
+    Args:
+        image_file: The uploaded image file (InMemoryUploadedFile or similar)
+
+    Returns:
+        Dictionary containing extracted EXIF data fields
+    """
+    exif_data: dict[str, Any] = {}
+
+    try:
+        image = Image.open(image_file)
+        exif_data["width"] = image.width
+        exif_data["height"] = image.height
+
+        exif_dict = image.getexif()
+        if not exif_dict:
+            return exif_data
+
+        raw_exif: dict[str, Any] = {}
+
+        for tag_id, value in exif_dict.items():
+            tag = TAGS.get(tag_id, tag_id)
+            raw_exif[str(tag)] = str(value) if not isinstance(value, (int, float, bool)) else value
+            _parse_exif_tag(tag, value, exif_data)
+
+        gps_info = exif_dict.get(34853)  # GPSInfo tag
+        if gps_info:
+            _parse_gps_data(gps_info, exif_data, raw_exif)
+
+        exif_data["raw_exif_data"] = raw_exif
+        image_file.seek(0)
+
+    except Exception as e:
+        logger.warning(f"Error extracting EXIF data: {e}")
+        if hasattr(image_file, "seek"):
+            image_file.seek(0)
+
+    return exif_data
 
 
 class BaseTrackingView(GenericViewSet):
@@ -430,6 +537,10 @@ class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet)
         ) = result
 
         image_file = serializer.validated_data["image"]
+
+        # Extract EXIF data from the image
+        exif_extracted = extract_exif_data(image_file)
+
         # Prepare form data for JSON storage (exclude file objects)
         form_data_dict: dict[str, Any] = {}
         for key, value in request.data.items():
@@ -439,7 +550,18 @@ class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet)
             else:
                 form_data_dict[key] = value
 
-        # Create EXIF data record
+        # Use EXIF GPS coordinates if available, otherwise use location_data
+        latitude = exif_extracted.get("latitude") or location_data.getLatitude()
+        longitude = exif_extracted.get("longitude") or location_data.getLongitude()
+        location_source = "EXIF" if exif_extracted.get("latitude") else location_data.source
+
+        # Extract and cast EXIF string fields
+        make_val: Optional[str] = exif_extracted.get("make")
+        model_val: Optional[str] = exif_extracted.get("model")
+        software_val: Optional[str] = exif_extracted.get("software")
+        exposure_time_val: Optional[str] = exif_extracted.get("exposure_time")
+
+        # Create EXIF data record with extracted EXIF data
         ExifData.objects.create(
             tracking=tracking,
             token=token_obj,
@@ -453,9 +575,25 @@ class ImageReviewView(BaseTrackingView, mixins.CreateModelMixin, GenericViewSet)
             locale=locale_data.selected,
             client_time=time_data.info,
             client_timezone=time_data.getTimezone(),
-            latitude=location_data.getLatitude(),
-            longitude=location_data.getLongitude(),
-            location_source=location_data.source,
+            latitude=latitude,
+            longitude=longitude,
+            location_source=location_source,
+            # EXIF-specific fields
+            altitude=exif_extracted.get("altitude"),
+            make=make_val,  # type: ignore
+            model=model_val,
+            software=software_val,
+            width=exif_extracted.get("width"),
+            height=exif_extracted.get("height"),
+            orientation=exif_extracted.get("orientation"),
+            datetime_original=exif_extracted.get("datetime_original"),
+            datetime_digitized=exif_extracted.get("datetime_digitized"),
+            exposure_time=exposure_time_val,
+            f_number=exif_extracted.get("f_number"),
+            iso_speed=exif_extracted.get("iso_speed"),
+            focal_length=exif_extracted.get("focal_length"),
+            flash=exif_extracted.get("flash"),
+            raw_exif_data=exif_extracted.get("raw_exif_data"),
             _ip_data=ip_data.model_dump(),
             _user_agent_data=user_agent_data.model_dump(),
             _header_data=header_data.model_dump(),
