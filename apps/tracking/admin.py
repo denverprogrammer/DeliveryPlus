@@ -1,4 +1,5 @@
 from typing import Any
+from typing import cast
 from typing import Optional
 from common.enums import CampaignDataType
 from django.contrib import admin
@@ -7,6 +8,7 @@ from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
+from django_admin_inline_paginator_plus.admin import TabularInlinePaginated
 from subadmin import SubAdmin
 from tracking.filters import BaseTextFieldFilter
 from tracking.filters import process_list_filter
@@ -30,7 +32,7 @@ class TokenInline(admin.TabularInline[Token, Tracking]):
     extra = 0
     fields = ("value", "status", "created_on", "last_used", "used", "deleted_on")
     readonly_fields = ("created_on", "last_used", "used", "deleted_on")
-    ordering = ("-last_used", "-created_on")
+    ordering = ("status", "-last_used", "-created_on")
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Token]:
         return super().get_queryset(request).select_related("tracking")
@@ -40,14 +42,16 @@ class TokenInline(admin.TabularInline[Token, Tracking]):
         return obj.tracking.count_requests or "-"
 
 
-class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracking]):
+class AbstractTrackingDataInline(TabularInlinePaginated[AbstractRequestData, Tracking]):
     """Inline for displaying TrackingRequestData (for PACKAGES campaigns)."""
 
     model = AbstractRequestData
+    per_page = 5
     extra = 0
     can_delete = False
-    show_change_link = False
+    show_change_link = True
     fields = (
+        "id",
         "timestamp",
         "data_type",
         "http_method",
@@ -65,6 +69,8 @@ class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracki
     search_fields = ("http_method",)
     list_filter = ("http_method",)
     list_per_page = 20
+    ordering = ("-server_timestamp",)
+    list_display_links = ("timestamp",)
 
     def has_add_permission(self, request: HttpRequest, obj: Optional[Any] = None) -> bool:
         return False
@@ -74,28 +80,83 @@ class AbstractTrackingDataInline(admin.TabularInline[AbstractRequestData, Tracki
 
     @admin.display(description="Timestamp")
     def timestamp(self, obj: AbstractRequestData) -> str:
+        admin_url = f"{reverse('tracking_data_dialog', args=[obj.tracking.campaign.campaign_type, obj.pk])}?_popup=1"
+
         return format_html(
             '<a href="{}" class="button">{}</a>',
-            f"{reverse('tracking_data_dialog', args=[obj.tracking.campaign.campaign_type, obj.pk])}?_popup=1",
+            admin_url,
             obj.server_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
-        return super().get_queryset(request).select_related("tracking", "token")
+        queryset = super().get_queryset(request).select_related("tracking", "token")
+        return cast(QuerySet[AbstractRequestData], queryset)
 
 
 class TrackingDataInline(AbstractTrackingDataInline):
     model = TrackingRequestData
 
-    # def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
-    #     return super().get_queryset(request).select_related("tracking", "token")
+    per_page = 5
+    extra = 0
+    can_delete = False
+    show_change_link = False
+    fields = (
+        "id",
+        "timestamp",
+        "data_type",
+        "http_method",
+        "ip_address",
+        "os",
+        "browser",
+        "platform",
+        "locale",
+        "client_time",
+        "client_timezone",
+        "latitude",
+        "longitude",
+    )
+    readonly_fields = fields
+    search_fields = ("http_method",)
+    list_filter = ("http_method",)
+    list_per_page = 20
+    ordering = ("-server_timestamp",)
+    list_display_links = ("timestamp",)
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
+        return super().get_queryset(request).select_related("tracking", "token")
 
 
-class ExifDataInline(AbstractTrackingDataInline):
+class ImageDataInline(AbstractTrackingDataInline):
     model = ImageRequestData
 
-    # def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
-    #     return super().get_queryset(request).select_related("tracking", "token")
+    per_page = 5
+    extra = 0
+    # can_delete = False
+    # show_change_link = False
+    fields = (
+        "id",
+        "timestamp",
+        "data_type",
+        "http_method",
+        "ip_address",
+        "os",
+        "browser",
+        "platform",
+        "locale",
+        "client_time",
+        "client_timezone",
+        "latitude",
+        "longitude",
+    )
+    readonly_fields = fields
+    search_fields = ("http_method",)
+    list_filter = ("http_method",)
+    list_per_page = 20
+    ordering = ("-server_timestamp",)
+    list_display_links = ("timestamp",)
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[AbstractRequestData]:
+        return super().get_queryset(request).select_related("tracking", "token")
 
 
 class TrackingSubAdmin(SubAdmin[Tracking]):
@@ -113,11 +174,11 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
 
     list_display = (
         "id",
-        "campaign_name",
+        "campaign__name",
         "recipient_name",
-        "recipient_email",
-        "recipient_phone",
-        "recipient_status",
+        "recipient__email",
+        "recipient__phone_number",
+        "recipient__status",
     )
     list_filter = process_list_filter(
         (
@@ -140,7 +201,22 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
     )
     list_per_page = 20
     show_change_link = True
+    list_display_links = (
+        "id",
+        "campaign__name",
+        "recipient_name",
+    )
     # Default inlines - will be overridden by get_inlines based on campaign type
+
+    @admin.display(description="Recipient")
+    def recipient_name(self, obj: Tracking) -> str:
+        """Display recipient full name."""
+        if not obj.recipient:
+            return "-"
+        first_name = obj.recipient.first_name or ""
+        last_name = obj.recipient.last_name or ""
+        name = f"{first_name} {last_name}".strip()
+        return name if name else f"Recipient #{obj.recipient.id}"
 
     def get_inlines(
         self, request: HttpRequest, obj: Optional[Tracking]
@@ -149,71 +225,19 @@ class TrackingSubAdmin(SubAdmin[Tracking]):
         campaign = obj.campaign if obj else None
 
         if campaign and campaign.campaign_type == CampaignDataType.IMAGES.value:
-            return (TokenInline, ExifDataInline)
+            return (TokenInline, ImageDataInline)
         elif campaign and campaign.campaign_type == CampaignDataType.PACKAGES.value:
             return (TokenInline, TrackingDataInline)
 
         return (TokenInline,)
 
-    @admin.display(description="Recipient")
-    def recipient_name(self, obj: Tracking) -> SafeString:
-        """Display recipient full name as a link."""
-        if not obj.recipient or not obj.company:
-            return format_html("-")
-        name = f'{obj.recipient.first_name or ""} {obj.recipient.last_name or ""}'.strip()
-        if not name:
-            name = f"Recipient #{obj.recipient.id}"
-        # Construct URL using SubAdmin nested pattern
-        # Recipient is a subadmin of Company, so URL is: mgmt_company_recipient_change
-        try:
-            url = reverse(
-                "admin:mgmt_company_recipient_change",
-                args=[obj.company.pk, obj.recipient.pk],
-            )
-        except Exception:
-            # Fallback if URL pattern doesn't exist
-            url = f"/admin/mgmt/company/{obj.company.pk}/recipient/{obj.recipient.pk}/change/"
-        return format_html('<a href="{}">{}</a>', url, name)
-
-    @admin.display(description="Email")
-    def recipient_email(self, obj: Tracking) -> str:
-        """Display recipient email."""
-        return obj.recipient.email if obj.recipient and obj.recipient.email else "-"
-
-    @admin.display(description="Phone")
-    def recipient_phone(self, obj: Tracking) -> str:
-        """Display recipient phone number."""
-        return obj.recipient.phone_number if obj.recipient and obj.recipient.phone_number else "-"
-
-    @admin.display(description="Status")
-    def recipient_status(self, obj: Tracking) -> str:
-        """Display recipient status."""
-        return obj.recipient.status if obj.recipient else "-"
-
-    @admin.display(description="Campaign")
-    def campaign_name(self, obj: Tracking) -> SafeString:
-        """Display campaign name as a link."""
-        if not obj.campaign or not obj.company:
-            return format_html("-")
-        # Construct URL using SubAdmin nested pattern
-        # Campaign is a subadmin of Company, so URL is: mgmt_company_campaign_change
-        try:
-            url = reverse(
-                "admin:mgmt_company_campaign_change",
-                args=[obj.company.pk, obj.campaign.pk],
-            )
-        except Exception:
-            # Fallback if URL pattern doesn't exist
-            url = f"/admin/mgmt/company/{obj.company.pk}/campaign/{obj.campaign.pk}/change/"
-        return format_html('<a href="{}">{}</a>', url, obj.campaign.name)
-
-    @admin.display(description="Token")
-    def token_value(self, obj: Tracking) -> str:
-        """Display token values (comma-separated if multiple)."""
-        tokens = obj.tokens.all()
-        if not tokens.exists():
-            return "-"
-        return ", ".join(token.value for token in tokens)
+    # @admin.display(description="Token")
+    # def token_value(self, obj: Tracking) -> str:
+    #     """Display token values (comma-separated if multiple)."""
+    #     tokens = obj.tokens.all()
+    #     if not tokens.exists():
+    #         return "-"
+    #     return ", ".join(token.value for token in tokens)
 
 
 class RecipientSubAdmin(SubAdmin[Recipient]):

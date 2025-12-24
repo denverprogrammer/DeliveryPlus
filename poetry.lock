@@ -883,6 +883,24 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-admin-inline-paginator-plus"
+version = "0.1.4"
+description = "The 'Django Admin Inline Paginator Plus' is simple way to paginate your inlines in Django admin"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "django_admin_inline_paginator_plus-0.1.4-py3-none-any.whl", hash = "sha256:a988bf248781e06c5b5daf88dd97f8b808c6842bd935babd987a8d17bfe099f3"},
+    {file = "django_admin_inline_paginator_plus-0.1.4.tar.gz", hash = "sha256:0fb61009483d94a386a7c1c5e163551f511abc9ae41791d7af3da892a3139754"},
+]
+
+[package.dependencies]
+django = "*"
+
+[package.extras]
+dev = ["coverage", "mypy", "pytest", "ruff"]
+
+[[package]]
 name = "django-admin-interface"
 version = "0.28.9"
 description = "django's default admin interface with superpowers - customizable themes, popup windows replaced by modals and many other features."
@@ -3159,4 +3177,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "a01040a5448095cf24d27e541160347138b55a2f2fe7311f8f72f42769d58b06"
+content-hash = "b0c72ae36c6bbb09d285dab2f1135e3ec2c9077050e65cb33815d3c25151bc90"

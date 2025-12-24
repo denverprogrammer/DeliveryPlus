@@ -139,6 +139,7 @@ packages = [
 python = ">=3.11,<4.0"
 celery = "^5.3.4"
 django = "^5.0"
+django-admin-inline-paginator-plus = "^0.1.4"
 django-admin-interface = "^0.28.0"
 django-autocomplete-light = "^3.12.1"
 django-debug-toolbar = "^4.3.0"
