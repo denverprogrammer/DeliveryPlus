@@ -415,6 +415,36 @@ class AbstractRequestData(models.Model):
             "crawler_detection": self.crawler_detection.model_dump(),
         }
 
+    @property
+    def organization(self) -> Optional[str]:
+        if self.ip_data:
+            return self.ip_data.getSelectedISP()
+        return None
+
+    @property
+    def isp(self) -> Optional[str]:
+        if self.ip_data:
+            return self.ip_data.getSelectedISP()
+        return None
+
+    @property
+    def country(self) -> Optional[str]:
+        if self.ip_data:
+            return self.ip_data.getSelectedCountryName()
+        return None
+
+    @property
+    def region(self) -> Optional[str]:
+        if self.ip_data:
+            return self.ip_data.getSelectedRegion()
+        return None
+
+    @property
+    def city(self) -> Optional[str]:
+        if self.ip_data:
+            return self.ip_data.getSelectedCity()
+        return None
+
     def __str__(self) -> str:
         return "Tracking data"
 
