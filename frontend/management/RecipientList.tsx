@@ -1,38 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Table, Button, Alert } from 'react-bootstrap';
-import { getAgents } from '../shared/services/api';
+import { Table, Alert } from 'react-bootstrap';
+import { getRecipients } from '../shared/services/api';
+import type { Recipient } from '../shared/types/api';
 
-interface Agent {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    status: string;
-}
-
-const AgentList = () => {
-    const [agents, setAgents] = useState<Agent[]>([]);
+const RecipientList = () => {
+    const [recipients, setRecipients] = useState<Recipient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchAgents = async () => {
+        const fetchRecipients = async () => {
             try {
-                const data = await getAgents();
-                setAgents(data);
+                const data = await getRecipients();
+                setRecipients(data);
             } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load agents');
+                setError(err instanceof Error ? err.message : 'Failed to load recipients');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchAgents();
+        fetchRecipients();
     }, []);
 
     if (isLoading) {
-        return <div>Loading agents...</div>;
+        return <div>Loading recipients...</div>;
     }
 
     if (error) {
@@ -42,9 +35,9 @@ const AgentList = () => {
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <h2>Agents List</h2>
-                <Link to="/mgmt/agents/add" className="btn btn-primary">
-                    Add Agent
+                <h2>Recipients List</h2>
+                <Link to="/recipients/add" className="btn btn-primary">
+                    Add Recipient
                 </Link>
             </div>
 
@@ -58,15 +51,15 @@ const AgentList = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {agents.length > 0 ? (
-                        agents.map((agent) => (
-                            <tr key={agent.id}>
-                                <td>{agent.first_name} {agent.last_name}</td>
-                                <td>{agent.email}</td>
-                                <td>{agent.status}</td>
+                    {recipients.length > 0 ? (
+                        recipients.map((recipient) => (
+                            <tr key={recipient.id}>
+                                <td>{recipient.first_name} {recipient.last_name}</td>
+                                <td>{recipient.email}</td>
+                                <td>{recipient.status || 'N/A'}</td>
                                 <td>
                                     <Link 
-                                        to={`/mgmt/agents/${agent.id}/edit`}
+                                        to={`/recipients/${recipient.id}/edit`}
                                         className="btn btn-outline-primary btn-sm"
                                     >
                                         Edit
@@ -77,7 +70,7 @@ const AgentList = () => {
                     ) : (
                         <tr>
                             <td colSpan={4} className="text-center">
-                                No agents found.
+                                No recipients found.
                             </td>
                         </tr>
                     )}
@@ -87,4 +80,5 @@ const AgentList = () => {
     );
 };
 
-export default AgentList; 
+export default RecipientList;
+

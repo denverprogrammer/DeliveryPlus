@@ -43,9 +43,9 @@ frontend/
 - **Build**: `npm run build:delivery`
 
 ## 2. Management Site
-- **Purpose**: Administrative interface for managing agents and companies
+- **Purpose**: Administrative interface for managing recipients and companies
 - **Location**: `frontend/management/`
-- **Routes**: `/login`, `/dashboard`, `/agents`, `/company/edit`
+- **Routes**: `/login`, `/dashboard`, `/recipients`, `/company/edit`
 - **Build Output**: `apps/staticfiles/management/`
 - **Development Port**: 3001
 - **Development**: `npm run dev:management`

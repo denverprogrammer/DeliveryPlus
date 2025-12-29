@@ -5,30 +5,52 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // Components
 import Navigation from '../shared/components/Navigation';
 import Login from './Login';
+import Signup from './Signup';
 import Dashboard from './Dashboard';
-import AgentList from './AgentList';
-import AgentForm from './AgentForm';
 import CompanyEdit from './CompanyEdit';
+import UserList from './UserList';
+import UserForm from './UserForm';
+import CampaignList from './CampaignList';
+import CampaignForm from './CampaignForm';
+import TrackingList from './TrackingList';
+import TrackingForm from './TrackingForm';
+import TrackingDetail from './TrackingDetail';
+import { AuthProvider } from '../shared/contexts/AuthContext';
 
 function ManagementApp() {
     return (
-        <Router>
-            <div className="App">
-                <Navigation />
-                <Container className="mt-4">
-                    <Routes>
-                        {/* Management Routes Only */}
+        <AuthProvider>
+            <Router>
+                <div className="App">
+                    <Navigation />
+                    <Container className="mt-4">
+                        <Routes>
+                        {/* Authentication */}
+                        <Route path="/signup" element={<Signup />} />
                         <Route path="/login" element={<Login />} />
+                        {/* Dashboard */}
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/agents" element={<AgentList />} />
-                        <Route path="/agents/add" element={<AgentForm />} />
-                        <Route path="/agents/:id/edit" element={<AgentForm />} />
-                        <Route path="/company/edit" element={<CompanyEdit />} />
                         <Route path="/" element={<Dashboard />} />
-                    </Routes>
-                </Container>
-            </div>
-        </Router>
+                        {/* Company */}
+                        <Route path="/company/edit" element={<CompanyEdit />} />
+                        {/* Users */}
+                        <Route path="/users" element={<UserList />} />
+                        <Route path="/users/add" element={<UserForm />} />
+                        <Route path="/users/:id/edit" element={<UserForm />} />
+                        {/* Campaigns */}
+                        <Route path="/campaigns" element={<CampaignList />} />
+                        <Route path="/campaigns/add" element={<CampaignForm />} />
+                        <Route path="/campaigns/:id/edit" element={<CampaignForm />} />
+                        {/* Tracking (nested under campaigns) */}
+                        <Route path="/campaigns/:campaignId/tracking" element={<TrackingList />} />
+                        <Route path="/campaigns/:campaignId/tracking/:id" element={<TrackingDetail />} />
+                        <Route path="/campaigns/:campaignId/tracking/add" element={<TrackingForm />} />
+                        <Route path="/campaigns/:campaignId/tracking/:id/edit" element={<TrackingForm />} />
+                        </Routes>
+                    </Container>
+                </div>
+            </Router>
+        </AuthProvider>
     );
 }
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Card, Row, Col } from 'react-bootstrap';
+import { useEffect, useState } from 'react';
+import { Card, Row, Col, Button } from 'react-bootstrap';
 import { getDashboard } from '../shared/services/api';
 
 interface DashboardData {
@@ -48,8 +48,7 @@ const Dashboard = () => {
                             <h5 className="mb-0">Company Information</h5>
                         </Card.Header>
                         <Card.Body>
-                            <p><strong>Company:</strong> {dashboardData?.company?.name}</p>
-                            {/* Add more company information as needed */}
+                            <p><strong>Company:</strong> {dashboardData?.company?.name || 'No Company'}</p>
                         </Card.Body>
                     </Card>
                 </Col>
@@ -60,7 +59,11 @@ const Dashboard = () => {
                             <h5 className="mb-0">Quick Actions</h5>
                         </Card.Header>
                         <Card.Body>
-                            <p>This is a test dashboard. Add more functionality as needed.</p>
+                            <div className="d-grid gap-2">
+                                <Button variant="primary" href="/users">Manage Users</Button>
+                                <Button variant="primary" href="/campaigns">Manage Campaigns</Button>
+                                <Button variant="secondary" href="/company/edit">Edit Company</Button>
+                            </div>
                         </Card.Body>
                     </Card>
                 </Col>

@@ -22,6 +22,7 @@ class RecipientForm(forms.ModelForm[Recipient]):
         super().__init__(*args, **kwargs)
         if "company" in self.fields and hasattr(self.fields["company"], "queryset"):
             self.fields["company"].queryset = Company.objects.all()
+        return None
 
 
 class CompanyForm(forms.ModelForm[Company]):

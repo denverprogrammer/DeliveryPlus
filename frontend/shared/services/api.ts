@@ -1,24 +1,60 @@
 import axios from 'axios';
 import { prepareTrackingHeader } from './trackingUtils';
+import type {
+    Company,
+    User,
+    UserCreatePayload,
+    UserUpdatePayload,
+    Recipient,
+    Campaign,
+    CampaignCreatePayload,
+    CampaignUpdatePayload,
+    Tracking,
+    TrackingCreatePayload,
+    TrackingUpdatePayload,
+    CompanyUpdatePayload,
+    LoginResponse,
+    SignupResponse,
+    SignupPayload,
+    DashboardData,
+    PaginatedResponse,
+    RequestDataDetail,
+} from '../types/api';
 
 // Configure axios defaults
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true, // Required for session authentication
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use((config) => {
+// Request interceptor to add auth token and CSRF token
+api.interceptors.request.use(async (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
         config.headers.Authorization = `Token ${token}`;
     }
+    // Get CSRF token from cookies for session authentication
+    const csrftoken = getCookie('csrftoken');
+    if (csrftoken) {
+        config.headers['X-CSRFToken'] = csrftoken;
+    }
     return config;
 });
+
+// Helper function to get cookie value
+function getCookie(name: string): string | null {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+}
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
@@ -33,7 +69,7 @@ api.interceptors.response.use(
 );
 
 // API functions
-export const sendTrackingData = async (token: string) => {
+export const sendTrackingData = async (token: string): Promise<unknown> => {
     const headerValue = await prepareTrackingHeader();
     
     const headers: Record<string, string> = {
@@ -57,7 +93,7 @@ export const sendTrackingData = async (token: string) => {
     return response.json();
 };
 
-export const sendRedirectData = async (token: string, notifications?: string) => {
+export const sendRedirectData = async (token: string, notifications?: string): Promise<unknown> => {
     const headerValue = await prepareTrackingHeader();
     
     const formData = new FormData();
@@ -85,49 +121,162 @@ export const sendRedirectData = async (token: string, notifications?: string) =>
 };
 
 // Auth functions
-export const login = async (username: string, password: string) => {
-    const response = await api.post('/mgmt/login/', { username, password });
+export const login = async (username: string, password: string): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/api/management/users/login/', { username, password });
     return response.data;
 };
 
-export const logout = async () => {
-    await api.post('/mgmt/logout/');
+export const logout = async (): Promise<void> => {
+    await api.post('/api/management/users/logout/');
     localStorage.removeItem('authToken');
 };
 
 // Management functions
-export const getDashboard = async () => {
-    const response = await api.get('/mgmt/');
+export const getDashboard = async (): Promise<DashboardData> => {
+    const response = await api.get<DashboardData>('/api/management/users/dashboard/');
     return response.data;
 };
 
-export const getAgents = async () => {
-    const response = await api.get('/mgmt/agents/');
+// Signup function
+export const signup = async (payload: SignupPayload): Promise<SignupResponse> => {
+    const response = await api.post<SignupResponse>('/api/management/users/signup/', payload);
     return response.data;
 };
 
-export const getAgent = async (id: number) => {
-    const response = await api.get(`/mgmt/agents/${id}/`);
+// User management functions
+export const getUsers = async (): Promise<User[]> => {
+    const response = await api.get<User[] | PaginatedResponse<User>>('/api/management/users/');
+    const data = response.data;
+    // Handle both array and paginated response
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return data.results;
+};
+
+export const getUser = async (id: number): Promise<User> => {
+    const response = await api.get<User>(`/api/management/users/${id}/`);
     return response.data;
 };
 
-export const createAgent = async (data: any) => {
-    const response = await api.post('/mgmt/agents/add/', data);
+export const createUser = async (data: UserCreatePayload): Promise<User> => {
+    const response = await api.post<User>('/api/management/users/', data);
     return response.data;
 };
 
-export const updateAgent = async (id: number, data: any) => {
-    const response = await api.put(`/mgmt/agents/${id}/edit/`, data);
+export const updateUser = async (id: number, data: UserUpdatePayload): Promise<User> => {
+    const response = await api.patch<User>(`/api/management/users/${id}/`, data);
     return response.data;
 };
 
-export const getCompany = async () => {
-    const response = await api.get('/mgmt/company/edit/');
+export const deleteUser = async (id: number): Promise<void> => {
+    await api.delete(`/api/management/users/${id}/`);
+};
+
+// Company management (using API endpoint)
+export const getCompanyAPI = async (): Promise<Company> => {
+    const response = await api.get<Company>('/api/management/companies/me/');
     return response.data;
 };
 
-export const updateCompany = async (data: any) => {
-    const response = await api.put('/mgmt/company/edit/', data);
+export const updateCompanyAPI = async (data: CompanyUpdatePayload): Promise<Company> => {
+    const response = await api.patch<Company>('/api/management/companies/me/', data);
+    return response.data;
+};
+
+// Campaign management functions
+export const getCampaigns = async (): Promise<Campaign[]> => {
+    const response = await api.get<Campaign[] | PaginatedResponse<Campaign>>('/api/management/campaigns/');
+    const data = response.data;
+    // Handle both array and paginated response
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return data.results;
+};
+
+export const getCampaign = async (id: number): Promise<Campaign> => {
+    const response = await api.get<Campaign>(`/api/management/campaigns/${id}/`);
+    return response.data;
+};
+
+export const createCampaign = async (data: CampaignCreatePayload): Promise<Campaign> => {
+    const response = await api.post<Campaign>('/api/management/campaigns/', data);
+    return response.data;
+};
+
+export const updateCampaign = async (id: number, data: CampaignUpdatePayload): Promise<Campaign> => {
+    const response = await api.patch<Campaign>(`/api/management/campaigns/${id}/`, data);
+    return response.data;
+};
+
+export const deleteCampaign = async (id: number): Promise<void> => {
+    await api.delete(`/api/management/campaigns/${id}/`);
+};
+
+// Tracking management functions
+export const getTracking = async (): Promise<Tracking[]> => {
+    const response = await api.get<Tracking[] | PaginatedResponse<Tracking>>('/api/management/tracking/');
+    const data = response.data;
+    // Handle both array and paginated response
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return data.results;
+};
+
+export const getTrackingRecord = async (id: number): Promise<Tracking> => {
+    const response = await api.get<Tracking>(`/api/management/tracking/${id}/`);
+    return response.data;
+};
+
+export const createTracking = async (data: TrackingCreatePayload): Promise<Tracking> => {
+    const response = await api.post<Tracking>('/api/management/tracking/', data);
+    return response.data;
+};
+
+export const updateTracking = async (id: number, data: TrackingUpdatePayload): Promise<Tracking> => {
+    const response = await api.patch<Tracking>(`/api/management/tracking/${id}/`, data);
+    return response.data;
+};
+
+export const deleteTracking = async (id: number): Promise<void> => {
+    await api.delete(`/api/management/tracking/${id}/`);
+};
+
+// Recipient management functions
+export const getRecipients = async (): Promise<Recipient[]> => {
+    const response = await api.get<Recipient[] | PaginatedResponse<Recipient>>('/api/management/recipients/');
+    const data = response.data;
+    // Handle both array and paginated response
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return data.results;
+};
+
+export const getRecipient = async (id: number): Promise<Recipient> => {
+    const response = await api.get<Recipient>(`/api/management/recipients/${id}/`);
+    return response.data;
+};
+
+export const createRecipient = async (data: Partial<Recipient>): Promise<Recipient> => {
+    const response = await api.post<Recipient>('/api/management/recipients/', data);
+    return response.data;
+};
+
+export const updateRecipient = async (id: number, data: Partial<Recipient>): Promise<Recipient> => {
+    const response = await api.patch<Recipient>(`/api/management/recipients/${id}/`, data);
+    return response.data;
+};
+
+export const deleteRecipient = async (id: number): Promise<void> => {
+    await api.delete(`/api/management/recipients/${id}/`);
+};
+
+// Request Data functions
+export const getRequestData = async (id: number): Promise<RequestDataDetail> => {
+    const response = await api.get<RequestDataDetail>(`/api/management/request-data/${id}/`);
     return response.data;
 };
 

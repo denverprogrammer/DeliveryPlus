@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
-import { getAgent, createAgent, updateAgent } from '../shared/services/api';
+import { getRecipient, createRecipient, updateRecipient } from '../shared/services/api';
 
-interface AgentFormData {
+interface RecipientFormData {
     first_name: string;
     last_name: string;
     email: string;
-    phone_number: string;
-    status: string;
+    phone_number?: string;
+    status?: string;
 }
 
-const AgentForm = () => {
+const RecipientForm = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const isEditing = Boolean(id);
 
-    const [formData, setFormData] = useState<AgentFormData>({
+    const [formData, setFormData] = useState<RecipientFormData>({
         first_name: '',
         last_name: '',
         email: '',
@@ -30,24 +30,24 @@ const AgentForm = () => {
 
     useEffect(() => {
         if (isEditing && id) {
-            const fetchAgent = async () => {
+            const fetchRecipient = async () => {
                 try {
-                    const agent = await getAgent(parseInt(id));
+                    const recipient = await getRecipient(parseInt(id));
                     setFormData({
-                        first_name: agent.first_name || '',
-                        last_name: agent.last_name || '',
-                        email: agent.email || '',
-                        phone_number: agent.phone_number || '',
-                        status: agent.status || 'active',
+                        first_name: recipient.first_name || '',
+                        last_name: recipient.last_name || '',
+                        email: recipient.email || '',
+                        phone_number: recipient.phone_number || '',
+                        status: recipient.status || 'active',
                     });
                 } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Failed to load agent');
+                    setError(err instanceof Error ? err.message : 'Failed to load recipient');
                 } finally {
                     setIsInitialLoading(false);
                 }
             };
 
-            fetchAgent();
+            fetchRecipient();
         } else {
             setIsInitialLoading(false);
         }
@@ -67,20 +67,20 @@ const AgentForm = () => {
 
         try {
             if (isEditing && id) {
-                await updateAgent(parseInt(id), formData);
+                await updateRecipient(parseInt(id), formData);
             } else {
-                await createAgent(formData);
+                await createRecipient(formData);
             }
-            navigate('/mgmt/agents');
+            navigate('/recipients');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save agent');
+            setError(err instanceof Error ? err.message : 'Failed to save recipient');
         } finally {
             setIsLoading(false);
         }
     };
 
     if (isInitialLoading) {
-        return <div>Loading agent...</div>;
+        return <div>Loading recipient...</div>;
     }
 
     return (
@@ -88,7 +88,7 @@ const AgentForm = () => {
             <div className="col-md-8">
                 <Card>
                     <Card.Header>
-                        <h2 className="mb-0">{isEditing ? 'Edit Agent' : 'Add Agent'}</h2>
+                        <h2 className="mb-0">{isEditing ? 'Edit Recipient' : 'Add Recipient'}</h2>
                     </Card.Header>
                     <Card.Body>
                         <Form onSubmit={handleSubmit}>
@@ -164,7 +164,7 @@ const AgentForm = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/mgmt/agents')}
+                                    onClick={() => navigate('/recipients')}
                                 >
                                     Cancel
                                 </Button>
@@ -177,4 +177,5 @@ const AgentForm = () => {
     );
 };
 
-export default AgentForm; 
+export default RecipientForm;
+

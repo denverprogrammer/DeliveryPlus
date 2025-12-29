@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
-import { getCompany, updateCompany } from '../shared/services/api';
+import { getCompanyAPI, updateCompanyAPI } from '../shared/services/api';
 
 interface CompanyFormData {
     name: string;
-    // Add other company fields as needed
+    street_address: string;
+    city: string;
+    state: string;
+    zip_code: string;
+    country: string;
+    phone_number: string;
 }
 
 const CompanyEdit = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState<CompanyFormData>({
         name: '',
+        street_address: '',
+        city: '',
+        state: '',
+        zip_code: '',
+        country: '',
+        phone_number: '',
     });
 
     const [isLoading, setIsLoading] = useState(false);
@@ -21,10 +32,16 @@ const CompanyEdit = () => {
     useEffect(() => {
         const fetchCompany = async () => {
             try {
-                const company = await getCompany();
+                const response = await getCompanyAPI();
+                const company = response;
                 setFormData({
                     name: company.name || '',
-                    // Add other fields as needed
+                    street_address: company.street_address || '',
+                    city: company.city || '',
+                    state: company.state || '',
+                    zip_code: company.zip_code || '',
+                    country: company.country || '',
+                    phone_number: company.phone_number || '',
                 });
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load company');
@@ -49,10 +66,27 @@ const CompanyEdit = () => {
         setError(null);
 
         try {
-            await updateCompany(formData);
-            navigate('/mgmt/dashboard');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save company');
+            await updateCompanyAPI(formData);
+            navigate('/dashboard');
+        } catch (err: any) {
+            // Handle error response
+            if (err.response?.data?.errors) {
+                const errors = err.response.data.errors;
+                // Format error messages
+                const errorMessages: string[] = [];
+                Object.entries(errors).forEach(([field, messages]) => {
+                    if (Array.isArray(messages)) {
+                        messages.forEach((msg: string) => {
+                            errorMessages.push(`${field}: ${msg}`);
+                        });
+                    } else {
+                        errorMessages.push(`${field}: ${messages}`);
+                    }
+                });
+                setError(errorMessages.join(', '));
+            } else {
+                setError(err instanceof Error ? err.message : 'Failed to save company');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +116,65 @@ const CompanyEdit = () => {
                                 />
                             </Form.Group>
 
-                            {/* Add more company fields as needed */}
+                            <Form.Group className="mb-3">
+                                <Form.Label>Street Address</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="street_address"
+                                    value={formData.street_address}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>City</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>State</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="state"
+                                    value={formData.state}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Zip Code</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="zip_code"
+                                    value={formData.zip_code}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Country</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="country"
+                                    value={formData.country}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3">
+                                <Form.Label>Phone Number</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="phone_number"
+                                    value={formData.phone_number}
+                                    onChange={handleChange}
+                                />
+                            </Form.Group>
 
                             {error && (
                                 <Alert variant="danger" className="mb-3">
@@ -101,7 +193,7 @@ const CompanyEdit = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/mgmt/dashboard')}
+                                    onClick={() => navigate('/dashboard')}
                                 >
                                     Cancel
                                 </Button>

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { login } from '../shared/services/api';
+import { useAuth } from '../shared/contexts/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { setUser, checkAuth } = useAuth();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -26,12 +28,31 @@ const Login = () => {
 
         try {
             const response = await login(formData.username, formData.password);
-            // Store auth token
-            localStorage.setItem('authToken', response.token);
-            // Redirect to dashboard
-            navigate('/mgmt/dashboard');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Login failed');
+            // Check if login was successful
+            if (response.success) {
+                // Set user in auth context
+                setUser(response.user);
+                // Re-check auth state
+                await checkAuth();
+                // Redirect to dashboard
+                navigate('/dashboard');
+            } else {
+                setError('Login failed. Please check your credentials.');
+            }
+        } catch (err: any) {
+            // Handle error response
+            if (err.response?.data?.errors) {
+                const errors = err.response.data.errors;
+                // Get first error message
+                const firstError = Object.values(errors)[0];
+                if (Array.isArray(firstError) && firstError.length > 0) {
+                    setError(firstError[0]);
+                } else {
+                    setError('Login failed. Please check your credentials.');
+                }
+            } else {
+                setError(err instanceof Error ? err.message : 'Login failed');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -85,9 +106,9 @@ const Login = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/mgmt/dashboard')}
+                                    onClick={() => navigate('/signup')}
                                 >
-                                    Cancel
+                                    Sign Up
                                 </Button>
                             </div>
                         </Form>

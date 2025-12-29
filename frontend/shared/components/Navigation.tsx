@@ -1,25 +1,38 @@
 import { Navbar, Nav, Container } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Navigation = () => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const { isAuthenticated, logout } = useAuth();
     
-    // Mock authentication state - in real app, this would come from context/state
-    const isAuthenticated = false; // This will be replaced with actual auth state
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login');
+    };
     
     // Determine if we're in the management section
-    const isManagementSite = location.pathname.startsWith('/mgmt');
+    const isManagementSite = location.pathname.startsWith('/mgmt') || 
+                             location.pathname.startsWith('/signup') ||
+                             location.pathname.startsWith('/login') ||
+                             location.pathname.startsWith('/dashboard') ||
+                             location.pathname.startsWith('/users') ||
+                             location.pathname.startsWith('/campaigns') ||
+                             location.pathname.startsWith('/tracking') ||
+                             location.pathname.startsWith('/company');
     
     // Determine if we're in the delivery section
-    const isDeliverySite = location.pathname.startsWith('/tracking') || 
+    const isDeliverySite = !isManagementSite && (
+                          location.pathname.startsWith('/tracking') || 
                           location.pathname.startsWith('/redirects') ||
                           location.pathname.startsWith('/services') ||
-                          location.pathname === '/';
+                          location.pathname === '/');
 
     return (
         <Navbar bg="primary" variant="dark" expand="lg" className="mb-4">
             <Container fluid>
-                <Navbar.Brand as={Link} to={isManagementSite ? "/mgmt/dashboard" : "/"}>
+                <Navbar.Brand as={Link} to={isManagementSite ? "/dashboard" : "/"}>
                     packageparcels
                 </Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
@@ -43,22 +56,29 @@ const Navigation = () => {
                             <>
                                 <Nav.Link 
                                     as={Link} 
-                                    to="/mgmt/dashboard" 
-                                    active={location.pathname === '/mgmt/dashboard'}
+                                    to="/dashboard" 
+                                    active={location.pathname === '/dashboard' || location.pathname === '/'}
                                 >
                                     Dashboard
                                 </Nav.Link>
                                 <Nav.Link 
                                     as={Link} 
-                                    to="/mgmt/agents" 
-                                    active={location.pathname.startsWith('/mgmt/agents')}
+                                    to="/users" 
+                                    active={location.pathname.startsWith('/users')}
                                 >
-                                    Agents
+                                    Users
                                 </Nav.Link>
                                 <Nav.Link 
                                     as={Link} 
-                                    to="/mgmt/company/edit" 
-                                    active={location.pathname === '/mgmt/company/edit'}
+                                    to="/campaigns" 
+                                    active={location.pathname.startsWith('/campaigns')}
+                                >
+                                    Campaigns
+                                </Nav.Link>
+                                <Nav.Link 
+                                    as={Link} 
+                                    to="/company/edit" 
+                                    active={location.pathname === '/company/edit'}
                                 >
                                     Company
                                 </Nav.Link>
@@ -68,13 +88,18 @@ const Navigation = () => {
                     
                     <Nav>
                         {isManagementSite && !isAuthenticated && (
-                            <Nav.Link as={Link} to="/mgmt/login">Login</Nav.Link>
+                            <>
+                                <Nav.Link as={Link} to="/signup">Sign Up</Nav.Link>
+                                <Nav.Link as={Link} to="/login">Login</Nav.Link>
+                            </>
                         )}
                         {isManagementSite && isAuthenticated && (
-                            <Nav.Link as={Link} to="/mgmt/logout">Logout</Nav.Link>
+                            <Nav.Link as="a" href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
+                                Logout
+                            </Nav.Link>
                         )}
                         {isDeliverySite && (
-                            <Nav.Link as={Link} to="/mgmt/login">Management</Nav.Link>
+                            <Nav.Link as={Link} to="/login">Management</Nav.Link>
                         )}
                     </Nav>
                 </Navbar.Collapse>
