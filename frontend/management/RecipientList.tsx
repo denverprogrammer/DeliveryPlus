@@ -81,4 +81,3 @@ const RecipientList = () => {
 };
 
 export default RecipientList;
-

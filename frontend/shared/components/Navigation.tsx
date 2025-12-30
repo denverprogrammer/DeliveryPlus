@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navbar, Nav, Container } from 'react-bootstrap';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,7 +14,9 @@ const Navigation = () => {
     };
     
     // Determine if we're in the management section
-    const isManagementSite = location.pathname.startsWith('/mgmt') || 
+    // If authenticated and on root path, assume management site
+    const isManagementSite = (isAuthenticated && location.pathname === '/') ||
+                             location.pathname.startsWith('/mgmt') || 
                              location.pathname.startsWith('/signup') ||
                              location.pathname.startsWith('/login') ||
                              location.pathname.startsWith('/dashboard') ||
@@ -23,7 +26,8 @@ const Navigation = () => {
                              location.pathname.startsWith('/company');
     
     // Determine if we're in the delivery section
-    const isDeliverySite = !isManagementSite && (
+    // Only show delivery site links if not authenticated or explicitly on delivery paths
+    const isDeliverySite = !isManagementSite && !isAuthenticated && (
                           location.pathname.startsWith('/tracking') || 
                           location.pathname.startsWith('/redirects') ||
                           location.pathname.startsWith('/services') ||

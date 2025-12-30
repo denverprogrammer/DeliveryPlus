@@ -62,6 +62,7 @@ const Dashboard = () => {
                             <div className="d-grid gap-2">
                                 <Button variant="primary" href="/users">Manage Users</Button>
                                 <Button variant="primary" href="/campaigns">Manage Campaigns</Button>
+                                <Button variant="primary" href="/tracking">Manage Tracking</Button>
                                 <Button variant="secondary" href="/company/edit">Edit Company</Button>
                             </div>
                         </Card.Body>

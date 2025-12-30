@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootswatch/dist/sandstone/bootstrap.min.css';
 
 // Components
 import Navigation from '../shared/components/Navigation';
+import Breadcrumbs from '../shared/components/Breadcrumbs';
 import Login from './Login';
 import Signup from './Signup';
 import Dashboard from './Dashboard';
@@ -12,7 +13,7 @@ import UserList from './UserList';
 import UserForm from './UserForm';
 import CampaignList from './CampaignList';
 import CampaignForm from './CampaignForm';
-import TrackingList from './TrackingList';
+import AllTrackingList from './AllTrackingList';
 import TrackingForm from './TrackingForm';
 import TrackingDetail from './TrackingDetail';
 import { AuthProvider } from '../shared/contexts/AuthContext';
@@ -24,6 +25,7 @@ function ManagementApp() {
                 <div className="App">
                     <Navigation />
                     <Container className="mt-4">
+                        <Breadcrumbs />
                         <Routes>
                         {/* Authentication */}
                         <Route path="/signup" element={<Signup />} />
@@ -41,11 +43,11 @@ function ManagementApp() {
                         <Route path="/campaigns" element={<CampaignList />} />
                         <Route path="/campaigns/add" element={<CampaignForm />} />
                         <Route path="/campaigns/:id/edit" element={<CampaignForm />} />
-                        {/* Tracking (nested under campaigns) */}
-                        <Route path="/campaigns/:campaignId/tracking" element={<TrackingList />} />
-                        <Route path="/campaigns/:campaignId/tracking/:id" element={<TrackingDetail />} />
-                        <Route path="/campaigns/:campaignId/tracking/add" element={<TrackingForm />} />
-                        <Route path="/campaigns/:campaignId/tracking/:id/edit" element={<TrackingForm />} />
+                        {/* Tracking (top-level) */}
+                        <Route path="/tracking" element={<AllTrackingList />} />
+                        <Route path="/tracking/add" element={<TrackingForm />} />
+                        <Route path="/tracking/:id" element={<TrackingDetail />} />
+                        <Route path="/tracking/:id/edit" element={<TrackingForm />} />
                         </Routes>
                     </Container>
                 </div>

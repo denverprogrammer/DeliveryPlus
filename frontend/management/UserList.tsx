@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Alert, Card } from 'react-bootstrap';
+import { Table, Button, Alert } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../shared/services/api';
 
 interface User {
@@ -52,16 +52,17 @@ const UserList = () => {
     }
 
     return (
-        <Card>
-            <Card.Header className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Users</h3>
-                <Button variant="primary" onClick={() => navigate('/users/add')}>
-                    Add User
-                </Button>
-            </Card.Header>
-            <Card.Body>
-                {error && <Alert variant="danger">{error}</Alert>}
-                <Table striped bordered hover>
+        <div>
+            {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+            <Table striped bordered hover style={{ captionSide: 'top' }}>
+                <caption className="p-0" style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                    <div className="d-flex justify-content-between align-items-center">
+                        <span>Users</span>
+                        <Button variant="primary" size="sm" onClick={() => navigate('/users/add')}>
+                            Add User
+                        </Button>
+                    </div>
+                </caption>
                     <thead>
                         <tr>
                             <th>Username</th>
@@ -101,8 +102,7 @@ const UserList = () => {
                         ))}
                     </tbody>
                 </Table>
-            </Card.Body>
-        </Card>
+        </div>
     );
 };
 

@@ -104,21 +104,23 @@ const TrackingForm = () => {
         setErrors({});
 
         try {
-            const data = {
+            const data: any = {
                 campaign: parseInt(formData.campaign),
-                recipient: parseInt(formData.recipient),
             };
+            // Only include recipient if it's not empty
+            if (formData.recipient && formData.recipient !== '') {
+                data.recipient = parseInt(formData.recipient);
+            } else {
+                data.recipient = null;
+            }
 
             if (isEdit && id) {
                 await updateTracking(parseInt(id), data);
             } else {
                 await createTracking(data);
             }
-            if (campaignId) {
-                navigate(`/campaigns/${campaignId}/tracking`);
-            } else {
-                navigate('/campaigns');
-            }
+            // Always navigate to /tracking after save
+            navigate('/tracking');
         } catch (err: any) {
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
@@ -172,7 +174,6 @@ const TrackingForm = () => {
                             name="recipient"
                             value={formData.recipient}
                             onChange={handleChange}
-                            required
                             isInvalid={!!errors.recipient}
                         >
                             <option value="">Select a recipient</option>
@@ -199,13 +200,7 @@ const TrackingForm = () => {
                         <Button type="submit" variant="primary" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                         </Button>
-                        <Button type="button" variant="secondary" onClick={() => {
-                            if (campaignId) {
-                                navigate(`/campaigns/${campaignId}/tracking`);
-                            } else {
-                                navigate('/campaigns');
-                            }
-                        }}>
+                        <Button type="button" variant="secondary" onClick={() => navigate('/tracking')}>
                             Cancel
                         </Button>
                     </div>

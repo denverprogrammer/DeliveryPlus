@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Alert, Card } from 'react-bootstrap';
+import { Table, Button, Alert } from 'react-bootstrap';
 import { getCampaigns, deleteCampaign } from '../shared/services/api';
 import type { Campaign } from '../shared/types/api';
 
@@ -43,63 +43,55 @@ const CampaignList = () => {
     }
 
     return (
-        <Card>
-            <Card.Header className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Campaigns</h3>
-                <Button variant="primary" onClick={() => navigate('/campaigns/add')}>
-                    Add Campaign
-                </Button>
-            </Card.Header>
-            <Card.Body>
-                {error && <Alert variant="danger">{error}</Alert>}
-                <Table striped bordered hover>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                            <th>Landing Page</th>
-                            <th>Actions</th>
+        <div>
+            {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+            <Table striped bordered hover style={{ captionSide: 'top' }}>
+                <caption className="p-0" style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                    <div className="d-flex justify-content-between align-items-center">
+                        <span>Campaigns</span>
+                        <Button variant="primary" size="sm" onClick={() => navigate('/campaigns/add')}>
+                            Add Campaign
+                        </Button>
+                    </div>
+                </caption>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Landing Page</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {campaigns.map((campaign) => (
+                        <tr key={campaign.id}>
+                            <td>{campaign.name}</td>
+                            <td>{campaign.campaign_type}</td>
+                            <td>{campaign.description || '-'}</td>
+                            <td>{campaign.landing_page_url || '-'}</td>
+                            <td>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                                    className="me-2"
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => handleDelete(campaign.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {campaigns.map((campaign) => (
-                            <tr key={campaign.id}>
-                                <td>{campaign.name}</td>
-                                <td>{campaign.campaign_type}</td>
-                                <td>{campaign.description || '-'}</td>
-                                <td>{campaign.landing_page_url || '-'}</td>
-                                <td>
-                                    <Button
-                                        variant="info"
-                                        size="sm"
-                                        onClick={() => navigate(`/campaigns/${campaign.id}/tracking`)}
-                                        className="me-2"
-                                    >
-                                        Tracking
-                                    </Button>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
-                                        className="me-2"
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() => handleDelete(campaign.id)}
-                                    >
-                                        Delete
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </Table>
-            </Card.Body>
-        </Card>
+                    ))}
+                </tbody>
+            </Table>
+        </div>
     );
 };
 
