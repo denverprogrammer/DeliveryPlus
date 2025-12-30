@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { signup } from '../shared/services/api';
-import { useAuth } from '../shared/contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 
 const Signup = () => {
     const navigate = useNavigate();

@@ -9,6 +9,7 @@ from mgmt.models import User
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -18,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework.viewsets import ModelViewSet
 from tracking.forms import CampaignSubAdminForm
 from tracking.forms import TrackingSubAdminForm
+from tracking.models import AbstractRequestData
 from tracking.models import Campaign
 from tracking.models import Tracking
 from .serializers import CampaignSerializer
@@ -236,10 +238,22 @@ class CompanyViewSet(GenericViewSet):
         return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class RequestDataViewSet(GenericViewSet):
-    """ViewSet for fetching individual request data details."""
+class RequestDataPagination(PageNumberPagination):
+    """Custom pagination for request data with configurable page size."""
+
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class RequestDataViewSet(
+    mixins.ListModelMixin,
+    GenericViewSet,
+):
+    """ViewSet for fetching individual request data details and listing with pagination/filtering."""
 
     permission_classes = [IsAuthenticated]
+    pagination_class = RequestDataPagination
 
     def _validate_request(
         self, request: Request, pk: str | None
@@ -312,6 +326,133 @@ class RequestDataViewSet(GenericViewSet):
             return response
 
         return Response({"error": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def _get_base_queryset(self) -> QuerySet[AbstractRequestData] | None:
+        """Get base queryset filtered by tracking ID and user's company."""
+        from common.enums import CampaignDataType
+        from tracking.models import ImageRequestData
+        from tracking.models import TrackingRequestData
+
+        if not isinstance(self.request.user, User) or not self.request.user.company:
+            return None
+
+        user: User = self.request.user
+        tracking_id = self.request.query_params.get("tracking_id")
+
+        if not tracking_id:
+            return None
+
+        try:
+            tracking = Tracking.objects.get(pk=int(tracking_id), company=user.company)
+        except (Tracking.DoesNotExist, ValueError):
+            return None
+
+        # Determine which model to query based on campaign type
+        if tracking.campaign and tracking.campaign.campaign_type == CampaignDataType.PACKAGES.value:
+            return TrackingRequestData.objects.filter(tracking=tracking)
+        elif tracking.campaign and tracking.campaign.campaign_type == CampaignDataType.IMAGES.value:
+            return ImageRequestData.objects.filter(tracking=tracking)
+        return None
+
+    def _apply_text_filters(
+        self, queryset: QuerySet[AbstractRequestData]
+    ) -> QuerySet[AbstractRequestData]:
+        """Apply text-based filters to the queryset."""
+        filters_map = {
+            "data_type": "data_type",
+            "http_method": "http_method",
+            "ip_address": "ip_address__icontains",
+            "os": "os__icontains",
+            "browser": "browser__icontains",
+            "platform": "platform__icontains",
+            "locale": "locale__icontains",
+        }
+
+        for param_name, filter_field in filters_map.items():
+            value = self.request.query_params.get(param_name)
+            if value:
+                queryset = queryset.filter(**{filter_field: value})
+
+        return queryset
+
+    def _apply_date_filter(
+        self, queryset: QuerySet[AbstractRequestData], param_name: str, field_name: str
+    ) -> QuerySet[AbstractRequestData]:
+        """Apply date filter to the queryset."""
+        date_value = self.request.query_params.get(param_name)
+        if not date_value:
+            return queryset
+
+        from datetime import datetime
+        from django.utils import timezone
+
+        try:
+            date_obj = datetime.strptime(date_value, "%Y-%m-%d").date()
+            start_datetime = timezone.make_aware(datetime.combine(date_obj, datetime.min.time()))
+            end_datetime = timezone.make_aware(datetime.combine(date_obj, datetime.max.time()))
+            queryset = queryset.filter(
+                **{f"{field_name}__gte": start_datetime, f"{field_name}__lte": end_datetime}
+            )
+        except (ValueError, TypeError):
+            pass
+
+        return queryset
+
+    def _apply_ordering(
+        self, queryset: QuerySet[AbstractRequestData]
+    ) -> QuerySet[AbstractRequestData]:
+        """Apply ordering to the queryset."""
+        ordering = self.request.query_params.get("ordering")
+        if ordering:
+            return queryset.order_by(ordering)
+        return queryset.order_by("-server_timestamp")
+
+    def get_queryset(self) -> QuerySet[AbstractRequestData]:
+        """Get request data queryset filtered by tracking ID and user's company."""
+        from tracking.models import TrackingRequestData
+
+        queryset = self._get_base_queryset()
+        if queryset is None:
+            return TrackingRequestData.objects.none()
+
+        queryset = self._apply_text_filters(queryset)
+        queryset = self._apply_date_filter(queryset, "server_timestamp", "server_timestamp")
+        queryset = self._apply_date_filter(queryset, "client_time", "client_time")
+        queryset = self._apply_ordering(queryset)
+
+        return queryset
+
+    def get_serializer_class(self) -> type[BaseSerializer]:
+        """Return appropriate serializer based on campaign type."""
+        from common.enums import CampaignDataType
+        from tracking.models import Tracking
+
+        tracking_id = self.request.query_params.get("tracking_id")
+        if tracking_id:
+            try:
+                tracking = Tracking.objects.get(pk=int(tracking_id))
+                if (
+                    tracking.campaign
+                    and tracking.campaign.campaign_type == CampaignDataType.IMAGES.value
+                ):
+                    return ImageRequestDataSerializer
+            except Tracking.DoesNotExist:
+                pass
+
+        return TrackingRequestDataSerializer
+
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """List request data with pagination and filtering."""
+        queryset = self.get_queryset()
+
+        # Paginate the queryset
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class RecipientViewSet(

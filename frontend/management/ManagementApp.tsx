@@ -3,8 +3,8 @@ import { Container } from 'react-bootstrap';
 import 'bootswatch/dist/sandstone/bootstrap.min.css';
 
 // Components
-import Navigation from '../shared/components/Navigation';
-import Breadcrumbs from '../shared/components/Breadcrumbs';
+import Navigation from './components/Navigation';
+import Breadcrumbs from './components/Breadcrumbs';
 import Login from './Login';
 import Signup from './Signup';
 import Dashboard from './Dashboard';
@@ -13,10 +13,11 @@ import UserList from './UserList';
 import UserForm from './UserForm';
 import CampaignList from './CampaignList';
 import CampaignForm from './CampaignForm';
+import CampaignDetail from './CampaignDetail';
 import AllTrackingList from './AllTrackingList';
 import TrackingForm from './TrackingForm';
 import TrackingDetail from './TrackingDetail';
-import { AuthProvider } from '../shared/contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 function ManagementApp() {
     return (
@@ -42,6 +43,7 @@ function ManagementApp() {
                         {/* Campaigns */}
                         <Route path="/campaigns" element={<CampaignList />} />
                         <Route path="/campaigns/add" element={<CampaignForm />} />
+                        <Route path="/campaigns/:id" element={<CampaignDetail />} />
                         <Route path="/campaigns/:id/edit" element={<CampaignForm />} />
                         {/* Tracking (top-level) */}
                         <Route path="/tracking" element={<AllTrackingList />} />

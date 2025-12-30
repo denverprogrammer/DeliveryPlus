@@ -3,7 +3,7 @@ import { Container } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Components
-import Navigation from '../shared/components/Navigation';
+import Navigation from './components/Navigation';
 import Home from '../shared/pages/Home';
 import TrackingPage from '../shared/pages/TrackingPage';
 import InterceptPage from '../shared/pages/InterceptPage';

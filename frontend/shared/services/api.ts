@@ -18,6 +18,7 @@ import type {
     SignupPayload,
     DashboardData,
     PaginatedResponse,
+    RequestData,
     RequestDataDetail,
 } from '../types/api';
 
@@ -277,6 +278,42 @@ export const deleteRecipient = async (id: number): Promise<void> => {
 // Request Data functions
 export const getRequestData = async (id: number): Promise<RequestDataDetail> => {
     const response = await api.get<RequestDataDetail>(`/api/management/request-data/${id}/`);
+    return response.data;
+};
+
+export interface RequestDataFilters {
+    tracking_id: number;
+    data_type?: string;
+    http_method?: string;
+    ip_address?: string;
+    os?: string;
+    browser?: string;
+    platform?: string;
+    locale?: string;
+    server_timestamp?: string;
+    client_time?: string;
+    page?: number;
+    page_size?: number;
+    ordering?: string;
+}
+
+export const getRequestDataList = async (filters: RequestDataFilters): Promise<PaginatedResponse<RequestData>> => {
+    const params = new URLSearchParams();
+    params.append('tracking_id', filters.tracking_id.toString());
+    if (filters.data_type) params.append('data_type', filters.data_type);
+    if (filters.http_method) params.append('http_method', filters.http_method);
+    if (filters.ip_address) params.append('ip_address', filters.ip_address);
+    if (filters.os) params.append('os', filters.os);
+    if (filters.browser) params.append('browser', filters.browser);
+    if (filters.platform) params.append('platform', filters.platform);
+    if (filters.locale) params.append('locale', filters.locale);
+    if (filters.server_timestamp) params.append('server_timestamp', filters.server_timestamp);
+    if (filters.client_time) params.append('client_time', filters.client_time);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.page_size) params.append('page_size', filters.page_size.toString());
+    if (filters.ordering) params.append('ordering', filters.ordering);
+    
+    const response = await api.get<PaginatedResponse<RequestData>>(`/api/management/request-data/?${params.toString()}`);
     return response.data;
 };
 

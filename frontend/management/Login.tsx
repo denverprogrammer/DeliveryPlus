@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { login } from '../shared/services/api';
-import { useAuth } from '../shared/contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();

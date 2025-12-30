@@ -74,6 +74,14 @@ const CampaignList = () => {
                                 <Button
                                     variant="primary"
                                     size="sm"
+                                    onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                                    className="me-2"
+                                >
+                                    View
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
                                     onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
                                     className="me-2"
                                 >
