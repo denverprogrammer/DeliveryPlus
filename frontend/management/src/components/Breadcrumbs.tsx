@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useParams, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { Breadcrumb } from 'react-bootstrap';
 import { getCampaign, getUser, getTrackingRecord } from '../services/api';
-import { useAuth } from '../../management/contexts/AuthContext';
-
-interface BreadcrumbItem {
-    label: string;
-    path: string;
-}
+import { useAuth } from '../contexts/AuthContext';
+import type { BreadcrumbItem } from '../types';
 
 const Breadcrumbs = () => {
     const location = useLocation();
-    const params = useParams();
     const { isAuthenticated } = useAuth();
     const [items, setItems] = useState<BreadcrumbItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +161,7 @@ const Breadcrumbs = () => {
         };
 
         buildBreadcrumbs();
-    }, [location.pathname, params, isAuthenticated]);
+    }, [location.pathname, isAuthenticated]);
 
     if (!isAuthenticated || isLoading || items.length === 0) {
         return null;

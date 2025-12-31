@@ -25,8 +25,9 @@ from tracking.models import Tracking
 from .serializers import CampaignSerializer
 from .serializers import ImageRequestDataSerializer
 from .serializers import RecipientSerializer
+from .serializers import TrackingDetailSerializer
+from .serializers import TrackingListSerializer
 from .serializers import TrackingRequestDataSerializer
-from .serializers import TrackingSerializer
 from .serializers import UserCreateSerializer
 from .serializers import UserSerializer
 
@@ -599,7 +600,13 @@ class TrackingViewSet(
     """ViewSet for tracking management."""
 
     permission_classes = [IsAuthenticated]
-    serializer_class = TrackingSerializer
+    serializer_class = TrackingListSerializer
+
+    def get_serializer_class(self) -> type[Any]:
+        """Return different serializers for list vs detail views."""
+        if self.action == "retrieve":
+            return TrackingDetailSerializer
+        return TrackingListSerializer
 
     def get_queryset(self) -> QuerySet[Tracking]:
         """Filter tracking records by the current user's company."""

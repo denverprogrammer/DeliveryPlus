@@ -20,6 +20,7 @@ class RecipientTagSerializer(ModelSerializer[Tag]):
 
 class RecipientSerializer(ModelSerializer[Recipient]):
     tags = RecipientTagSerializer(many=True, read_only=True)
+    full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipient
@@ -27,11 +28,16 @@ class RecipientSerializer(ModelSerializer[Recipient]):
             "id",
             "first_name",
             "last_name",
+            "full_name",
             "email",
             "phone_number",
             "status",
             "tags",
         ]
+
+    def get_full_name(self, obj: Recipient) -> str:
+        """Return recipient full name."""
+        return f"{obj.first_name or ''} {obj.last_name or ''}".strip()
 
 
 class TokenSerializer(ModelSerializer[Token]):
@@ -302,11 +308,38 @@ class ImageRequestDataSerializer(ModelSerializer):
         return None
 
 
-class TrackingSerializer(ModelSerializer[Tracking]):
+class CampaignSerializer(ModelSerializer[Campaign]):
+    class Meta:
+        model = Campaign
+        fields = "__all__"
+
+
+class TrackingListSerializer(ModelSerializer[Tracking]):
+    """Serializer for tracking list view - includes nested campaign and recipient, excludes request_data, tokens, token_values, campaign_name, and recipient_name."""
+
+    campaign = CampaignSerializer(read_only=True)
+    recipient = RecipientSerializer(read_only=True, allow_null=True)
+    count_requests = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Tracking
+        fields = [
+            "id",
+            "campaign",
+            "recipient",
+            "company",
+            "count_requests",
+        ]
+        read_only_fields = ["id", "company", "count_requests"]
+
+
+class TrackingDetailSerializer(ModelSerializer[Tracking]):
+    """Serializer for tracking detail view - includes request_data and tokens."""
+
     tokens = TokenSerializer(many=True, read_only=True)
     token_values = serializers.SerializerMethodField()
-    campaign_name = serializers.CharField(source="campaign.name", read_only=True)
-    recipient_name = serializers.SerializerMethodField()
+    campaign = CampaignSerializer(read_only=True)
+    recipient = RecipientSerializer(read_only=True, allow_null=True)
     count_requests = serializers.IntegerField(read_only=True)
     request_data = serializers.SerializerMethodField()
 
@@ -317,9 +350,7 @@ class TrackingSerializer(ModelSerializer[Tracking]):
             "tokens",
             "token_values",
             "campaign",
-            "campaign_name",
             "recipient",
-            "recipient_name",
             "company",
             "count_requests",
             "request_data",
@@ -329,12 +360,6 @@ class TrackingSerializer(ModelSerializer[Tracking]):
     def get_token_values(self, obj: Tracking) -> list[str]:
         """Return list of token values."""
         return [token.value for token in obj.tokens.all()]
-
-    def get_recipient_name(self, obj: Tracking) -> str:
-        """Return recipient full name."""
-        if obj.recipient:
-            return f"{obj.recipient.first_name or ''} {obj.recipient.last_name or ''}".strip()
-        return ""
 
     def get_request_data(self, obj: Tracking) -> list[dict[str, Any]]:
         """Return request data based on campaign type."""
@@ -363,10 +388,8 @@ class TrackingSerializer(ModelSerializer[Tracking]):
         return []
 
 
-class CampaignSerializer(ModelSerializer[Campaign]):
-    class Meta:
-        model = Campaign
-        fields = "__all__"
+# Keep TrackingSerializer as alias for backward compatibility, but use TrackingListSerializer for list
+TrackingSerializer = TrackingListSerializer
 
 
 class TrackingDataSerializer(ModelSerializer[TrackingData]):
