@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Table, Alert } from 'react-bootstrap';
 import { getRecipients } from '../shared/services/api';
 import type { Recipient } from '../shared/types/api';
+import { isNonEmptyArray } from './utils/typeGuards';
 
 const RecipientList = () => {
     const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -51,7 +52,7 @@ const RecipientList = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {recipients.length > 0 ? (
+                    {isNonEmptyArray(recipients) ? (
                         recipients.map((recipient) => (
                             <tr key={recipient.id}>
                                 <td>{recipient.first_name} {recipient.last_name}</td>

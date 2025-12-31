@@ -3,11 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { Breadcrumb } from 'react-bootstrap';
 import { getCampaign, getUser, getTrackingRecord } from '../../shared/services/api';
 import { useAuth } from '../contexts/AuthContext';
-
-interface BreadcrumbItem {
-    label: string;
-    path: string;
-}
+import type { BreadcrumbItem } from '../types';
 
 const Breadcrumbs = () => {
     const location = useLocation();

@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getUser, createUser, updateUser } from '../shared/services/api';
+import { useParsedParam } from './utils/params';
+import type { UserCreatePayload, UserUpdatePayload } from '../shared/types/api';
+
+interface UserFormData {
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    password: string;
+    is_active: boolean;
+    is_staff: boolean;
+}
 
 const UserForm = () => {
     const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
-    const isEdit = !!id;
-    const [formData, setFormData] = useState({
+    const [userId] = useParsedParam('id');
+    const isEdit = userId !== null;
+    const [formData, setFormData] = useState<UserFormData>({
         username: '',
         email: '',
         first_name: '',
@@ -22,16 +34,18 @@ const UserForm = () => {
     const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
-        if (isEdit && id) {
+        if (isEdit && userId !== null) {
             loadUser();
         }
-    }, [id, isEdit]);
+    }, [userId, isEdit]);
 
     const loadUser = async () => {
+        if (userId === null) {
+            return;
+        }
         try {
             setIsLoadingData(true);
-            const response = await getUser(parseInt(id!));
-            const user = response;
+            const user = await getUser(userId);
             setFormData({
                 username: user.username || '',
                 email: user.email || '',
@@ -68,23 +82,24 @@ const UserForm = () => {
         setErrors({});
 
         try {
-            const data: any = {
-                username: formData.username,
-                email: formData.email,
-                first_name: formData.first_name,
-                last_name: formData.last_name,
-            };
-
-            // Only include password, is_active, and is_staff when creating a new user
-            if (!isEdit) {
-                data.password = formData.password;
-                data.is_active = formData.is_active;
-                data.is_staff = formData.is_staff;
-            }
-
-            if (isEdit && id) {
-                await updateUser(parseInt(id), data);
+            if (isEdit && userId !== null) {
+                const data: UserUpdatePayload = {
+                    username: formData.username,
+                    email: formData.email,
+                    first_name: formData.first_name,
+                    last_name: formData.last_name,
+                };
+                await updateUser(userId, data);
             } else {
+                const data: UserCreatePayload = {
+                    username: formData.username,
+                    email: formData.email,
+                    first_name: formData.first_name,
+                    last_name: formData.last_name,
+                    password: formData.password,
+                    is_active: formData.is_active,
+                    is_staff: formData.is_staff,
+                };
                 await createUser(data);
             }
             navigate('/users');

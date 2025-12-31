@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getRecipient, createRecipient, updateRecipient } from '../shared/services/api';
+import { useParsedParam } from './utils/params';
 
 interface RecipientFormData {
     first_name: string;
     last_name: string;
     email: string;
-    phone_number?: string;
-    status?: string;
+    phone_number: string;
+    status: string;
 }
 
 const RecipientForm = () => {
-    const { id } = useParams<{ id: string }>();
+    const [recipientId] = useParsedParam('id');
     const navigate = useNavigate();
-    const isEditing = Boolean(id);
+    const isEditing = recipientId !== null;
 
     const [formData, setFormData] = useState<RecipientFormData>({
         first_name: '',
@@ -29,10 +30,10 @@ const RecipientForm = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (isEditing && id) {
+        if (isEditing && recipientId !== null) {
             const fetchRecipient = async () => {
                 try {
-                    const recipient = await getRecipient(parseInt(id));
+                    const recipient = await getRecipient(recipientId);
                     setFormData({
                         first_name: recipient.first_name || '',
                         last_name: recipient.last_name || '',
@@ -51,7 +52,7 @@ const RecipientForm = () => {
         } else {
             setIsInitialLoading(false);
         }
-    }, [id, isEditing]);
+    }, [recipientId, isEditing]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         setFormData({
@@ -66,8 +67,8 @@ const RecipientForm = () => {
         setError(null);
 
         try {
-            if (isEditing && id) {
-                await updateRecipient(parseInt(id), formData);
+            if (isEditing && recipientId !== null) {
+                await updateRecipient(recipientId, formData);
             } else {
                 await createRecipient(formData);
             }

@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Table, Alert, Form, Pagination } from 'react-bootstrap';
+import { Table, Alert, Form } from 'react-bootstrap';
 import { getTrackingRecord, getRequestDataList, type RequestDataFilters } from '../shared/services/api';
 import type { Tracking, Token, RequestData } from '../shared/types/api';
 import RequestDataModal from './RequestDataModal';
+import PaginationControls from './components/PaginationControls';
+import { TABLE_CAPTION_STYLE, SORT_ICON_STYLE, FILTER_INPUT_MIN_WIDTH, COLORS, DEBOUNCE_DELAY } from './constants/ui';
+import { useParsedParam } from './utils/params';
+import { isNonEmptyArray } from './utils/typeGuards';
 
 const TrackingDetail = () => {
-    const { id } = useParams<{ id: string }>();
+    const [trackingId] = useParsedParam('id');
     const [tracking, setTracking] = useState<Tracking | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -19,7 +22,7 @@ const TrackingDetail = () => {
     const [requestDataError, setRequestDataError] = useState<string | null>(null);
     const [pagination, setPagination] = useState({ count: 0, page: 1, page_size: 20, total_pages: 1 });
     const [filters, setFilters] = useState<RequestDataFilters>({
-        tracking_id: parseInt(id || '0'),
+        tracking_id: trackingId || 0,
         data_type: '',
         http_method: '',
         ip_address: '',
@@ -37,20 +40,23 @@ const TrackingDetail = () => {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | ''>('');
 
     useEffect(() => {
-        if (id) {
+        if (trackingId !== null) {
             loadTracking();
+        } else {
+            setError('Invalid tracking ID');
+            setIsLoading(false);
         }
-    }, [id]);
+    }, [trackingId]);
 
     useEffect(() => {
-        if (tracking?.id) {
+        if (trackingId !== null) {
             // Debounce filter changes
             const timeoutId = setTimeout(() => {
                 loadRequestData();
-            }, 300);
+            }, DEBOUNCE_DELAY);
             return () => clearTimeout(timeoutId);
         }
-    }, [tracking?.id, filters]);
+    }, [trackingId, filters]);
 
     // Sync sort state with filters.ordering
     useEffect(() => {
@@ -67,12 +73,15 @@ const TrackingDetail = () => {
     }, [filters.ordering]);
 
     const loadTracking = async () => {
+        if (trackingId === null) {
+            return;
+        }
         try {
             setIsLoading(true);
-            const response = await getTrackingRecord(parseInt(id!));
-            setTracking(response);
+            const tracking = await getTrackingRecord(trackingId);
+            setTracking(tracking);
             // Update filters with tracking ID
-            setFilters(prev => ({ ...prev, tracking_id: response.id }));
+            setFilters(prev => ({ ...prev, tracking_id: tracking.id }));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
         } finally {
@@ -81,14 +90,15 @@ const TrackingDetail = () => {
     };
 
     const loadRequestData = async () => {
-        if (!tracking?.id) return;
-        
+        if (trackingId === null) {
+            return;
+        }
         try {
             setRequestDataLoading(true);
             setRequestDataError(null);
             const response = await getRequestDataList({
                 ...filters,
-                tracking_id: tracking.id,
+                tracking_id: trackingId,
             });
             
             if ('results' in response && Array.isArray(response.results)) {
@@ -147,18 +157,16 @@ const TrackingDetail = () => {
     };
 
     const getSortIcon = (column: string) => {
-        const unsortedStyle = { fontSize: '1.2em', fontWeight: 'bold' };
-        const sortedStyle = { fontSize: '1.2em', fontWeight: 'bold' };
         if (sortColumn !== column) {
-            return <span style={unsortedStyle}> ▲▼</span>;
+            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲▼</span>;
         }
         if (sortDirection === 'asc') {
-            return <span style={sortedStyle}> ▲</span>;
+            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲</span>;
         }
         if (sortDirection === 'desc') {
-            return <span style={sortedStyle}> ▼</span>;
+            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▼</span>;
         }
-        return <span style={unsortedStyle}> ▲▼</span>;
+        return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲▼</span>;
     };
 
     const formatDate = (dateString: string) => {
@@ -215,9 +223,9 @@ const TrackingDetail = () => {
 
             {/* Tokens Section */}
             <div className="mb-4">
-                {tokens.length > 0 ? (
-                    <Table striped bordered hover style={{ captionSide: 'top' }}>
-                        <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>Tokens</caption>
+                {isNonEmptyArray(tokens) ? (
+                    <Table striped bordered hover>
+                        <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>Tokens</caption>
                         <thead>
                             <tr>
                                 <th>Value</th>
@@ -246,46 +254,45 @@ const TrackingDetail = () => {
 
             {/* Request Data Section */}
             <div>
-                <Table striped bordered hover size="sm" style={{ captionSide: 'top' }}>
-                    <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                <Table striped bordered hover size="sm">
+                    <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                         Request Data {pagination.count > 0 && `(${pagination.count} total)`}
                     </caption>
                     <thead>
                         <tr>
-                            <th style={{ textAlign: 'center' }}>
-                                ID
-                            </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('server_timestamp')}>
+                            <th className="text-center" style={{ cursor: 'pointer' }} onClick={() => handleSort('server_timestamp')}>
                                 Timestamp {getSortIcon('server_timestamp')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('data_type')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('data_type')}>
                                 Type {getSortIcon('data_type')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('http_method')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('http_method')}>
                                 Method {getSortIcon('http_method')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('ip_address')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('ip_address')}>
                                 IP Address {getSortIcon('ip_address')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('os')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer' }} onClick={() => handleSort('os')}>
                                 OS {getSortIcon('os')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('browser')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('browser')}>
                                 Browser {getSortIcon('browser')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('platform')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('platform')}>
                                 Platform {getSortIcon('platform')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('locale')}>
+                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('locale')}>
                                 Locale {getSortIcon('locale')}
                             </th>
-                            <th style={{ cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('client_time')}>
+                            <th className="text-center" style={{ cursor: 'pointer' }} onClick={() => handleSort('client_time')}>
                                 Client Time {getSortIcon('client_time')}
+                            </th>
+                            <th className="text-center">
+                                ####
                             </th>
                         </tr>
                         {/* Filters Row */}
                         <tr>
-                            <td></td>
                             <td>
                                 <Form.Control
                                     size="sm"
@@ -294,31 +301,34 @@ const TrackingDetail = () => {
                                     onChange={(e) => handleFilterChange('server_timestamp', e.target.value)}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="Data Type"
                                     value={filters.data_type || ''}
                                     onChange={(e) => handleFilterChange('data_type', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="HTTP Method"
                                     value={filters.http_method || ''}
                                     onChange={(e) => handleFilterChange('http_method', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="IP Address"
                                     value={filters.ip_address || ''}
                                     onChange={(e) => handleFilterChange('ip_address', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.MEDIUM }}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="OS"
@@ -326,28 +336,31 @@ const TrackingDetail = () => {
                                     onChange={(e) => handleFilterChange('os', e.target.value)}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="Browser"
                                     value={filters.browser || ''}
                                     onChange={(e) => handleFilterChange('browser', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="Platform"
                                     value={filters.platform || ''}
                                     onChange={(e) => handleFilterChange('platform', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
                                 />
                             </td>
-                            <td>
+                            <td className="text-nowrap" style={{ width: '1%' }}>
                                 <Form.Control
                                     size="sm"
                                     placeholder="Locale"
                                     value={filters.locale || ''}
                                     onChange={(e) => handleFilterChange('locale', e.target.value)}
+                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
                                 />
                             </td>
                             <td>
@@ -358,6 +371,7 @@ const TrackingDetail = () => {
                                     onChange={(e) => handleFilterChange('client_time', e.target.value)}
                                 />
                             </td>
+                            <td></td>
                         </tr>
                     </thead>
                     <tbody>
@@ -369,30 +383,30 @@ const TrackingDetail = () => {
                             <tr>
                                 <td colSpan={10} className="text-center text-danger">{requestDataError}</td>
                             </tr>
-                        ) : requestData.length > 0 ? (
+                        ) : isNonEmptyArray(requestData) ? (
                             requestData.map((req: RequestData) => (
                                 <tr key={req.id}>
+                                    <td>{formatDateTime(req.server_timestamp)}</td>
+                                    <td className="text-nowrap">{req.data_type || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.http_method || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.ip_address || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.os || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.browser || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.platform || 'N/A'}</td>
+                                    <td className="text-nowrap">{req.locale || 'N/A'}</td>
+                                    <td>{req.client_time ? formatDateTime(req.client_time) : <><span>N/A</span></>}</td>
                                     <td>
                                         <button
-                                            className="btn btn-link p-0"
-                                            style={{ textDecoration: 'underline', border: 'none', background: 'none', color: '#0d6efd' }}
+                                            className="btn btn-link p-0 text-decoration-underline border-0 bg-transparent"
+                                            style={{ color: COLORS.PRIMARY }}
                                             onClick={() => {
                                                 setSelectedRequestDataId(req.id);
                                                 setShowModal(true);
                                             }}
                                         >
-                                            {req.id}
+                                            View
                                         </button>
                                     </td>
-                                    <td>{formatDateTime(req.server_timestamp)}</td>
-                                    <td>{req.data_type || 'N/A'}</td>
-                                    <td>{req.http_method || 'N/A'}</td>
-                                    <td>{req.ip_address || 'N/A'}</td>
-                                    <td>{req.os || 'N/A'}</td>
-                                    <td>{req.browser || 'N/A'}</td>
-                                    <td>{req.platform || 'N/A'}</td>
-                                    <td>{req.locale || 'N/A'}</td>
-                                    <td>{req.client_time ? formatDateTime(req.client_time) : <><span>N/A</span></>}</td>
                                 </tr>
                             ))
                         ) : (
@@ -403,66 +417,14 @@ const TrackingDetail = () => {
                     </tbody>
                 </Table>
                 
-                {/* Pagination and Page Size */}
-                <div className="d-flex justify-content-between align-items-center mt-3">
-                    <Form.Group className="d-flex align-items-center mb-0">
-                        <Form.Label className="me-2 mb-0">Page Size:</Form.Label>
-                        <Form.Select
-                            size="sm"
-                            style={{ width: 'auto' }}
-                            value={filters.page_size || 20}
-                            onChange={(e) => setFilters(prev => ({ ...prev, page_size: parseInt(e.target.value), page: 1 }))}
-                        >
-                            <option value="5">5</option>
-                            <option value="10">10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </Form.Select>
-                    </Form.Group>
-                    
-                    {pagination.total_pages > 1 && (
-                        <Pagination className="mb-0">
-                            <Pagination.First 
-                                disabled={pagination.page === 1}
-                                onClick={() => handlePageChange(1)}
-                            />
-                            <Pagination.Prev 
-                                disabled={pagination.page === 1}
-                                onClick={() => handlePageChange(pagination.page - 1)}
-                            />
-                            {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
-                                let pageNum;
-                                if (pagination.total_pages <= 5) {
-                                    pageNum = i + 1;
-                                } else if (pagination.page <= 3) {
-                                    pageNum = i + 1;
-                                } else if (pagination.page >= pagination.total_pages - 2) {
-                                    pageNum = pagination.total_pages - 4 + i;
-                                } else {
-                                    pageNum = pagination.page - 2 + i;
-                                }
-                                return (
-                                    <Pagination.Item
-                                        key={pageNum}
-                                        active={pageNum === pagination.page}
-                                        onClick={() => handlePageChange(pageNum)}
-                                    >
-                                        {pageNum}
-                                    </Pagination.Item>
-                                );
-                            })}
-                            <Pagination.Next 
-                                disabled={pagination.page === pagination.total_pages}
-                                onClick={() => handlePageChange(pagination.page + 1)}
-                            />
-                            <Pagination.Last 
-                                disabled={pagination.page === pagination.total_pages}
-                                onClick={() => handlePageChange(pagination.total_pages)}
-                            />
-                        </Pagination>
-                    )}
-                </div>
+                <PaginationControls
+                    pagination={pagination}
+                    pageSize={filters.page_size || 20}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={(newPageSize) => {
+                        setFilters((prev) => ({ ...prev, page_size: newPageSize, page: 1 }));
+                    }}
+                />
             </div>
 
             <RequestDataModal

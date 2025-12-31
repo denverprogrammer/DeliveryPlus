@@ -1,24 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Table, Button, Alert, Card } from 'react-bootstrap';
+import _ from 'lodash';
 import { getTracking, deleteTracking, getCampaign } from '../shared/services/api';
 import type { Tracking } from '../shared/types/api';
+import { isCampaignObject, isNonEmptyArray } from './utils/typeGuards';
+import { useParsedParam } from './utils/params';
 
 const TrackingList = () => {
     const navigate = useNavigate();
-    const { campaignId } = useParams<{ campaignId: string }>();
+    const [campaignId] = useParsedParam('campaignId');
     const [tracking, setTracking] = useState<Tracking[]>([]);
     const [campaignName, setCampaignName] = useState<string>('');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     const loadCampaign = async () => {
-        if (!campaignId) return;
+        if (campaignId === null) {
+            return;
+        }
         try {
-            const campaign = await getCampaign(parseInt(campaignId));
+            const campaign = await getCampaign(campaignId);
             setCampaignName(campaign.name);
         } catch (err) {
             console.error('Failed to load campaign:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load campaign');
         }
     };
 
@@ -27,13 +33,17 @@ const TrackingList = () => {
             setIsLoading(true);
             const response = await getTracking();
             // Filter by campaign if campaignId is provided
-            const filtered = campaignId 
-                ? response.filter((t: Tracking) => {
-                    const campaignIdNum = typeof t.campaign === 'object' ? t.campaign?.id : t.campaign;
-                    return campaignIdNum === parseInt(campaignId);
-                })
-                : response;
-            setTracking(filtered || []);
+            if (campaignId !== null) {
+                const filtered = response.filter((t: Tracking) => {
+                    const trackingCampaignId = isCampaignObject(t.campaign)
+                        ? t.campaign.id
+                        : _.isNumber(t.campaign) ? t.campaign : null;
+                    return trackingCampaignId === campaignId;
+                });
+                setTracking(filtered);
+            } else {
+                setTracking(response || []);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
         } finally {
@@ -42,7 +52,9 @@ const TrackingList = () => {
     };
 
     useEffect(() => {
-        loadCampaign();
+        if (campaignId !== null) {
+            loadCampaign();
+        }
         loadTracking();
     }, [campaignId]);
 
@@ -69,9 +81,11 @@ const TrackingList = () => {
                     <h3 className="mb-0">Tracking</h3>
                     {campaignName && <small className="text-muted">Campaign: {campaignName}</small>}
                 </div>
-                <Button variant="primary" onClick={() => navigate(`/campaigns/${campaignId}/tracking/add`)}>
-                    Add Tracking
-                </Button>
+                {campaignId !== null && (
+                    <Button variant="primary" onClick={() => navigate(`/campaigns/${campaignId}/tracking/add`)}>
+                        Add Tracking
+                    </Button>
+                )}
             </Card.Header>
             <Card.Body>
                 {error && <Alert variant="danger">{error}</Alert>}
@@ -84,28 +98,32 @@ const TrackingList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {tracking.length > 0 ? (
+                        {isNonEmptyArray(tracking) ? (
                             tracking.map((record) => (
                                 <tr key={record.id}>
                                     <td>{record.recipient_name || 'N/A'}</td>
                                     <td>{record.count_requests || 0}</td>
                                     <td>
-                                        <Button
-                                            variant="info"
-                                            size="sm"
-                                            onClick={() => navigate(`/campaigns/${campaignId}/tracking/${record.id}`)}
-                                            className="me-2"
-                                        >
-                                            View
-                                        </Button>
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            onClick={() => navigate(`/campaigns/${campaignId}/tracking/${record.id}/edit`)}
-                                            className="me-2"
-                                        >
-                                            Edit
-                                        </Button>
+                                        {campaignId !== null && (
+                                            <>
+                                                <Button
+                                                    variant="info"
+                                                    size="sm"
+                                                    onClick={() => navigate(`/campaigns/${campaignId}/tracking/${record.id}`)}
+                                                    className="me-2"
+                                                >
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    onClick={() => navigate(`/campaigns/${campaignId}/tracking/${record.id}/edit`)}
+                                                    className="me-2"
+                                                >
+                                                    Edit
+                                                </Button>
+                                            </>
+                                        )}
                                         <Button
                                             variant="danger"
                                             size="sm"

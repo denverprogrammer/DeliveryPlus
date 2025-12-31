@@ -1,26 +1,35 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Table, Alert, Button } from 'react-bootstrap';
 import { getCampaign } from '../shared/services/api';
 import type { Campaign } from '../shared/types/api';
+import { TABLE_CAPTION_STYLE, ROUTES } from './constants/ui';
+import { isNonEmptyArray } from './utils/typeGuards';
+import { useParsedParam } from './utils/params';
 
 const CampaignDetail = () => {
-    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [campaignId] = useParsedParam('id');
     const [campaign, setCampaign] = useState<Campaign | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (id) {
+        if (campaignId !== null) {
             loadCampaign();
+        } else {
+            setError('Invalid campaign ID');
+            setIsLoading(false);
         }
-    }, [id]);
+    }, [campaignId]);
 
     const loadCampaign = async () => {
+        if (campaignId === null) {
+            return;
+        }
         try {
             setIsLoading(true);
-            const response = await getCampaign(parseInt(id!));
+            const response = await getCampaign(campaignId);
             setCampaign(response);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load campaign');
@@ -49,7 +58,7 @@ const CampaignDetail = () => {
                     <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                        onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}/edit`)}
                         className="me-2"
                     >
                         Edit
@@ -57,7 +66,7 @@ const CampaignDetail = () => {
                     <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => navigate('/campaigns')}
+                        onClick={() => navigate(ROUTES.CAMPAIGNS)}
                     >
                         Back to List
                     </Button>
@@ -69,7 +78,7 @@ const CampaignDetail = () => {
                     <Table striped bordered hover>
                         <tbody>
                             <tr>
-                                <th style={{ width: '30%' }}>ID</th>
+                                <th className="w-25">ID</th>
                                 <td>{campaign.id}</td>
                             </tr>
                             <tr>
@@ -103,7 +112,7 @@ const CampaignDetail = () => {
                     <Table striped bordered hover>
                         <tbody>
                             <tr>
-                                <th style={{ width: '30%' }}>IP Precedence</th>
+                                <th className="w-25">IP Precedence</th>
                                 <td>{campaign.ip_precedence || 'N/A'}</td>
                             </tr>
                             <tr>
@@ -133,11 +142,11 @@ const CampaignDetail = () => {
                 <div className="row">
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 IP Tracking
                             </caption>
                             <tbody>
-                                {campaign.ip_tracking && campaign.ip_tracking.length > 0 ? (
+                                {isNonEmptyArray(campaign.ip_tracking) ? (
                                     campaign.ip_tracking.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -153,11 +162,11 @@ const CampaignDetail = () => {
                     </div>
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 Location Tracking
                             </caption>
                             <tbody>
-                                {campaign.location_tracking && campaign.location_tracking.length > 0 ? (
+                                {isNonEmptyArray(campaign.location_tracking) ? (
                                     campaign.location_tracking.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -175,11 +184,11 @@ const CampaignDetail = () => {
                 <div className="row mt-3">
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 Locale Tracking
                             </caption>
                             <tbody>
-                                {campaign.locale_tracking && campaign.locale_tracking.length > 0 ? (
+                                {isNonEmptyArray(campaign.locale_tracking) ? (
                                     campaign.locale_tracking.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -195,11 +204,11 @@ const CampaignDetail = () => {
                     </div>
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 Browser Tracking
                             </caption>
                             <tbody>
-                                {campaign.browser_tracking && campaign.browser_tracking.length > 0 ? (
+                                {isNonEmptyArray(campaign.browser_tracking) ? (
                                     campaign.browser_tracking.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -217,11 +226,11 @@ const CampaignDetail = () => {
                 <div className="row mt-3">
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 Time Tracking
                             </caption>
                             <tbody>
-                                {campaign.time_tracking && campaign.time_tracking.length > 0 ? (
+                                {isNonEmptyArray(campaign.time_tracking) ? (
                                     campaign.time_tracking.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -237,11 +246,11 @@ const CampaignDetail = () => {
                     </div>
                     <div className="col-md-6">
                         <Table striped bordered hover size="sm">
-                            <caption style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
                                 Publishing Type
                             </caption>
                             <tbody>
-                                {campaign.publishing_type && campaign.publishing_type.length > 0 ? (
+                                {isNonEmptyArray(campaign.publishing_type) ? (
                                     campaign.publishing_type.map((item, index) => (
                                         <tr key={index}>
                                             <td>{item}</td>
@@ -263,7 +272,7 @@ const CampaignDetail = () => {
                 <div className="mb-4">
                     <h4 className="mb-3">Tracking Pixel</h4>
                     <div className="bg-light p-3 rounded">
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                        <pre className="m-0" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {campaign.tracking_pixel}
                         </pre>
                     </div>

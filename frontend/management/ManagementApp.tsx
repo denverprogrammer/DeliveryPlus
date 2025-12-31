@@ -5,6 +5,7 @@ import 'bootswatch/dist/sandstone/bootstrap.min.css';
 // Components
 import Navigation from './components/Navigation';
 import Breadcrumbs from './components/Breadcrumbs';
+import Layout from './components/Layout';
 import Login from './Login';
 import Signup from './Signup';
 import Dashboard from './Dashboard';
@@ -25,7 +26,7 @@ function ManagementApp() {
             <Router>
                 <div className="App">
                     <Navigation />
-                    <Container className="mt-4">
+                    <Layout>
                         <Breadcrumbs />
                         <Routes>
                         {/* Authentication */}
@@ -51,7 +52,7 @@ function ManagementApp() {
                         <Route path="/tracking/:id" element={<TrackingDetail />} />
                         <Route path="/tracking/:id/edit" element={<TrackingForm />} />
                         </Routes>
-                    </Container>
+                    </Layout>
                 </div>
             </Router>
         </AuthProvider>

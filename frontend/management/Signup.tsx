@@ -3,11 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { signup } from '../shared/services/api';
 import { useAuth } from './contexts/AuthContext';
+import type { SignupPayload } from '../shared/types/api';
+
+interface SignupFormData {
+    username: string;
+    email: string;
+    password1: string;
+    password2: string;
+    company_name: string;
+}
 
 const Signup = () => {
     const navigate = useNavigate();
     const { checkAuth } = useAuth();
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<SignupFormData>({
         username: '',
         email: '',
         password1: '',
@@ -37,21 +46,27 @@ const Signup = () => {
         setErrors({});
 
         try {
-            const response = await signup({
+            const data: SignupPayload = {
                 username: formData.username,
                 email: formData.email,
                 password1: formData.password1,
                 password2: formData.password2,
                 company_name: formData.company_name,
-            });
+            };
+            const response = await signup(data);
             if (response.success) {
                 // Re-check auth state after signup
                 await checkAuth();
                 navigate('/dashboard');
             }
-        } catch (err: any) {
-            if (err.response?.data?.errors) {
-                setErrors(err.response.data.errors);
+        } catch (err) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
+                if (axiosError.response?.data?.errors) {
+                    setErrors(axiosError.response.data.errors);
+                } else {
+                    setError('Signup failed');
+                }
             } else {
                 setError(err instanceof Error ? err.message : 'Signup failed');
             }

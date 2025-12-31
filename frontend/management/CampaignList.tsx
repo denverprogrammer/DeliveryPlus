@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Table, Button, Alert } from 'react-bootstrap';
 import { getCampaigns, deleteCampaign } from '../shared/services/api';
 import type { Campaign } from '../shared/types/api';
+import { TABLE_CAPTION_STYLE, ROUTES } from './constants/ui';
 
 const CampaignList = () => {
     const navigate = useNavigate();
@@ -45,11 +46,11 @@ const CampaignList = () => {
     return (
         <div>
             {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-            <Table striped bordered hover style={{ captionSide: 'top' }}>
-                <caption className="p-0" style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <Table striped bordered hover>
+                <caption className="p-0 fw-bold" style={TABLE_CAPTION_STYLE}>
                     <div className="d-flex justify-content-between align-items-center">
                         <span>Campaigns</span>
-                        <Button variant="primary" size="sm" onClick={() => navigate('/campaigns/add')}>
+                        <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.CAMPAIGNS}/add`)}>
                             Add Campaign
                         </Button>
                     </div>
@@ -74,7 +75,7 @@ const CampaignList = () => {
                                 <Button
                                     variant="primary"
                                     size="sm"
-                                    onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                                    onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}`)}
                                     className="me-2"
                                 >
                                     View
@@ -82,7 +83,7 @@ const CampaignList = () => {
                                 <Button
                                     variant="primary"
                                     size="sm"
-                                    onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                                    onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}/edit`)}
                                     className="me-2"
                                 >
                                     Edit

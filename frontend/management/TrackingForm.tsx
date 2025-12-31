@@ -1,48 +1,45 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
+import _ from 'lodash';
 import { getTrackingRecord, createTracking, updateTracking } from '../shared/services/api';
 import { getCampaigns, getRecipients } from '../shared/services/api';
+import type { Campaign, Recipient, TrackingCreatePayload, TrackingUpdatePayload } from '../shared/types/api';
+import { isCampaignObject, isRecipientObject } from './utils/typeGuards';
+import { useParsedParam } from './utils/params';
 
-interface Campaign {
-    id: number;
-    name: string;
+interface TrackingFormData {
+    campaign: string;
+    recipient: string;
 }
 
-interface Recipient {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
+interface TrackingFormErrors {
+    campaign?: string[];
+    recipient?: string[];
 }
 
 const TrackingForm = () => {
     const navigate = useNavigate();
-    const { campaignId, id } = useParams<{ campaignId: string; id: string }>();
-    const isEdit = !!id;
-    const [formData, setFormData] = useState({
-        campaign: campaignId || '',
+    const [trackingId] = useParsedParam('id');
+    const isEdit = trackingId !== null;
+    const [formData, setFormData] = useState<TrackingFormData>({
+        campaign: '',
         recipient: '',
     });
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [recipients, setRecipients] = useState<Recipient[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isLoadingData, setIsLoadingData] = useState(isEdit);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoadingData, setIsLoadingData] = useState<boolean>(isEdit);
     const [error, setError] = useState<string | null>(null);
-    const [errors, setErrors] = useState<Record<string, string[]>>({});
+    const [errors, setErrors] = useState<TrackingFormErrors>({});
 
     useEffect(() => {
-        if (campaignId) {
-            setFormData(prev => ({ ...prev, campaign: campaignId }));
-        } else {
-            // Only load campaigns if not nested under a campaign
-            loadCampaigns();
-        }
+        loadCampaigns();
         loadRecipients();
-        if (isEdit && id) {
+        if (isEdit && trackingId !== null) {
             loadTracking();
         }
-    }, [id, isEdit, campaignId]);
+    }, [trackingId, isEdit]);
 
     const loadCampaigns = async () => {
         try {
@@ -63,20 +60,23 @@ const TrackingForm = () => {
     };
 
     const loadTracking = async () => {
+        if (trackingId === null) {
+            setError('Tracking ID is required');
+            return;
+        }
         try {
             setIsLoadingData(true);
-            const response = await getTrackingRecord(parseInt(id!));
-            const tracking = response;
-            // Handle both object and ID formats
-            const campaignId = typeof tracking.campaign === 'object' 
-                ? tracking.campaign?.id 
-                : tracking.campaign;
-            const recipientId = typeof tracking.recipient === 'object'
-                ? tracking.recipient?.id
-                : tracking.recipient;
+            const tracking = await getTrackingRecord(trackingId);
+            // Handle both object and ID formats using type guards
+            const campaignId = isCampaignObject(tracking.campaign)
+                ? tracking.campaign.id
+                : _.isNumber(tracking.campaign) ? tracking.campaign : null;
+            const recipientId = isRecipientObject(tracking.recipient)
+                ? tracking.recipient.id
+                : _.isNumber(tracking.recipient) ? tracking.recipient : null;
             setFormData({
-                campaign: campaignId?.toString() || '',
-                recipient: recipientId?.toString() || '',
+                campaign: _.toString(campaignId) || '',
+                recipient: _.toString(recipientId) || '',
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
@@ -86,14 +86,17 @@ const TrackingForm = () => {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-        if (errors[e.target.name]) {
-            const newErrors = { ...errors };
-            delete newErrors[e.target.name];
-            setErrors(newErrors);
+        const { name, value } = e.target;
+        setFormData((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+        if (name in errors) {
+            setErrors((prev) => {
+                const newErrors = { ...prev };
+                delete newErrors[name as keyof TrackingFormErrors];
+                return newErrors;
+            });
         }
     };
 
@@ -104,26 +107,35 @@ const TrackingForm = () => {
         setErrors({});
 
         try {
-            const data: any = {
-                campaign: parseInt(formData.campaign),
-            };
-            // Only include recipient if it's not empty
-            if (formData.recipient && formData.recipient !== '') {
-                data.recipient = parseInt(formData.recipient);
-            } else {
-                data.recipient = null;
+            const campaignId = parseInt(formData.campaign, 10);
+            if (isNaN(campaignId)) {
+                setError('Campaign is required');
+                return;
             }
 
-            if (isEdit && id) {
-                await updateTracking(parseInt(id), data);
+            if (isEdit && trackingId !== null) {
+                const data: TrackingUpdatePayload = {
+                    campaign: campaignId,
+                    recipient: !_.isEmpty(formData.recipient) ? parseInt(formData.recipient, 10) : null,
+                };
+                await updateTracking(trackingId, data);
             } else {
+                const data: TrackingCreatePayload = {
+                    campaign: campaignId,
+                    recipient: !_.isEmpty(formData.recipient) ? parseInt(formData.recipient, 10) : null,
+                };
                 await createTracking(data);
             }
             // Always navigate to /tracking after save
             navigate('/tracking');
-        } catch (err: any) {
-            if (err.response?.data?.errors) {
-                setErrors(err.response.data.errors);
+        } catch (err) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { errors?: TrackingFormErrors } } };
+                if (axiosError.response?.data?.errors) {
+                    setErrors(axiosError.response.data.errors);
+                } else {
+                    setError('Failed to save tracking');
+                }
             } else {
                 setError(err instanceof Error ? err.message : 'Failed to save tracking');
             }
@@ -143,8 +155,7 @@ const TrackingForm = () => {
             </Card.Header>
             <Card.Body>
                 <Form onSubmit={handleSubmit}>
-                    {!campaignId && (
-                        <Form.Group className="mb-3">
+                    <Form.Group className="mb-3">
                             <Form.Label>Campaign</Form.Label>
                             <Form.Select
                                 name="campaign"
@@ -166,7 +177,6 @@ const TrackingForm = () => {
                                 </Form.Control.Feedback>
                             )}
                         </Form.Group>
-                    )}
 
                     <Form.Group className="mb-3">
                         <Form.Label>Recipient</Form.Label>

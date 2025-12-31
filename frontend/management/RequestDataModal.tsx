@@ -2,18 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Modal, Tabs, Tab } from 'react-bootstrap';
 import { getRequestData } from '../shared/services/api';
 import type { RequestDataDetail } from '../shared/types/api';
+import type { RequestDataModalProps } from './types';
+import { isNonEmptyArray } from './utils/typeGuards';
 
 // Declare JSONEditor type
 declare global {
     interface Window {
         JSONEditor: any;
     }
-}
-
-interface RequestDataModalProps {
-    show: boolean;
-    onHide: () => void;
-    requestDataId: number | null;
 }
 
 const RequestDataModal: React.FC<RequestDataModalProps> = ({ show, onHide, requestDataId }) => {
@@ -309,7 +305,7 @@ const RequestDataModal: React.FC<RequestDataModalProps> = ({ show, onHide, reque
                         <Tab eventKey="warnings" title="Warnings">
                             <div className="mt-3">
                                     <h5>Security Checks</h5>
-                                    {data.warnings.security_checks && data.warnings.security_checks.length > 0 ? (
+                                    {isNonEmptyArray(data.warnings.security_checks) ? (
                                         data.warnings.security_checks.map((warning, idx) => (
                                             <div
                                                 key={idx}

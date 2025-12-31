@@ -1,7 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getCampaign, createCampaign, updateCampaign } from '../shared/services/api';
+import { useParsedParam } from './utils/params';
+import type { CampaignCreatePayload, CampaignUpdatePayload } from '../shared/types/api';
+
+interface CampaignFormData {
+    name: string;
+    description: string;
+    campaign_type: string;
+    publishing_type: string[];
+    landing_page_url: string;
+    tracking_pixel: string;
+    ip_precedence: string;
+    location_precedence: string;
+    locale_precedence: string;
+    browser_precedence: string;
+    time_precedence: string;
+    ip_tracking: string[];
+    location_tracking: string[];
+    locale_tracking: string[];
+    browser_tracking: string[];
+    time_tracking: string[];
+}
 
 const CAMPAIGN_TYPES = [
     { value: 'packages', label: 'Packages' },
@@ -26,13 +47,13 @@ const PUBLISHING_TYPES = [
 
 const CampaignForm = () => {
     const navigate = useNavigate();
-    const { id } = useParams<{ id: string }>();
-    const isEdit = !!id;
-    const [formData, setFormData] = useState({
+    const [campaignId] = useParsedParam('id');
+    const isEdit = campaignId !== null;
+    const [formData, setFormData] = useState<CampaignFormData>({
         name: '',
         description: '',
         campaign_type: 'packages',
-        publishing_type: [] as string[],
+        publishing_type: [],
         landing_page_url: '',
         tracking_pixel: '',
         ip_precedence: 'server',
@@ -40,11 +61,11 @@ const CampaignForm = () => {
         locale_precedence: 'server',
         browser_precedence: 'server',
         time_precedence: 'server',
-        ip_tracking: [] as string[],
-        location_tracking: [] as string[],
-        locale_tracking: [] as string[],
-        browser_tracking: [] as string[],
-        time_tracking: [] as string[],
+        ip_tracking: [],
+        location_tracking: [],
+        locale_tracking: [],
+        browser_tracking: [],
+        time_tracking: [],
     });
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(isEdit);
@@ -52,16 +73,18 @@ const CampaignForm = () => {
     const [errors, setErrors] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
-        if (isEdit && id) {
+        if (isEdit && campaignId !== null) {
             loadCampaign();
         }
-    }, [id, isEdit]);
+    }, [campaignId, isEdit]);
 
     const loadCampaign = async () => {
+        if (campaignId === null) {
+            return;
+        }
         try {
             setIsLoadingData(true);
-            const response = await getCampaign(parseInt(id!));
-            const campaign = response;
+            const campaign = await getCampaign(campaignId);
             setFormData({
                 name: campaign.name || '',
                 description: campaign.description || '',
@@ -118,28 +141,69 @@ const CampaignForm = () => {
         setErrors({});
 
         try {
-            if (isEdit && id) {
-                await updateCampaign(parseInt(id), formData);
+            if (isEdit && campaignId !== null) {
+                const data: CampaignUpdatePayload = {
+                    name: formData.name,
+                    description: formData.description,
+                    campaign_type: formData.campaign_type,
+                    publishing_type: formData.publishing_type,
+                    landing_page_url: formData.landing_page_url,
+                    tracking_pixel: formData.tracking_pixel,
+                    ip_precedence: formData.ip_precedence,
+                    location_precedence: formData.location_precedence,
+                    locale_precedence: formData.locale_precedence,
+                    browser_precedence: formData.browser_precedence,
+                    time_precedence: formData.time_precedence,
+                    ip_tracking: formData.ip_tracking,
+                    location_tracking: formData.location_tracking,
+                    locale_tracking: formData.locale_tracking,
+                    browser_tracking: formData.browser_tracking,
+                    time_tracking: formData.time_tracking,
+                };
+                await updateCampaign(campaignId, data);
             } else {
-                await createCampaign(formData);
+                const data: CampaignCreatePayload = {
+                    name: formData.name,
+                    description: formData.description,
+                    campaign_type: formData.campaign_type,
+                    publishing_type: formData.publishing_type,
+                    landing_page_url: formData.landing_page_url,
+                    tracking_pixel: formData.tracking_pixel,
+                    ip_precedence: formData.ip_precedence,
+                    location_precedence: formData.location_precedence,
+                    locale_precedence: formData.locale_precedence,
+                    browser_precedence: formData.browser_precedence,
+                    time_precedence: formData.time_precedence,
+                    ip_tracking: formData.ip_tracking,
+                    location_tracking: formData.location_tracking,
+                    locale_tracking: formData.locale_tracking,
+                    browser_tracking: formData.browser_tracking,
+                    time_tracking: formData.time_tracking,
+                };
+                await createCampaign(data);
             }
             navigate('/campaigns');
-        } catch (err: any) {
-            if (err.response?.data?.errors) {
-                const errors = err.response.data.errors;
-                setErrors(errors);
-                // Also set a general error message
-                const errorMessages: string[] = [];
-                Object.entries(errors).forEach(([field, messages]) => {
-                    if (Array.isArray(messages)) {
-                        messages.forEach((msg: string) => {
-                            errorMessages.push(`${field}: ${msg}`);
-                        });
-                    } else {
-                        errorMessages.push(`${field}: ${messages}`);
-                    }
-                });
-                setError(errorMessages.join(', '));
+        } catch (err) {
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
+                if (axiosError.response?.data?.errors) {
+                    const errors = axiosError.response.data.errors;
+                    setErrors(errors);
+                    // Also set a general error message
+                    const errorMessages: string[] = [];
+                    Object.entries(errors).forEach(([field, messages]) => {
+                        if (Array.isArray(messages)) {
+                            messages.forEach((msg: string) => {
+                                errorMessages.push(`${field}: ${msg}`);
+                            });
+                        } else {
+                            errorMessages.push(`${field}: ${String(messages)}`);
+                        }
+                    });
+                    setError(errorMessages.join(', '));
+                } else {
+                    setError('Failed to save campaign');
+                }
             } else {
                 setError(err instanceof Error ? err.message : 'Failed to save campaign');
             }

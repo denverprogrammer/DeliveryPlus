@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Table, Button, Alert } from 'react-bootstrap';
 import { getTracking, deleteTracking } from '../shared/services/api';
 import type { Tracking } from '../shared/types/api';
+import { TABLE_CAPTION_STYLE, ROUTES } from './constants/ui';
+import { isNonEmptyArray } from './utils/typeGuards';
 
 const AllTrackingList = () => {
     const navigate = useNavigate();
@@ -40,12 +42,12 @@ const AllTrackingList = () => {
 
     const handleView = (record: Tracking) => {
         // Navigate to the top-level tracking detail page
-        navigate(`/tracking/${record.id}`);
+        navigate(`${ROUTES.TRACKING}/${record.id}`);
     };
 
     const handleEdit = (record: Tracking) => {
         // Navigate to the top-level tracking edit page
-        navigate(`/tracking/${record.id}/edit`);
+        navigate(`${ROUTES.TRACKING}/${record.id}/edit`);
     };
 
     if (isLoading) {
@@ -55,11 +57,11 @@ const AllTrackingList = () => {
     return (
         <div>
             {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-            <Table striped bordered hover style={{ captionSide: 'top' }}>
-                <caption className="p-0" style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <Table striped bordered hover>
+                <caption className="p-0 fw-bold" style={TABLE_CAPTION_STYLE}>
                     <div className="d-flex justify-content-between align-items-center">
                         <span>Tracking</span>
-                        <Button variant="primary" size="sm" onClick={() => navigate('/tracking/add')}>
+                        <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.TRACKING}/add`)}>
                             Add Tracking
                         </Button>
                     </div>
@@ -73,7 +75,7 @@ const AllTrackingList = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {tracking.length > 0 ? (
+                    {isNonEmptyArray(tracking) ? (
                         tracking.map((record) => (
                             <tr key={record.id}>
                                 <td>{record.campaign_name || 'N/A'}</td>

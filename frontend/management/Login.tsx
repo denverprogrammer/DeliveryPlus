@@ -3,11 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { login } from '../shared/services/api';
 import { useAuth } from './contexts/AuthContext';
+import { isNonEmptyArray } from './utils/typeGuards';
+
+interface LoginFormData {
+    username: string;
+    password: string;
+}
 
 const Login = () => {
     const navigate = useNavigate();
     const { setUser, checkAuth } = useAuth();
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<LoginFormData>({
         username: '',
         password: '',
     });
@@ -39,14 +45,19 @@ const Login = () => {
             } else {
                 setError('Login failed. Please check your credentials.');
             }
-        } catch (err: any) {
+        } catch (err) {
             // Handle error response
-            if (err.response?.data?.errors) {
-                const errors = err.response.data.errors;
-                // Get first error message
-                const firstError = Object.values(errors)[0];
-                if (Array.isArray(firstError) && firstError.length > 0) {
-                    setError(firstError[0]);
+            if (err && typeof err === 'object' && 'response' in err) {
+                const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
+                if (axiosError.response?.data?.errors) {
+                    const errors = axiosError.response.data.errors;
+                    // Get first error message
+                    const firstError = Object.values(errors)[0];
+                    if (Array.isArray(firstError) && isNonEmptyArray(firstError)) {
+                        setError(firstError[0] as string);
+                    } else {
+                        setError('Login failed. Please check your credentials.');
+                    }
                 } else {
                     setError('Login failed. Please check your credentials.');
                 }

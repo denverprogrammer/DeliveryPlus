@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getCompanyAPI, updateCompanyAPI } from '../shared/services/api';
+import type { CompanyUpdatePayload } from '../shared/types/api';
 
 interface CompanyFormData {
     name: string;
@@ -66,7 +67,16 @@ const CompanyEdit = () => {
         setError(null);
 
         try {
-            await updateCompanyAPI(formData);
+            const data: CompanyUpdatePayload = {
+                name: formData.name,
+                street_address: formData.street_address,
+                city: formData.city,
+                state: formData.state,
+                zip_code: formData.zip_code,
+                country: formData.country,
+                phone_number: formData.phone_number,
+            };
+            await updateCompanyAPI(data);
             navigate('/dashboard');
         } catch (err: any) {
             // Handle error response

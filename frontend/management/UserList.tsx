@@ -2,16 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Button, Alert } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../shared/services/api';
-
-interface User {
-    id: number;
-    username: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    is_active: boolean;
-    is_staff: boolean;
-}
+import { TABLE_CAPTION_STYLE, ROUTES } from './constants/ui';
+import type { User } from '../shared/types/api';
 
 const UserList = () => {
     const navigate = useNavigate();
@@ -54,11 +46,11 @@ const UserList = () => {
     return (
         <div>
             {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-            <Table striped bordered hover style={{ captionSide: 'top' }}>
-                <caption className="p-0" style={{ captionSide: 'top', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
+            <Table striped bordered hover>
+                <caption className="p-0 fw-bold" style={TABLE_CAPTION_STYLE}>
                     <div className="d-flex justify-content-between align-items-center">
                         <span>Users</span>
-                        <Button variant="primary" size="sm" onClick={() => navigate('/users/add')}>
+                        <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.USERS}/add`)}>
                             Add User
                         </Button>
                     </div>
@@ -85,11 +77,11 @@ const UserList = () => {
                                     <Button
                                         variant="primary"
                                         size="sm"
-                                        onClick={() => navigate(`/users/${user.id}/edit`)}
-                                        className="me-2"
-                                    >
-                                        Edit
-                                    </Button>
+                                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}
+                                    className="me-2"
+                                >
+                                    Edit
+                                </Button>
                                     <Button
                                         variant="danger"
                                         size="sm"
