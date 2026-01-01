@@ -143,6 +143,17 @@ class UserViewSet(ModelViewSet):
         return Response({"success": True})
 
     @action(detail=False, methods=["get"])
+    def me(self, request: Request) -> Response:
+        """Get the current user's information."""
+        if not isinstance(request.user, User):
+            return Response(
+                {"error": "User not authenticated"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        user: User = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
     def dashboard(self, request: Request) -> Response:
         """Get dashboard data for the current user."""
         if not isinstance(request.user, User):
@@ -174,9 +185,16 @@ class UserViewSet(ModelViewSet):
 
     def perform_update(self, serializer: Any) -> None:
         """Handle password update if provided."""
+        from rest_framework.exceptions import ValidationError
+
         password = serializer.validated_data.pop("password", None)
+        current_password = serializer.validated_data.pop("current_password", None)
         user = serializer.save()
         if password:
+            # If current_password is provided, validate it
+            if current_password:
+                if not user.check_password(current_password):
+                    raise ValidationError({"current_password": ["Current password is incorrect"]})
             user.set_password(password)
             user.save()
 

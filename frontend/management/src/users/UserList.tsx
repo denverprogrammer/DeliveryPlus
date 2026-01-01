@@ -49,6 +49,12 @@ const UserList = () => {
         return (
             <div className="d-flex gap-2">
                 <i
+                    className="bi bi-eye text-info"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}`)}
+                    title="View"
+                />
+                <i
                     className="bi bi-pencil text-primary"
                     style={{ cursor: 'pointer', fontSize: '1.2rem' }}
                     onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}
@@ -93,7 +99,7 @@ const UserList = () => {
             sortable: false,
             filter: false,
             pinned: 'right',
-            width: 100,
+            width: 120,
             suppressSizeToFit: true,
         },
     ], []);

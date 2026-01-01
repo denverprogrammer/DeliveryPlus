@@ -38,6 +38,7 @@ export interface UserUpdatePayload {
     first_name?: string;
     last_name?: string;
     password?: string;
+    current_password?: string;
     is_active?: boolean;
     is_staff?: boolean;
 }

@@ -88,6 +88,11 @@ export const getDashboard = async (): Promise<DashboardData> => {
     return response.data;
 };
 
+export const getCurrentUser = async (): Promise<User> => {
+    const response = await api.get<User>('/api/management/users/me/');
+    return response.data;
+};
+
 // Signup function
 export const signup = async (payload: SignupPayload): Promise<SignupResponse> => {
     const response = await api.post<SignupResponse>('/api/management/users/signup/', payload);

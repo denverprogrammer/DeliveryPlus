@@ -4,6 +4,7 @@ import { ColDef, GridApi, FilterChangedEvent, SortChangedEvent, PaginationChange
 import { DEBOUNCE_DELAY, NOT_AVAILABLE } from '../constants/ui';
 import type { PaginationParams } from '../types/api';
 import { formatDateTime } from '../utils/formatting';
+import { useGridTheme } from '../contexts/ThemeContext';
 
 /**
  * Default column definition for ag-grid tables.
@@ -62,7 +63,6 @@ export interface DataTableProps<T = any> {
     data: T[];
     isLoading: boolean;
     loadData: (pagination: PaginationParams, api: GridApi<T>) => Promise<void>;
-    theme?: any;
     paginationPageSize?: number;
     paginationPageSizeSelector?: number[];
     noRowsMessage?: string;
@@ -74,12 +74,12 @@ const DataTable = <T,>({
     data,
     isLoading,
     loadData,
-    theme,
     paginationPageSize = 20,
     paginationPageSizeSelector = [5, 10, 20, 50, 100],
     noRowsMessage = 'No data found.',
     onGridReady: onGridReadyProp,
 }: DataTableProps<T>) => {
+    const { gridTheme } = useGridTheme();
     const gridRef = useRef<AgGridReact<T>>(null);
     const filterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -179,7 +179,7 @@ const DataTable = <T,>({
     return (
         <AgGridReact
             ref={gridRef}
-            theme={theme}
+            theme={gridTheme}
             rowData={data}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}

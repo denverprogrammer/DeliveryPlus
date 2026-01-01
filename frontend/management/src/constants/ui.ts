@@ -27,6 +27,7 @@ export const ROUTES = {
     TRACKING: '/tracking',
     RECIPIENTS: '/recipients',
     COMPANY_EDIT: '/company/edit',
+    PROFILE: '/profile',
     LOGIN: '/login',
     SIGNUP: '/signup',
 } as const;

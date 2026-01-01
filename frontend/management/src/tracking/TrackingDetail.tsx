@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { Alert, Form } from 'react-bootstrap';
-import { ColDef, ICellRendererParams, GridApi, themeQuartz, themeBalham, themeAlpine, themeMaterial } from 'ag-grid-community';
+import { Alert } from 'react-bootstrap';
+import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
 import { getTrackingRecord, getRequestDataList, getTokenList, disableToken, reactivateToken, createToken } from '../services/api';
 import type { TrackingDetail, Token, RequestData } from '../types/api';
 import RequestDataModal from '../RequestDataModal';
@@ -18,9 +18,6 @@ const TrackingDetail = () => {
     const [error, setError] = useState<string | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [selectedRequestDataId, setSelectedRequestDataId] = useState<number | null>(null);
-    
-    // Theme selector state
-    const [selectedTheme, setSelectedTheme] = useState<string>('quartz');
     
     // Request data state
     const [requestData, setRequestData] = useState<RequestData[]>([]);
@@ -291,45 +288,10 @@ const TrackingDetail = () => {
         return <Alert variant="warning">Tracking record not found</Alert>;
     }
 
-    const themeOptions = [
-        { value: 'quartz', label: 'Quartz' },
-        { value: 'balham', label: 'Balham' },
-        { value: 'alpine', label: 'Alpine' },
-        { value: 'material', label: 'Material' },
-    ];
-
-    const getTheme = (themeName: string) => {
-        switch (themeName) {
-            case 'quartz':
-                return themeQuartz;
-            case 'balham':
-                return themeBalham;
-            case 'alpine':
-                return themeAlpine;
-            case 'material':
-                return themeMaterial;
-            default:
-                return themeQuartz;
-        }
-    };
-
-    const currentTheme = getTheme(selectedTheme);
-
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3 className="mb-0">Tracking Details</h3>
-                <Form.Select
-                    value={selectedTheme}
-                    onChange={(e) => setSelectedTheme(e.target.value)}
-                    style={{ width: '200px' }}
-                >
-                    {themeOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </Form.Select>
             </div>
             <div className="row mb-4">
                 <div className="col-md-6">
@@ -357,12 +319,10 @@ const TrackingDetail = () => {
                 )}
                 <div style={{ height: '300px', width: '100%' }}>
                     <DataTable<Token>
-                        key={selectedTheme + '1'}
                         columnDefs={tokenColumnDefs}
                         data={tokens}
                         isLoading={tokensLoading}
                         loadData={loadTokens}
-                        theme={currentTheme}
                         noRowsMessage="No tokens found."
                     />
                 </div>
@@ -380,12 +340,10 @@ const TrackingDetail = () => {
 
                 <div style={{ height: '600px', width: '100%' }}>
                     <DataTable<RequestData>
-                        key={selectedTheme + '2'}
                         columnDefs={columnDefs}
                         data={requestData}
                         isLoading={requestDataLoading}
                         loadData={loadRequestData}
-                        theme={currentTheme}
                         noRowsMessage="No request data found."
                     />
                 </div>

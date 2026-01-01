@@ -428,6 +428,9 @@ class ImageUploadSerializer(serializers.Serializer):
 
 
 class UserSerializer(ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    current_password = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = User
         fields = [
@@ -439,6 +442,8 @@ class UserSerializer(ModelSerializer):
             "is_active",
             "is_staff",
             "company",
+            "password",
+            "current_password",
         ]
         read_only_fields = ["id", "company"]
 

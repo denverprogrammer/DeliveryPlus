@@ -21,6 +21,8 @@ import Dashboard from './Dashboard';
 import CompanyEdit from './CompanyEdit';
 import UserList from './users/UserList';
 import UserForm from './users/UserForm';
+import UserDetail from './users/UserDetail';
+import Profile from './users/Profile';
 import CampaignList from './campaigns/CampaignList';
 import CampaignForm from './campaigns/CampaignForm';
 import CampaignDetail from './campaigns/CampaignDetail';
@@ -28,11 +30,13 @@ import TrackingList from './tracking/TrackingList';
 import TrackingForm from './tracking/TrackingForm';
 import TrackingDetail from './tracking/TrackingDetail';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 function ManagementApp() {
     return (
         <AuthProvider>
-            <Router>
+            <ThemeProvider>
+                <Router>
                 <div className="App">
                     <Navigation />
                     <Layout>
@@ -49,7 +53,10 @@ function ManagementApp() {
                         {/* Users */}
                         <Route path="/users" element={<UserList />} />
                         <Route path="/users/add" element={<UserForm />} />
+                        <Route path="/users/:id" element={<UserDetail />} />
                         <Route path="/users/:id/edit" element={<UserForm />} />
+                        {/* Profile */}
+                        <Route path="/profile" element={<Profile />} />
                         {/* Campaigns */}
                         <Route path="/campaigns" element={<CampaignList />} />
                         <Route path="/campaigns/add" element={<CampaignForm />} />
@@ -64,6 +71,7 @@ function ManagementApp() {
                     </Layout>
                 </div>
             </Router>
+            </ThemeProvider>
         </AuthProvider>
     );
 }
