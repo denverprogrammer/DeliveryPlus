@@ -25,6 +25,7 @@ export const ROUTES = {
     USERS: '/users',
     CAMPAIGNS: '/campaigns',
     TRACKING: '/tracking',
+    RECIPIENTS: '/recipients',
     COMPANY_EDIT: '/company/edit',
     LOGIN: '/login',
     SIGNUP: '/signup',

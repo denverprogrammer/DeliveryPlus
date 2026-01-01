@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import Any
+from common.enums import TokenStatus
 from django.contrib.auth import login
 from django.db.models import QuerySet
 from mgmt.models import Company
@@ -21,10 +22,12 @@ from tracking.forms import CampaignSubAdminForm
 from tracking.forms import TrackingSubAdminForm
 from tracking.models import AbstractRequestData
 from tracking.models import Campaign
+from tracking.models import Token
 from tracking.models import Tracking
 from .serializers import CampaignSerializer
 from .serializers import ImageRequestDataSerializer
 from .serializers import RecipientSerializer
+from .serializers import TokenSerializer
 from .serializers import TrackingDetailSerializer
 from .serializers import TrackingListSerializer
 from .serializers import TrackingRequestDataSerializer
@@ -679,3 +682,111 @@ class TrackingViewSet(
             serializer = self.get_serializer(tracking)
             return Response(serializer.data)
         return Response({"errors": form.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TokenPagination(PageNumberPagination):
+    """Custom pagination for tokens with configurable page size."""
+
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class TokenViewSet(mixins.ListModelMixin, GenericViewSet):
+    """ViewSet for token management."""
+
+    permission_classes = [IsAuthenticated]
+    queryset = Token.objects.all()
+    serializer_class = TokenSerializer
+    pagination_class = TokenPagination
+
+    def get_queryset(self) -> QuerySet[Token]:
+        """Filter tokens by the current user's company and optionally by tracking_id."""
+        if not isinstance(self.request.user, User):
+            return Token.objects.none()
+        user: User = self.request.user
+        if not user.company:
+            return Token.objects.none()
+
+        queryset = Token.objects.filter(tracking__company=user.company).select_related("tracking")
+
+        # Filter by tracking_id if provided
+        tracking_id = self.request.query_params.get("tracking_id")
+        if tracking_id:
+            try:
+                queryset = queryset.filter(tracking_id=int(tracking_id))
+            except (ValueError, TypeError):
+                pass
+
+        return queryset
+
+    @action(detail=True, methods=["post"])
+    def disable(self, request: Request, pk: int) -> Response:
+        """Disable a token by setting its status to inactive."""
+        token = self.get_object()
+        token.status = TokenStatus.INACTIVE.value
+        token.save(update_fields=["status"])
+        from .serializers import TokenSerializer
+
+        return Response(TokenSerializer(token).data)
+
+    @action(detail=True, methods=["post"])
+    def reactivate(self, request: Request, pk: int) -> Response:
+        """Reactivate a token by setting its status to active."""
+        token = self.get_object()
+        token.status = TokenStatus.ACTIVE.value
+        token.deleted_on = None
+        token.save(update_fields=["status", "deleted_on"])
+        from .serializers import TokenSerializer
+
+        return Response(TokenSerializer(token).data)
+
+    @action(detail=False, methods=["post"])
+    def create_token(self, request: Request) -> Response:
+        """Create a new token for a tracking record."""
+        tracking_id = request.data.get("tracking_id")
+        if not tracking_id:
+            return Response(
+                {"error": "tracking_id is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            tracking = Tracking.objects.get(id=tracking_id)
+        except Tracking.DoesNotExist:
+            return Response(
+                {"error": "Tracking record not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verify tracking belongs to user's company
+        if not isinstance(request.user, User):
+            return Response(
+                {"error": "Unauthorized"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        user: User = request.user
+        if not user.company or tracking.company != user.company:
+            return Response(
+                {"error": "Tracking record does not belong to your company"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Generate a unique token value
+        import secrets
+
+        token_value = secrets.token_urlsafe(32)
+
+        # Ensure uniqueness
+        while Token.objects.filter(value=token_value).exists():
+            token_value = secrets.token_urlsafe(32)
+
+        token = Token.objects.create(
+            tracking=tracking,
+            value=token_value,
+            status=TokenStatus.ACTIVE.value,
+        )
+
+        from .serializers import TokenSerializer
+
+        return Response(TokenSerializer(token).data, status=status.HTTP_201_CREATED)

@@ -1,29 +1,45 @@
-import { NOT_AVAILABLE } from '../constants/ui';
-
 /**
  * Formats a date string to a localized string representation.
- * Returns NOT_AVAILABLE if the date string is undefined or empty.
+ * Returns null if the date string is undefined or empty.
  * 
  * @param dateString - The date string to format
- * @returns Formatted date string or NOT_AVAILABLE
+ * @returns Formatted date string or null
  */
-export const formatDate = (dateString: string | undefined): string => {
-    if (!dateString) return NOT_AVAILABLE;
+export const formatDate = (dateString: string | undefined | null): string|null => {
     try {
-        return new Date(dateString).toLocaleString();
-    } catch {
-        return dateString;
-    }
+        if (dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+    } catch {}
+
+    return null;
 };
 
 /**
  * Formats a coordinate value (latitude/longitude) to 4 decimal places.
- * Returns NOT_AVAILABLE if the value is undefined.
+ * Returns null if the value is undefined.
  * 
  * @param value - The coordinate value to format
- * @returns Formatted coordinate string or NOT_AVAILABLE
+ * @returns Formatted coordinate string or null.
  */
-export const formatCoordinate = (value: number | undefined): string => {
-    if (value === undefined) return NOT_AVAILABLE;
-    return value.toFixed(4);
+export const formatCoordinate = (value: number | undefined | null): string | null => {
+    if (value) {
+        return value.toFixed(4);
+    }
+    
+    return null;
+};
+
+export const formatDateTime = (dateString: string | undefined | null): string[] | null => {
+    try {
+        if (dateString) {
+            const date = new Date(dateString);
+            const datePart = date.toLocaleDateString();
+            const timePart = date.toLocaleTimeString();
+
+            return [datePart, timePart];
+        }
+    } catch {}
+
+    return null;
 };

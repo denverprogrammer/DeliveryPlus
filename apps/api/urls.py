@@ -5,6 +5,7 @@ from .management_views import CompanyViewSet
 from .management_views import RecipientViewSet
 from .management_views import RequestDataViewSet
 from .management_views import SignupViewSet
+from .management_views import TokenViewSet
 from .management_views import TrackingViewSet
 from .management_views import UserViewSet
 from .views import ImageReviewView
@@ -24,6 +25,7 @@ router.register(r"management/companies", CompanyViewSet, basename="companies")
 router.register(r"management/recipients", RecipientViewSet, basename="recipients")
 router.register(r"management/campaigns", CampaignViewSet, basename="campaigns")
 router.register(r"management/tracking", TrackingViewSet, basename="tracking")
+router.register(r"management/tokens", TokenViewSet, basename="tokens")
 router.register(r"management/request-data", RequestDataViewSet, basename="request-data")
 
 

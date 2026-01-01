@@ -1,31 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Alert } from 'react-bootstrap';
+import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { Button, Alert } from 'react-bootstrap';
 import { getTracking, deleteTracking } from '../services/api';
 import type { TrackingListItem } from '../types/api';
-import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
-import { isNonEmptyArray } from '../utils/typeGuards';
+import { TABLE_CAPTION_STYLE, ROUTES, NOT_AVAILABLE } from '../constants/ui';
+import DataTable from '../components/DataTable';
+import type { PaginationParams } from '../types/api';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const TrackingList = () => {
     const navigate = useNavigate();
     const [tracking, setTracking] = useState<TrackingListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadTracking = async () => {
+    const loadData = useCallback(async (_pagination: PaginationParams, _api: GridApi<TrackingListItem>) => {
         try {
             setIsLoading(true);
+            setError(null);
             const response = await getTracking();
-            setTracking(response || []);
+            setTracking(response.results);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        loadTracking();
     }, []);
 
     const handleDelete = async (id: number) => {
@@ -34,92 +34,103 @@ const TrackingList = () => {
         }
         try {
             await deleteTracking(id);
-            loadTracking();
+            // Reload data after delete
+            const response = await getTracking();
+            setTracking(response.results);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete tracking');
         }
     };
 
     const handleView = (record: TrackingListItem) => {
-        // Navigate to the top-level tracking detail page
         navigate(`${ROUTES.TRACKING}/${record.id}`);
     };
 
     const handleEdit = (record: TrackingListItem) => {
-        // Navigate to the top-level tracking edit page
         navigate(`${ROUTES.TRACKING}/${record.id}/edit`);
     };
 
-    if (isLoading) {
-        return <div>Loading...</div>;
-    }
+    const ActionsCellRenderer = (params: ICellRendererParams<TrackingListItem>) => {
+        const record = params.data;
+        if (!record) return null;
+        
+        return (
+            <div className="d-flex gap-2">
+                <i
+                    className="bi bi-eye text-info"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => handleView(record)}
+                    title="View"
+                />
+                <i
+                    className="bi bi-pencil text-primary"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => handleEdit(record)}
+                    title="Edit"
+                />
+                <i
+                    className="bi bi-trash text-danger"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => handleDelete(record.id)}
+                    title="Delete"
+                />
+            </div>
+        );
+    };
+
+    const columnDefs: ColDef<TrackingListItem>[] = useMemo(() => [
+        {
+            headerName: 'Campaign',
+            valueGetter: (params) => params.data?.campaign?.name || NOT_AVAILABLE,
+            sortable: true,
+            filter: true,
+        },
+        {
+            headerName: 'Recipient',
+            valueGetter: (params) => params.data?.recipient?.full_name || NOT_AVAILABLE,
+            sortable: true,
+            filter: true,
+        },
+        {
+            field: 'count_requests',
+            headerName: 'Request Count',
+            valueGetter: (params) => params.data?.count_requests || 0,
+            sortable: true,
+            filter: true,
+        },
+        {
+            headerName: 'Actions',
+            cellRenderer: ActionsCellRenderer,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            width: 120,
+            suppressSizeToFit: true,
+        },
+    ], []);
 
     return (
         <div>
             {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-            <Table striped bordered hover>
-                <caption className="p-0 fw-bold" style={TABLE_CAPTION_STYLE}>
-                    <div className="d-flex justify-content-between align-items-center">
-                        <span>Tracking</span>
-                        <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.TRACKING}/add`)}>
-                            Add Tracking
-                        </Button>
-                    </div>
-                </caption>
-                <thead>
-                    <tr>
-                        <th>Campaign</th>
-                        <th>Recipient</th>
-                        <th>Request Count</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {isNonEmptyArray(tracking) ? (
-                        tracking.map((record) => (
-                            <tr key={record.id}>
-                                <td>{record.campaign?.name || 'N/A'}</td>
-                                <td>{record.recipient?.full_name || 'N/A'}</td>
-                                <td>{record.count_requests || 0}</td>
-                                <td>
-                                    <Button
-                                        variant="info"
-                                        size="sm"
-                                        onClick={() => handleView(record)}
-                                        className="me-2"
-                                    >
-                                        View
-                                    </Button>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => handleEdit(record)}
-                                        className="me-2"
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() => handleDelete(record.id)}
-                                    >
-                                        Delete
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))
-                    ) : (
-                        <tr>
-                            <td colSpan={4} className="text-center">
-                                No tracking records found.
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </Table>
+            <div className="p-0 fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
+                <div className="d-flex justify-content-between align-items-center">
+                    <span>Tracking</span>
+                    <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.TRACKING}/add`)}>
+                        Add Tracking
+                    </Button>
+                </div>
+            </div>
+            <div style={{ height: '600px', width: '100%' }}>
+                <DataTable<TrackingListItem>
+                    columnDefs={columnDefs}
+                    data={tracking}
+                    isLoading={isLoading}
+                    loadData={loadData}
+                    noRowsMessage="No tracking records found."
+                />
+            </div>
         </div>
     );
 };
 
 export default TrackingList;
-

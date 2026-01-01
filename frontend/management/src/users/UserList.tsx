@@ -1,30 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Button, Alert } from 'react-bootstrap';
+import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { Button, Alert } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../services/api';
 import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
 import type { User } from '../types/api';
+import DataTable from '../components/DataTable';
+import type { PaginationParams } from '../types/api';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const UserList = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<User[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadUsers = async () => {
+    const loadData = useCallback(async (_pagination: PaginationParams, _api: GridApi<User>) => {
         try {
             setIsLoading(true);
+            setError(null);
             const response = await getUsers();
-            setUsers(response || []);
+            setUsers(response.results);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load users');
         } finally {
             setIsLoading(false);
         }
-    };
-
-    useEffect(() => {
-        loadUsers();
     }, []);
 
     const handleDelete = async (id: number) => {
@@ -33,67 +34,90 @@ const UserList = () => {
         }
         try {
             await deleteUser(id);
-            loadUsers();
+            // Reload data after delete
+            const response = await getUsers();
+            setUsers(response.results);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to delete user');
         }
     };
 
-    if (isLoading) {
-        return <div>Loading...</div>;
-    }
+    const ActionsCellRenderer = (params: ICellRendererParams<User>) => {
+        const user = params.data;
+        if (!user) return null;
+        
+        return (
+            <div className="d-flex gap-2">
+                <i
+                    className="bi bi-pencil text-primary"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}
+                    title="Edit"
+                />
+                <i
+                    className="bi bi-trash text-danger"
+                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                    onClick={() => handleDelete(user.id)}
+                    title="Delete"
+                />
+            </div>
+        );
+    };
+
+    const columnDefs: ColDef<User>[] = useMemo(() => [
+        { field: 'username', headerName: 'Username', sortable: true, filter: true },
+        { field: 'email', headerName: 'Email', sortable: true, filter: true },
+        {
+            headerName: 'Name',
+            valueGetter: (params) => `${params.data?.first_name || ''} ${params.data?.last_name || ''}`.trim(),
+            sortable: true,
+            filter: true,
+        },
+        {
+            field: 'is_active',
+            headerName: 'Active',
+            valueGetter: (params) => params.data?.is_active ? 'Yes' : 'No',
+            sortable: true,
+            filter: true,
+        },
+        {
+            field: 'is_staff',
+            headerName: 'Staff',
+            valueGetter: (params) => params.data?.is_staff ? 'Yes' : 'No',
+            sortable: true,
+            filter: true,
+        },
+        {
+            headerName: 'Actions',
+            cellRenderer: ActionsCellRenderer,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            width: 100,
+            suppressSizeToFit: true,
+        },
+    ], []);
 
     return (
         <div>
             {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
-            <Table striped bordered hover>
-                <caption className="p-0 fw-bold" style={TABLE_CAPTION_STYLE}>
-                    <div className="d-flex justify-content-between align-items-center">
-                        <span>Users</span>
-                        <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.USERS}/add`)}>
-                            Add User
-                        </Button>
-                    </div>
-                </caption>
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Name</th>
-                            <th>Active</th>
-                            <th>Staff</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {users.map((user) => (
-                            <tr key={user.id}>
-                                <td>{user.username}</td>
-                                <td>{user.email}</td>
-                                <td>{user.first_name} {user.last_name}</td>
-                                <td>{user.is_active ? 'Yes' : 'No'}</td>
-                                <td>{user.is_staff ? 'Yes' : 'No'}</td>
-                                <td>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}
-                                    className="me-2"
-                                >
-                                    Edit
-                                </Button>
-                                    <Button
-                                        variant="danger"
-                                        size="sm"
-                                        onClick={() => handleDelete(user.id)}
-                                    >
-                                        Delete
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </Table>
+            <div className="p-0 fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
+                <div className="d-flex justify-content-between align-items-center">
+                    <span>Users</span>
+                    <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.USERS}/add`)}>
+                        Add User
+                    </Button>
+                </div>
+            </div>
+            <div style={{ height: '600px', width: '100%' }}>
+                <DataTable<User>
+                    columnDefs={columnDefs}
+                    data={users}
+                    isLoading={isLoading}
+                    loadData={loadData}
+                    noRowsMessage="No users found."
+                />
+            </div>
         </div>
     );
 };

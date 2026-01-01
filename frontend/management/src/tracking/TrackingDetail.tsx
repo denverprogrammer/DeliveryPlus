@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Table, Alert, Form } from 'react-bootstrap';
-import { getTrackingRecord, getRequestDataList, type RequestDataFilters } from '../services/api';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { Alert, Form } from 'react-bootstrap';
+import { ColDef, ICellRendererParams, GridApi, themeQuartz, themeBalham, themeAlpine, themeMaterial } from 'ag-grid-community';
+import { getTrackingRecord, getRequestDataList, getTokenList, disableToken, reactivateToken, createToken } from '../services/api';
 import type { TrackingDetail, Token, RequestData } from '../types/api';
 import RequestDataModal from '../RequestDataModal';
-import PaginationControls from '../components/PaginationControls';
-import { TABLE_CAPTION_STYLE, SORT_ICON_STYLE, FILTER_INPUT_MIN_WIDTH, COLORS, DEBOUNCE_DELAY } from '../constants/ui';
+import { TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
 import { useParsedParam } from '../utils/params';
-import { isNonEmptyArray } from '../utils/typeGuards';
+import DataTable, { DateTimeCellRenderer } from '../components/DataTable';
+import type { PaginationParams } from '../types/api';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import { formatDate } from '../utils/formatting';
 
 const TrackingDetail = () => {
     const [trackingId] = useParsedParam('id');
@@ -16,28 +19,19 @@ const TrackingDetail = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedRequestDataId, setSelectedRequestDataId] = useState<number | null>(null);
     
-    // Request data pagination and filtering
+    // Theme selector state
+    const [selectedTheme, setSelectedTheme] = useState<string>('quartz');
+    
+    // Request data state
     const [requestData, setRequestData] = useState<RequestData[]>([]);
     const [requestDataLoading, setRequestDataLoading] = useState(false);
     const [requestDataError, setRequestDataError] = useState<string | null>(null);
-    const [pagination, setPagination] = useState({ count: 0, page: 1, page_size: 20, total_pages: 1 });
-    const [filters, setFilters] = useState<RequestDataFilters>({
-        tracking_id: trackingId || 0,
-        data_type: '',
-        http_method: '',
-        ip_address: '',
-        os: '',
-        browser: '',
-        platform: '',
-        locale: '',
-        server_timestamp: '',
-        client_time: '',
-        page: 1,
-        page_size: 20,
-        ordering: '',
-    });
-    const [sortColumn, setSortColumn] = useState<string>('');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | ''>('');
+    const [rowCount, setRowCount] = useState(0);
+    
+    // Token state
+    const [tokens, setTokens] = useState<Token[]>([]);
+    const [tokensLoading, setTokensLoading] = useState(false);
+    const [tokensError, setTokensError] = useState<string | null>(null);
 
     useEffect(() => {
         if (trackingId !== null) {
@@ -48,30 +42,6 @@ const TrackingDetail = () => {
         }
     }, [trackingId]);
 
-    useEffect(() => {
-        if (trackingId !== null) {
-            // Debounce filter changes
-            const timeoutId = setTimeout(() => {
-                loadRequestData();
-            }, DEBOUNCE_DELAY);
-            return () => clearTimeout(timeoutId);
-        }
-    }, [trackingId, filters]);
-
-    // Sync sort state with filters.ordering
-    useEffect(() => {
-        if (!filters.ordering) {
-            setSortColumn('');
-            setSortDirection('');
-        } else if (filters.ordering.startsWith('-')) {
-            setSortColumn(filters.ordering.substring(1));
-            setSortDirection('desc');
-        } else {
-            setSortColumn(filters.ordering);
-            setSortDirection('asc');
-        }
-    }, [filters.ordering]);
-
     const loadTracking = async () => {
         if (trackingId === null) {
             return;
@@ -80,8 +50,6 @@ const TrackingDetail = () => {
             setIsLoading(true);
             const tracking = await getTrackingRecord(trackingId);
             setTracking(tracking);
-            // Update filters with tracking ID
-            setFilters(prev => ({ ...prev, tracking_id: tracking.id }));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
         } finally {
@@ -89,110 +57,227 @@ const TrackingDetail = () => {
         }
     };
 
-    const loadRequestData = async () => {
+    const loadRequestData = useCallback(async (pagination: PaginationParams, _api: GridApi<RequestData>): Promise<void> => {
         if (trackingId === null) {
             return;
         }
+
         try {
             setRequestDataLoading(true);
             setRequestDataError(null);
+
             const response = await getRequestDataList({
-                ...filters,
                 tracking_id: trackingId,
+                ...(pagination.filters || {}),
+                ...pagination,
             });
             
-            if ('results' in response && Array.isArray(response.results)) {
-                setRequestData(response.results);
-                const pageSize = filters.page_size || 20;
-                const currentPage = filters.page || 1;
-                setPagination({
-                    count: response.count || 0,
-                    page: currentPage,
-                    page_size: pageSize,
-                    total_pages: Math.ceil((response.count || 0) / pageSize),
-                });
-            } else {
-                // Fallback if not paginated
-                const dataArray = Array.isArray(response) ? response : [];
-                setRequestData(dataArray);
-                setPagination({
-                    count: dataArray.length,
-                    page: 1,
-                    page_size: filters.page_size || 20,
-                    total_pages: 1,
-                });
-            }
+            setRequestData(response.results);
+            setRowCount(response.count);
         } catch (err) {
             setRequestDataError(err instanceof Error ? err.message : 'Failed to load request data');
             setRequestData([]);
+            setRowCount(0);
         } finally {
             setRequestDataLoading(false);
         }
+    }, [trackingId]);
+
+    const ViewCellRenderer = (params: ICellRendererParams<RequestData>) => {
+        const req = params.data;
+        if (!req) return null;
+        return (
+            <i
+                className="bi bi-eye text-info"
+                style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                onClick={() => {
+                    setSelectedRequestDataId(req.id);
+                    setShowModal(true);
+                }}
+                title="View"
+            />
+        );
     };
 
-    const handleFilterChange = (field: keyof RequestDataFilters, value: string) => {
-        setFilters(prev => ({ ...prev, [field]: value, page: 1 }));
-    };
-
-    const handlePageChange = (page: number) => {
-        setFilters(prev => ({ ...prev, page }));
-    };
-
-    const handleSort = (column: string) => {
-        if (sortColumn !== column) {
-            // New column - start with ascending
-            setSortColumn(column);
-            setSortDirection('asc');
-            setFilters(prev => ({ ...prev, ordering: column, page: 1 }));
-        } else if (sortDirection === 'asc') {
-            // Switch to descending
-            setSortDirection('desc');
-            setFilters(prev => ({ ...prev, ordering: `-${column}`, page: 1 }));
-        } else if (sortDirection === 'desc') {
-            // Remove sorting
-            setSortColumn('');
-            setSortDirection('');
-            setFilters(prev => ({ ...prev, ordering: '', page: 1 }));
+    const handleDisableToken = async (tokenId: number) => {
+        if (!window.confirm('Are you sure you want to disable this token?')) {
+            return;
         }
-    };
-
-    const getSortIcon = (column: string) => {
-        if (sortColumn !== column) {
-            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲▼</span>;
-        }
-        if (sortDirection === 'asc') {
-            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲</span>;
-        }
-        if (sortDirection === 'desc') {
-            return <span className="fw-bold" style={SORT_ICON_STYLE}> ▼</span>;
-        }
-        return <span className="fw-bold" style={SORT_ICON_STYLE}> ▲▼</span>;
-    };
-
-    const formatDate = (dateString: string) => {
-        if (!dateString) return 'N/A';
         try {
-            return new Date(dateString).toLocaleString();
-        } catch {
-            return dateString;
+            await disableToken(tokenId);
+            loadTracking(); // Reload tracking to refresh tokens
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to disable token');
         }
     };
 
-    const formatDateTime = (dateString: string) => {
-        if (!dateString) return <><span>N/A</span></>;
+    const handleReactivateToken = async (tokenId: number) => {
         try {
-            const date = new Date(dateString);
-            const datePart = date.toLocaleDateString();
-            const timePart = date.toLocaleTimeString();
-            return (
-                <>
-                    <span>{datePart}</span>, <span>{timePart}</span>
-                </>
-            );
-        } catch {
-            return <><span>{dateString}</span></>;
+            await reactivateToken(tokenId);
+            loadTracking(); // Reload tracking to refresh tokens
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to reactivate token');
         }
     };
+
+    const handleCreateToken = async () => {
+        if (trackingId === null) return;
+        try {
+            await createToken(trackingId);
+            loadTracking(); // Reload tracking to refresh tokens
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to create token');
+        }
+    };
+
+    const TokenActionsCellRenderer = (params: ICellRendererParams<Token>) => {
+        const token = params.data;
+        if (!token) return null;
+        
+        const isActive = token.status === 'active';
+        const isInactive = token.status === 'inactive';
+        
+        return (
+            <div className="d-flex gap-2">
+                {isActive && (
+                    <i
+                        className="bi bi-x-circle text-warning"
+                        style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                        onClick={() => handleDisableToken(token.id)}
+                        title="Disable"
+                    />
+                )}
+                {isInactive && (
+                    <i
+                        className="bi bi-arrow-clockwise text-success"
+                        style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                        onClick={() => handleReactivateToken(token.id)}
+                        title="Reactivate"
+                    />
+                )}
+            </div>
+        );
+    };
+
+    const columnDefs: ColDef<RequestData>[] = useMemo(() => [
+        {
+            field: 'server_timestamp',
+            headerName: 'Server Timestamp',
+            cellRenderer: DateTimeCellRenderer,
+            sortable: true,
+            filter: 'agDateColumnFilter',
+            filterParams: {
+                comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+                    if (!cellValue) return 0;
+                    const cellDate = new Date(cellValue);
+                    if (cellDate < filterLocalDateAtMidnight) {
+                        return -1;
+                    } else if (cellDate > filterLocalDateAtMidnight) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                },
+            },
+        },
+        { field: 'data_type', headerName: 'Type', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
+        { field: 'http_method', headerName: 'Method', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
+        { field: 'ip_address', headerName: 'IP Address', sortable: true, filter: 'agTextColumnFilter', width: 130, suppressSizeToFit: true },
+        { field: 'os', headerName: 'OS', sortable: true, filter: 'agTextColumnFilter' },
+        { field: 'browser', headerName: 'Browser', sortable: true, filter: 'agTextColumnFilter', width: 120, suppressSizeToFit: true },
+        { field: 'platform', headerName: 'Platform', sortable: true, filter: 'agTextColumnFilter', width: 120, suppressSizeToFit: true },
+        { field: 'locale', headerName: 'Locale', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
+        {
+            field: 'client_time',
+            headerName: 'Client Timestamp',
+            cellRenderer: DateTimeCellRenderer,
+            sortable: true,
+            filter: 'agDateColumnFilter',
+            filterParams: {
+                comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+                    if (!cellValue) return 0;
+                    const cellDate = new Date(cellValue);
+                    if (cellDate < filterLocalDateAtMidnight) {
+                        return -1;
+                    } else if (cellDate > filterLocalDateAtMidnight) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                },
+            },
+        },
+        {
+            headerName: 'Actions',
+            cellRenderer: ViewCellRenderer,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            width: 100,
+            suppressSizeToFit: true,
+        },
+    ], []);
+
+
+    const loadTokens = useCallback(async (pagination: PaginationParams, _api: GridApi<Token>): Promise<void> => {
+        if (trackingId === null) {
+            return;
+        }
+
+        try {
+            setTokensLoading(true);
+            setTokensError(null);
+
+            const response = await getTokenList({
+                tracking_id: trackingId,
+                ...pagination,
+            });
+            
+            setTokens(response.results);
+        } catch (err) {
+            setTokensError(err instanceof Error ? err.message : 'Failed to load tokens');
+            setTokens([]);
+        } finally {
+            setTokensLoading(false);
+        }
+    }, [trackingId]);
+
+    const tokenColumnDefs: ColDef<Token>[] = useMemo(() => [
+        { field: 'value', headerName: 'Value', sortable: true, filter: true },
+        { field: 'status', headerName: 'Status', sortable: true, filter: true, width: 100, suppressSizeToFit: true },
+        {
+            field: 'created_on',
+            headerName: 'Created',
+            valueGetter: (params) => formatDate(params?.data?.created_on) ?? NOT_AVAILABLE,
+            sortable: true,
+            filter: true,
+        },
+        {
+            field: 'last_used',
+            headerName: 'Last Used',
+            valueGetter: (params) => formatDate(params?.data?.last_used) ?? NOT_AVAILABLE,
+            sortable: true,
+            filter: true,
+        },
+        {
+            headerName: 'Used',
+            valueGetter: (params) => params.data?.used || 0,
+            sortable: true,
+            filter: true,
+            width: 80,
+            suppressSizeToFit: true,
+        },
+        {
+            headerName: 'Actions',
+            cellRenderer: TokenActionsCellRenderer,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            width: 100,
+            suppressSizeToFit: true,
+        },
+    ], [tracking?.count_requests]);
+
 
     if (isLoading) {
         return <div>Loading...</div>;
@@ -206,15 +291,50 @@ const TrackingDetail = () => {
         return <Alert variant="warning">Tracking record not found</Alert>;
     }
 
-    const tokens = tracking.tokens ?? [];
+    const themeOptions = [
+        { value: 'quartz', label: 'Quartz' },
+        { value: 'balham', label: 'Balham' },
+        { value: 'alpine', label: 'Alpine' },
+        { value: 'material', label: 'Material' },
+    ];
+
+    const getTheme = (themeName: string) => {
+        switch (themeName) {
+            case 'quartz':
+                return themeQuartz;
+            case 'balham':
+                return themeBalham;
+            case 'alpine':
+                return themeAlpine;
+            case 'material':
+                return themeMaterial;
+            default:
+                return themeQuartz;
+        }
+    };
+
+    const currentTheme = getTheme(selectedTheme);
 
     return (
         <div>
-            <h3 className="mb-3">Tracking Details</h3>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <h3 className="mb-0">Tracking Details</h3>
+                <Form.Select
+                    value={selectedTheme}
+                    onChange={(e) => setSelectedTheme(e.target.value)}
+                    style={{ width: '200px' }}
+                >
+                    {themeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </Form.Select>
+            </div>
             <div className="row mb-4">
                 <div className="col-md-6">
-                    <p><strong>Campaign:</strong> {tracking.campaign?.name || 'N/A'}</p>
-                    <p><strong>Recipient:</strong> {tracking.recipient?.full_name || 'N/A'}</p>
+                    <p><strong>Campaign:</strong> {tracking.campaign?.name || NOT_AVAILABLE}</p>
+                    <p><strong>Recipient:</strong> {tracking.recipient?.full_name || NOT_AVAILABLE}</p>
                 </div>
                 <div className="col-md-6">
                     <p><strong>Request Count:</strong> {tracking.count_requests || 0}</p>
@@ -223,208 +343,52 @@ const TrackingDetail = () => {
 
             {/* Tokens Section */}
             <div className="mb-4">
-                {isNonEmptyArray(tokens) ? (
-                    <Table striped bordered hover>
-                        <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>Tokens</caption>
-                        <thead>
-                            <tr>
-                                <th>Value</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Last Used</th>
-                                <th>Used</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tokens.map((token: Token) => (
-                                <tr key={token.id}>
-                                    <td>{token.value}</td>
-                                    <td>{token.status}</td>
-                                    <td>{formatDate(token.created_on)}</td>
-                                    <td>{token.last_used ? formatDate(token.last_used) : 'N/A'}</td>
-                                    <td>{token.used !== undefined ? token.used : tracking.count_requests || 0}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
-                ) : (
-                    <p className="text-muted">No tokens found.</p>
+                <div className="fw-bold mb-2 d-flex justify-content-between align-items-center" style={TABLE_CAPTION_STYLE}>
+                    <span>Tokens</span>
+                    <i
+                        className="bi bi-plus-circle text-primary"
+                        style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                        onClick={handleCreateToken}
+                        title="Create New Token"
+                    />
+                </div>
+                {tokensError && (
+                    <Alert variant="danger" className="mb-2">{tokensError}</Alert>
                 )}
+                <div style={{ height: '300px', width: '100%' }}>
+                    <DataTable<Token>
+                        key={selectedTheme + '1'}
+                        columnDefs={tokenColumnDefs}
+                        data={tokens}
+                        isLoading={tokensLoading}
+                        loadData={loadTokens}
+                        theme={currentTheme}
+                        noRowsMessage="No tokens found."
+                    />
+                </div>
             </div>
 
             {/* Request Data Section */}
             <div>
-                <Table striped bordered hover size="sm">
-                    <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                        Request Data {pagination.count > 0 && `(${pagination.count} total)`}
-                    </caption>
-                    <thead>
-                        <tr>
-                            <th className="text-center" style={{ cursor: 'pointer' }} onClick={() => handleSort('server_timestamp')}>
-                                Timestamp {getSortIcon('server_timestamp')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('data_type')}>
-                                Type {getSortIcon('data_type')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('http_method')}>
-                                Method {getSortIcon('http_method')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('ip_address')}>
-                                IP Address {getSortIcon('ip_address')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer' }} onClick={() => handleSort('os')}>
-                                OS {getSortIcon('os')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('browser')}>
-                                Browser {getSortIcon('browser')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('platform')}>
-                                Platform {getSortIcon('platform')}
-                            </th>
-                            <th className="text-center text-nowrap" style={{ cursor: 'pointer', width: 'auto' }} onClick={() => handleSort('locale')}>
-                                Locale {getSortIcon('locale')}
-                            </th>
-                            <th className="text-center" style={{ cursor: 'pointer' }} onClick={() => handleSort('client_time')}>
-                                Client Time {getSortIcon('client_time')}
-                            </th>
-                            <th className="text-center">
-                                ####
-                            </th>
-                        </tr>
-                        {/* Filters Row */}
-                        <tr>
-                            <td>
-                                <Form.Control
-                                    size="sm"
-                                    type="date"
-                                    value={filters.server_timestamp || ''}
-                                    onChange={(e) => handleFilterChange('server_timestamp', e.target.value)}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="Data Type"
-                                    value={filters.data_type || ''}
-                                    onChange={(e) => handleFilterChange('data_type', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="HTTP Method"
-                                    value={filters.http_method || ''}
-                                    onChange={(e) => handleFilterChange('http_method', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="IP Address"
-                                    value={filters.ip_address || ''}
-                                    onChange={(e) => handleFilterChange('ip_address', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.MEDIUM }}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="OS"
-                                    value={filters.os || ''}
-                                    onChange={(e) => handleFilterChange('os', e.target.value)}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="Browser"
-                                    value={filters.browser || ''}
-                                    onChange={(e) => handleFilterChange('browser', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="Platform"
-                                    value={filters.platform || ''}
-                                    onChange={(e) => handleFilterChange('platform', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
-                                />
-                            </td>
-                            <td className="text-nowrap" style={{ width: '1%' }}>
-                                <Form.Control
-                                    size="sm"
-                                    placeholder="Locale"
-                                    value={filters.locale || ''}
-                                    onChange={(e) => handleFilterChange('locale', e.target.value)}
-                                    style={{ width: 'auto', minWidth: FILTER_INPUT_MIN_WIDTH.SMALL }}
-                                />
-                            </td>
-                            <td>
-                                <Form.Control
-                                    size="sm"
-                                    type="date"
-                                    value={filters.client_time || ''}
-                                    onChange={(e) => handleFilterChange('client_time', e.target.value)}
-                                />
-                            </td>
-                            <td></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requestDataLoading ? (
-                            <tr>
-                                <td colSpan={10} className="text-center">Loading...</td>
-                            </tr>
-                        ) : requestDataError ? (
-                            <tr>
-                                <td colSpan={10} className="text-center text-danger">{requestDataError}</td>
-                            </tr>
-                        ) : isNonEmptyArray(requestData) ? (
-                            requestData.map((req: RequestData) => (
-                                <tr key={req.id}>
-                                    <td>{formatDateTime(req.server_timestamp)}</td>
-                                    <td className="text-nowrap">{req.data_type || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.http_method || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.ip_address || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.os || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.browser || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.platform || 'N/A'}</td>
-                                    <td className="text-nowrap">{req.locale || 'N/A'}</td>
-                                    <td>{req.client_time ? formatDateTime(req.client_time) : <><span>N/A</span></>}</td>
-                                    <td>
-                                        <button
-                                            className="btn btn-link p-0 text-decoration-underline border-0 bg-transparent"
-                                            style={{ color: COLORS.PRIMARY }}
-                                            onClick={() => {
-                                                setSelectedRequestDataId(req.id);
-                                                setShowModal(true);
-                                            }}
-                                        >
-                                            View
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={10} className="text-center text-muted">No request data found.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </Table>
-                
-                <PaginationControls
-                    pagination={pagination}
-                    pageSize={filters.page_size || 20}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={(newPageSize) => {
-                        setFilters((prev) => ({ ...prev, page_size: newPageSize, page: 1 }));
-                    }}
-                />
+                <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
+                    Request Data {rowCount > 0 && `(${rowCount} total)`}
+                </div>
+
+                {requestDataError && (
+                    <Alert variant="danger" className="mb-2">{requestDataError}</Alert>
+                )}
+
+                <div style={{ height: '600px', width: '100%' }}>
+                    <DataTable<RequestData>
+                        key={selectedTheme + '2'}
+                        columnDefs={columnDefs}
+                        data={requestData}
+                        isLoading={requestDataLoading}
+                        loadData={loadRequestData}
+                        theme={currentTheme}
+                        noRowsMessage="No request data found."
+                    />
+                </div>
             </div>
 
             <RequestDataModal

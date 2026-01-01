@@ -42,7 +42,7 @@ const TrackingForm = () => {
     const loadCampaigns = async () => {
         try {
             const response = await getCampaigns();
-            setCampaigns(response || []);
+            setCampaigns(response.results);
         } catch (err) {
             console.error('Failed to load campaigns:', err);
         }
@@ -51,7 +51,7 @@ const TrackingForm = () => {
     const loadRecipients = async () => {
         try {
             const response = await getRecipients();
-            setRecipients(response || []);
+            setRecipients(response.results);
         } catch (err) {
             console.error('Failed to load recipients:', err);
         }

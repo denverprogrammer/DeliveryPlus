@@ -18,8 +18,10 @@ import type {
     SignupPayload,
     DashboardData,
     PaginatedResponse,
+    PaginationParams,
     RequestData,
     RequestDataDetail,
+    Token,
 } from '../types/api';
 
 // Configure axios defaults
@@ -93,14 +95,19 @@ export const signup = async (payload: SignupPayload): Promise<SignupResponse> =>
 };
 
 // User management functions
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (): Promise<PaginatedResponse<User>> => {
     const response = await api.get<User[] | PaginatedResponse<User>>('/api/management/users/');
     const data = response.data;
-    // Handle both array and paginated response
+    // Always return PaginatedResponse format
     if (Array.isArray(data)) {
-        return data;
+        return {
+            count: data.length,
+            next: null,
+            previous: null,
+            results: data,
+        };
     }
-    return data.results;
+    return data;
 };
 
 export const getUser = async (id: number): Promise<User> => {
@@ -134,14 +141,19 @@ export const updateCompanyAPI = async (data: CompanyUpdatePayload): Promise<Comp
 };
 
 // Campaign management functions
-export const getCampaigns = async (): Promise<Campaign[]> => {
+export const getCampaigns = async (): Promise<PaginatedResponse<Campaign>> => {
     const response = await api.get<Campaign[] | PaginatedResponse<Campaign>>('/api/management/campaigns/');
     const data = response.data;
-    // Handle both array and paginated response
+    // Always return PaginatedResponse format
     if (Array.isArray(data)) {
-        return data;
+        return {
+            count: data.length,
+            next: null,
+            previous: null,
+            results: data,
+        };
     }
-    return data.results;
+    return data;
 };
 
 export const getCampaign = async (id: number): Promise<Campaign> => {
@@ -164,14 +176,19 @@ export const deleteCampaign = async (id: number): Promise<void> => {
 };
 
 // Tracking management functions
-export const getTracking = async (): Promise<TrackingListItem[]> => {
+export const getTracking = async (): Promise<PaginatedResponse<TrackingListItem>> => {
     const response = await api.get<TrackingListItem[] | PaginatedResponse<TrackingListItem>>('/api/management/tracking/');
     const data = response.data;
-    // Handle both array and paginated response
+    // Always return PaginatedResponse format
     if (Array.isArray(data)) {
-        return data;
+        return {
+            count: data.length,
+            next: null,
+            previous: null,
+            results: data,
+        };
     }
-    return data.results;
+    return data;
 };
 
 export const getTrackingRecord = async (id: number): Promise<TrackingDetail> => {
@@ -194,14 +211,19 @@ export const deleteTracking = async (id: number): Promise<void> => {
 };
 
 // Recipient management functions
-export const getRecipients = async (): Promise<Recipient[]> => {
+export const getRecipients = async (): Promise<PaginatedResponse<Recipient>> => {
     const response = await api.get<Recipient[] | PaginatedResponse<Recipient>>('/api/management/recipients/');
     const data = response.data;
-    // Handle both array and paginated response
+    // Always return PaginatedResponse format
     if (Array.isArray(data)) {
-        return data;
+        return {
+            count: data.length,
+            next: null,
+            previous: null,
+            results: data,
+        };
     }
-    return data.results;
+    return data;
 };
 
 export const getRecipient = async (id: number): Promise<Recipient> => {
@@ -229,7 +251,7 @@ export const getRequestData = async (id: number): Promise<RequestDataDetail> => 
     return response.data;
 };
 
-export interface RequestDataFilters {
+export interface RequestDataFilters extends PaginationParams {
     tracking_id: number;
     data_type?: string;
     http_method?: string;
@@ -240,28 +262,62 @@ export interface RequestDataFilters {
     locale?: string;
     server_timestamp?: string;
     client_time?: string;
-    page?: number;
-    page_size?: number;
-    ordering?: string;
 }
 
 export const getRequestDataList = async (filters: RequestDataFilters): Promise<PaginatedResponse<RequestData>> => {
     const params = new URLSearchParams();
     params.append('tracking_id', filters.tracking_id.toString());
-    if (filters.data_type) params.append('data_type', filters.data_type);
-    if (filters.http_method) params.append('http_method', filters.http_method);
-    if (filters.ip_address) params.append('ip_address', filters.ip_address);
-    if (filters.os) params.append('os', filters.os);
-    if (filters.browser) params.append('browser', filters.browser);
-    if (filters.platform) params.append('platform', filters.platform);
-    if (filters.locale) params.append('locale', filters.locale);
-    if (filters.server_timestamp) params.append('server_timestamp', filters.server_timestamp);
-    if (filters.client_time) params.append('client_time', filters.client_time);
+    
+    // Handle filters from PaginationParams.filters (spread in TrackingDetail) or direct filter fields
+    const filterFields = filters.filters || {};
+    if (filters.data_type ?? filterFields.data_type) params.append('data_type', String(filters.data_type ?? filterFields.data_type));
+    if (filters.http_method ?? filterFields.http_method) params.append('http_method', String(filters.http_method ?? filterFields.http_method));
+    if (filters.ip_address ?? filterFields.ip_address) params.append('ip_address', String(filters.ip_address ?? filterFields.ip_address));
+    if (filters.os ?? filterFields.os) params.append('os', String(filters.os ?? filterFields.os));
+    if (filters.browser ?? filterFields.browser) params.append('browser', String(filters.browser ?? filterFields.browser));
+    if (filters.platform ?? filterFields.platform) params.append('platform', String(filters.platform ?? filterFields.platform));
+    if (filters.locale ?? filterFields.locale) params.append('locale', String(filters.locale ?? filterFields.locale));
+    if (filters.server_timestamp ?? filterFields.server_timestamp) params.append('server_timestamp', String(filters.server_timestamp ?? filterFields.server_timestamp));
+    if (filters.client_time ?? filterFields.client_time) params.append('client_time', String(filters.client_time ?? filterFields.client_time));
+    
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.page_size) params.append('page_size', filters.page_size.toString());
     if (filters.ordering) params.append('ordering', filters.ordering);
     
     const response = await api.get<PaginatedResponse<RequestData>>(`/api/management/request-data/?${params.toString()}`);
+    return response.data;
+};
+
+// Token functions
+export interface TokenFilters extends PaginationParams {
+    tracking_id: number;
+}
+
+export const getTokenList = async (filters: TokenFilters): Promise<PaginatedResponse<Token>> => {
+    const params = new URLSearchParams();
+    params.append('tracking_id', filters.tracking_id.toString());
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.page_size) params.append('page_size', filters.page_size.toString());
+    if (filters.ordering) params.append('ordering', filters.ordering);
+    
+    const response = await api.get<PaginatedResponse<Token>>(`/api/management/tokens/?${params.toString()}`);
+    return response.data;
+};
+
+export const disableToken = async (id: number): Promise<Token> => {
+    const response = await api.post<Token>(`/api/management/tokens/${id}/disable/`);
+    return response.data;
+};
+
+export const reactivateToken = async (id: number): Promise<Token> => {
+    const response = await api.post<Token>(`/api/management/tokens/${id}/reactivate/`);
+    return response.data;
+};
+
+export const createToken = async (trackingId: number): Promise<Token> => {
+    const response = await api.post<Token>('/api/management/tokens/create_token/', {
+        tracking_id: trackingId,
+    });
     return response.data;
 };
 

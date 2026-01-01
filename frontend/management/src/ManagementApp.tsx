@@ -1,5 +1,15 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 import 'bootswatch/dist/sandstone/bootstrap.min.css';
+import 'ag-grid-community/styles/ag-grid.css';
+// Import all themes for testing
+import 'ag-grid-community/styles/ag-theme-quartz.css';
+import 'ag-grid-community/styles/ag-theme-balham.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+import 'ag-grid-community/styles/ag-theme-material.css';
+
+// Register AG Grid modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 // Components
 import Navigation from './components/Navigation';

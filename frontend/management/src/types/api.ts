@@ -269,6 +269,14 @@ export interface ApiError {
     detail?: string;
 }
 
+// Pagination parameters for API requests
+export interface PaginationParams {
+    page?: number;
+    page_size?: number;
+    ordering?: string;
+    filters?: Record<string, any>;
+}
+
 // Paginated response (DRF default)
 export interface PaginatedResponse<T> {
     count: number;

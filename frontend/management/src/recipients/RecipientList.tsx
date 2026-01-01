@@ -1,82 +1,93 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Table, Alert } from 'react-bootstrap';
+import { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { Alert, Button } from 'react-bootstrap';
 import { getRecipients } from '../services/api';
 import type { Recipient } from '../types/api';
-import { isNonEmptyArray } from '../utils/typeGuards';
+import { NOT_AVAILABLE, ROUTES, TABLE_CAPTION_STYLE } from '../constants/ui';
+import DataTable from '../components/DataTable';
+import type { PaginationParams } from '../types/api';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const RecipientList = () => {
+    const navigate = useNavigate();
     const [recipients, setRecipients] = useState<Recipient[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchRecipients = async () => {
-            try {
-                const data = await getRecipients();
-                setRecipients(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load recipients');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchRecipients();
+    const loadData = useCallback(async (_pagination: PaginationParams, _api: GridApi<Recipient>) => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await getRecipients();
+            setRecipients(response.results);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load recipients');
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    if (isLoading) {
-        return <div>Loading recipients...</div>;
-    }
+    const ActionsCellRenderer = (params: ICellRendererParams<Recipient>) => {
+        const recipient = params.data;
+        if (!recipient) return null;
+        
+        return (
+            <i
+                className="bi bi-pencil text-primary"
+                style={{ cursor: 'pointer', fontSize: '1.2rem' }}
+                onClick={() => navigate(`${ROUTES.RECIPIENTS}/${recipient.id}/edit`)}
+                title="Edit"
+            />
+        );
+    };
 
-    if (error) {
-        return <Alert variant="danger">{error}</Alert>;
-    }
+    const columnDefs: ColDef<Recipient>[] = useMemo(() => [
+        {
+            headerName: 'Name',
+            valueGetter: (params) => `${params.data?.first_name || ''} ${params.data?.last_name || ''}`.trim(),
+            sortable: true,
+            filter: true,
+        },
+        { field: 'email', headerName: 'Email', sortable: true, filter: true },
+        {
+            field: 'status',
+            headerName: 'Status',
+            valueGetter: (params) => params.data?.status || NOT_AVAILABLE,
+            sortable: true,
+            filter: true,
+        },
+        {
+            headerName: 'Actions',
+            cellRenderer: ActionsCellRenderer,
+            sortable: false,
+            filter: false,
+            pinned: 'right',
+            width: 80,
+            suppressSizeToFit: true,
+        },
+    ], []);
 
     return (
         <div>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h2>Recipients List</h2>
-                <Link to="/recipients/add" className="btn btn-primary">
-                    Add Recipient
-                </Link>
+            {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+            <div className="p-0 fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
+                <div className="d-flex justify-content-between align-items-center">
+                    <span>Recipients</span>
+                    <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.RECIPIENTS}/add`)}>
+                        Add Recipient
+                    </Button>
+                </div>
             </div>
-
-            <Table striped bordered hover>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {isNonEmptyArray(recipients) ? (
-                        recipients.map((recipient) => (
-                            <tr key={recipient.id}>
-                                <td>{recipient.first_name} {recipient.last_name}</td>
-                                <td>{recipient.email}</td>
-                                <td>{recipient.status || 'N/A'}</td>
-                                <td>
-                                    <Link 
-                                        to={`/recipients/${recipient.id}/edit`}
-                                        className="btn btn-outline-primary btn-sm"
-                                    >
-                                        Edit
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))
-                    ) : (
-                        <tr>
-                            <td colSpan={4} className="text-center">
-                                No recipients found.
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </Table>
+            <div style={{ height: '600px', width: '100%' }}>
+                <DataTable<Recipient>
+                    columnDefs={columnDefs}
+                    data={recipients}
+                    isLoading={isLoading}
+                    loadData={loadData}
+                    noRowsMessage="No recipients found."
+                />
+            </div>
         </div>
     );
 };

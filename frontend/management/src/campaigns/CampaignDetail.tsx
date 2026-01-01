@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Alert, Button } from 'react-bootstrap';
+import { AgGridReact } from 'ag-grid-react';
 import { getCampaign } from '../services/api';
 import type { Campaign } from '../types/api';
-import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
+import { TABLE_CAPTION_STYLE, ROUTES, NOT_AVAILABLE } from '../constants/ui';
 import { isNonEmptyArray } from '../utils/typeGuards';
 import { useParsedParam } from '../utils/params';
+import { defaultColDef, getRowClass } from '../components/DataTable';
 
 const CampaignDetail = () => {
     const navigate = useNavigate();
@@ -50,6 +52,7 @@ const CampaignDetail = () => {
         return <Alert variant="warning">Campaign not found</Alert>;
     }
 
+
     return (
         <div>
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -91,7 +94,7 @@ const CampaignDetail = () => {
                             </tr>
                             <tr>
                                 <th>Description</th>
-                                <td>{campaign.description || 'N/A'}</td>
+                                <td>{campaign.description || NOT_AVAILABLE}</td>
                             </tr>
                             <tr>
                                 <th>Landing Page URL</th>
@@ -101,7 +104,7 @@ const CampaignDetail = () => {
                                             {campaign.landing_page_url}
                                         </a>
                                     ) : (
-                                        'N/A'
+                                        NOT_AVAILABLE
                                     )}
                                 </td>
                             </tr>
@@ -113,23 +116,23 @@ const CampaignDetail = () => {
                         <tbody>
                             <tr>
                                 <th className="w-25">IP Precedence</th>
-                                <td>{campaign.ip_precedence || 'N/A'}</td>
+                                <td>{campaign.ip_precedence || NOT_AVAILABLE}</td>
                             </tr>
                             <tr>
                                 <th>Location Precedence</th>
-                                <td>{campaign.location_precedence || 'N/A'}</td>
+                                <td>{campaign.location_precedence || NOT_AVAILABLE}</td>
                             </tr>
                             <tr>
                                 <th>Locale Precedence</th>
-                                <td>{campaign.locale_precedence || 'N/A'}</td>
+                                <td>{campaign.locale_precedence || NOT_AVAILABLE}</td>
                             </tr>
                             <tr>
                                 <th>Browser Precedence</th>
-                                <td>{campaign.browser_precedence || 'N/A'}</td>
+                                <td>{campaign.browser_precedence || NOT_AVAILABLE}</td>
                             </tr>
                             <tr>
                                 <th>Time Precedence</th>
-                                <td>{campaign.time_precedence || 'N/A'}</td>
+                                <td>{campaign.time_precedence || NOT_AVAILABLE}</td>
                             </tr>
                         </tbody>
                     </Table>
@@ -140,129 +143,103 @@ const CampaignDetail = () => {
             <div className="mb-4">
                 <h4 className="mb-3">Tracking Configuration</h4>
                 <div className="row">
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                IP Tracking
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.ip_tracking) ? (
-                                    campaign.ip_tracking.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No IP tracking configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>IP Tracking</div>
+                        {isNonEmptyArray(campaign.ip_tracking) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.ip_tracking.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={defaultColDef}
+                                    getRowClass={getRowClass}
+                                    animateRows={true}
+                                    pagination={true}
+                                    paginationPageSize={20}
+                                    paginationPageSizeSelector={[10, 20, 50, 100]}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No IP tracking configured</p>
+                        )}
                     </div>
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                Location Tracking
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.location_tracking) ? (
-                                    campaign.location_tracking.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No location tracking configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>Location Tracking</div>
+                        {isNonEmptyArray(campaign.location_tracking) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.location_tracking.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={{ resizable: true }}
+                                    animateRows={true}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No location tracking configured</p>
+                        )}
                     </div>
                 </div>
                 <div className="row mt-3">
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                Locale Tracking
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.locale_tracking) ? (
-                                    campaign.locale_tracking.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No locale tracking configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>Locale Tracking</div>
+                        {isNonEmptyArray(campaign.locale_tracking) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.locale_tracking.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={{ resizable: true }}
+                                    animateRows={true}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No locale tracking configured</p>
+                        )}
                     </div>
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                Browser Tracking
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.browser_tracking) ? (
-                                    campaign.browser_tracking.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No browser tracking configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>Browser Tracking</div>
+                        {isNonEmptyArray(campaign.browser_tracking) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.browser_tracking.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={{ resizable: true }}
+                                    animateRows={true}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No browser tracking configured</p>
+                        )}
                     </div>
                 </div>
                 <div className="row mt-3">
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                Time Tracking
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.time_tracking) ? (
-                                    campaign.time_tracking.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No time tracking configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>Time Tracking</div>
+                        {isNonEmptyArray(campaign.time_tracking) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.time_tracking.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={{ resizable: true }}
+                                    animateRows={true}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No time tracking configured</p>
+                        )}
                     </div>
-                    <div className="col-md-6">
-                        <Table striped bordered hover size="sm">
-                            <caption className="fw-bold" style={TABLE_CAPTION_STYLE}>
-                                Publishing Type
-                            </caption>
-                            <tbody>
-                                {isNonEmptyArray(campaign.publishing_type) ? (
-                                    campaign.publishing_type.map((item, index) => (
-                                        <tr key={index}>
-                                            <td>{item}</td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td className="text-muted">No publishing types configured</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </Table>
+                    <div className="col-md-6 mb-3">
+                        <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>Publishing Type</div>
+                        {isNonEmptyArray(campaign.publishing_type) ? (
+                            <div className="ag-theme-quartz" style={{ height: '200px', width: '100%' }}>
+                                <AgGridReact
+                                    rowData={campaign.publishing_type.map((item, index) => ({ id: index, value: item }))}
+                                    columnDefs={[{ field: 'value', headerName: 'Value', sortable: true, filter: true }]}
+                                    defaultColDef={{ resizable: true }}
+                                    animateRows={true}
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-muted">No publishing types configured</p>
+                        )}
                     </div>
                 </div>
             </div>
