@@ -1,16 +1,16 @@
 import { Navbar, Nav, Container } from 'react-bootstrap';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ROUTES } from '../constants/ui';
+import { useNavigator } from '../utils/routes';
 
 const Navigation = () => {
     const location = useLocation();
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const { isAuthenticated, logout, user } = useAuth();
     
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
+        navigator.sendToLogin();
     };
     
     // Determine if we're in the management section
@@ -57,8 +57,8 @@ const Navigation = () => {
                             <>
                                 <Nav.Link 
                                     as={Link} 
-                                    to={ROUTES.PROFILE}
-                                    active={location.pathname === ROUTES.PROFILE}
+                                    to={navigator.getProfileUrl()}
+                                    active={location.pathname === navigator.getProfileUrl()}
                                 >
                                     Welcome {user?.username || 'User'}
                                 </Nav.Link>

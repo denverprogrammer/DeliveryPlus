@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import _ from 'lodash';
-import { getTrackingRecord, createTracking, updateTracking, getCampaigns, getRecipients } from '../services/api';
+import { getTrackingDetail, createTracking, updateTracking, getCampaigns, getRecipients } from '../services/api';
 import type { Campaign, Recipient, TrackingCreatePayload, TrackingUpdatePayload } from '../types/api';
 import { useParsedParam } from '../utils/params';
+import { useNavigator } from '../utils/routes';
 
 interface TrackingFormData {
     campaign: string;
@@ -17,7 +17,7 @@ interface TrackingFormErrors {
 }
 
 const TrackingForm = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [trackingId] = useParsedParam('id');
     const isEdit = trackingId !== null;
     const [formData, setFormData] = useState<TrackingFormData>({
@@ -64,7 +64,7 @@ const TrackingForm = () => {
         }
         try {
             setIsLoadingData(true);
-            const tracking = await getTrackingRecord(trackingId);
+            const tracking = await getTrackingDetail(trackingId);
             setFormData({
                 campaign: tracking.campaign.id.toString(),
                 recipient: tracking.recipient?.id.toString() || '',
@@ -118,7 +118,7 @@ const TrackingForm = () => {
                 await createTracking(data);
             }
             // Always navigate to /tracking after save
-            navigate('/tracking');
+            navigator.sendToTracking();
         } catch (err) {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosError = err as { response?: { data?: { errors?: TrackingFormErrors } } };
@@ -201,7 +201,7 @@ const TrackingForm = () => {
                         <Button type="submit" variant="primary" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                         </Button>
-                        <Button type="button" variant="secondary" onClick={() => navigate('/tracking')}>
+                        <Button type="button" variant="secondary" onClick={() => navigator.sendToTracking()}>
                             Cancel
                         </Button>
                     </div>

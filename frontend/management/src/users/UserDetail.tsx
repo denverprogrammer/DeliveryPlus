@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Table, Button, Alert } from 'react-bootstrap';
 import { getUser } from '../services/api';
 import { useParsedParam } from '../utils/params';
-import { ROUTES, TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
+import { TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
 import type { User } from '../types/api';
+import { useNavigator } from '../utils/routes';
 
 const UserDetail = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [userId] = useParsedParam('id');
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -55,10 +55,10 @@ const UserDetail = () => {
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3>User Details</h3>
                 <div className="d-flex gap-2">
-                    <Button variant="primary" onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}>
+                    <Button variant="primary" onClick={() => navigator.sendToEditUser(user.id)}>
                         Edit
                     </Button>
-                    <Button variant="secondary" onClick={() => navigate(ROUTES.USERS)}>
+                    <Button variant="secondary" onClick={() => navigator.sendToUsers()}>
                         Back to List
                     </Button>
                 </div>

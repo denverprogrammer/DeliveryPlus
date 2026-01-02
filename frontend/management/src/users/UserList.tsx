@@ -1,17 +1,16 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { GridApi } from 'ag-grid-community';
 import { Button, Alert } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../services/api';
-import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
+import { TABLE_CAPTION_STYLE } from '../constants/ui';
 import type { User } from '../types/api';
 import DataTable from '../components/DataTable';
 import type { PaginationParams } from '../types/api';
-import { useActionHandlers } from '../utils/listHandlers';
+import { useNavigator } from '../utils/routes';
 import { useColumnDefs } from '../hooks/useColumnDefs';
 
 const UserList = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -29,15 +28,27 @@ const UserList = () => {
         }
     }, []);
 
-    const { handleView, handleEdit, handleDelete } = useActionHandlers<User>({
-        baseRoute: ROUTES.USERS,
-        onDelete: deleteUser,
-        onDeleteSuccess: async () => {
+    const handleView = useCallback((user: User) => {
+        navigator.sendToUser(user.id);
+    }, [navigator]);
+
+    const handleEdit = useCallback((user: User) => {
+        navigator.sendToEditUser(user.id);
+    }, [navigator]);
+
+    const handleDelete = useCallback(async (user: User) => {
+        if (!window.confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+        try {
+            await deleteUser(user.id);
             const response = await getUsers();
             setUsers(response.results);
-        },
-        deleteConfirmMessage: 'Are you sure you want to delete this user?',
-    });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete user');
+            throw err;
+        }
+    }, []);
 
     const columnDefs = useColumnDefs<User>('userList', { view: handleView, edit: handleEdit, delete: handleDelete });
 
@@ -47,7 +58,7 @@ const UserList = () => {
             <div className="p-0 fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
                 <div className="d-flex justify-content-between align-items-center">
                     <span>Users</span>
-                    <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.USERS}/add`)}>
+                    <Button variant="primary" size="sm" onClick={() => navigator.sendToAddUser()}>
                         Add User
                     </Button>
                 </div>

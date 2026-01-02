@@ -196,7 +196,7 @@ export const getTracking = async (): Promise<PaginatedResponse<TrackingListItem>
     return data;
 };
 
-export const getTrackingRecord = async (id: number): Promise<TrackingDetail> => {
+export const getTrackingDetail = async (id: number): Promise<TrackingDetail> => {
     const response = await api.get<TrackingDetail>(`/api/management/tracking/${id}/`);
     return response.data;
 };

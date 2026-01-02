@@ -20,23 +20,11 @@ export const COLORS = {
     HOVER_BG: '#e9ecef',
 } as const;
 
-export const ROUTES = {
-    DASHBOARD: '/dashboard',
-    USERS: '/users',
-    CAMPAIGNS: '/campaigns',
-    TRACKING: '/tracking',
-    RECIPIENTS: '/recipients',
-    COMPANY_EDIT: '/company/edit',
-    PROFILE: '/profile',
-    LOGIN: '/login',
-    SIGNUP: '/signup',
-} as const;
-
 export const MENU_ITEMS = [
-    { path: ROUTES.USERS, label: 'Manage Users', icon: '👥' },
-    { path: ROUTES.CAMPAIGNS, label: 'Manage Campaigns', icon: '📢' },
-    { path: ROUTES.TRACKING, label: 'Manage Tracking', icon: '📊' },
-    { path: ROUTES.COMPANY_EDIT, label: 'Edit Company', icon: '🏢' },
+    { path: '/users', label: 'Manage Users', icon: '👥' },
+    { path: '/campaigns', label: 'Manage Campaigns', icon: '📢' },
+    { path: '/tracking', label: 'Manage Tracking', icon: '📊' },
+    { path: '/company/edit', label: 'Edit Company', icon: '🏢' },
 ] as const;
 
 export const TRANSITION_DURATION = {

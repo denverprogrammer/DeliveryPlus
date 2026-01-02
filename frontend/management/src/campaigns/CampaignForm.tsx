@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getCampaign, createCampaign, updateCampaign } from '../services/api';
 import { useParsedParam } from '../utils/params';
 import type { CampaignCreatePayload, CampaignUpdatePayload } from '../types/api';
+import { useNavigator } from '../utils/routes';
 
 interface CampaignFormData {
     name: string;
@@ -46,7 +46,7 @@ const PUBLISHING_TYPES = [
 ];
 
 const CampaignForm = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [campaignId] = useParsedParam('id');
     const isEdit = campaignId !== null;
     const [formData, setFormData] = useState<CampaignFormData>({
@@ -182,7 +182,7 @@ const CampaignForm = () => {
                 };
                 await createCampaign(data);
             }
-            navigate('/campaigns');
+            navigator.sendToCampaigns();
         } catch (err) {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
@@ -345,7 +345,7 @@ const CampaignForm = () => {
                         <Button type="submit" variant="primary" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                         </Button>
-                        <Button type="button" variant="secondary" onClick={() => navigate('/campaigns')}>
+                        <Button type="button" variant="secondary" onClick={() => navigator.sendToCampaigns()}>
                             Cancel
                         </Button>
                     </div>

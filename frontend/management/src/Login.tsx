@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { login } from './services/api';
 import { useAuth } from './contexts/AuthContext';
 import { isNonEmptyArray } from './utils/typeGuards';
+import { useNavigator } from './utils/routes';
 
 interface LoginFormData {
     username: string;
@@ -11,7 +11,7 @@ interface LoginFormData {
 }
 
 const Login = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const { setUser, checkAuth } = useAuth();
     const [formData, setFormData] = useState<LoginFormData>({
         username: '',
@@ -41,7 +41,7 @@ const Login = () => {
                 // Re-check auth state
                 await checkAuth();
                 // Redirect to dashboard
-                navigate('/dashboard');
+                navigator.sendToDashboard();
             } else {
                 setError('Login failed. Please check your credentials.');
             }
@@ -117,7 +117,7 @@ const Login = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/signup')}
+                                    onClick={() => navigator.sendToSignup()}
                                 >
                                     Sign Up
                                 </Button>

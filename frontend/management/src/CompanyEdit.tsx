@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getCompanyAPI, updateCompanyAPI } from './services/api';
 import type { CompanyUpdatePayload } from './types/api';
+import { useNavigator } from './utils/routes';
 
 interface CompanyFormData {
     name: string;
@@ -15,7 +15,7 @@ interface CompanyFormData {
 }
 
 const CompanyEdit = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [formData, setFormData] = useState<CompanyFormData>({
         name: '',
         street_address: '',
@@ -77,7 +77,7 @@ const CompanyEdit = () => {
                 phone_number: formData.phone_number,
             };
             await updateCompanyAPI(data);
-            navigate('/dashboard');
+            navigator.sendToDashboard();
         } catch (err: any) {
             // Handle error response
             if (err.response?.data?.errors) {
@@ -203,7 +203,7 @@ const CompanyEdit = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/dashboard')}
+                                    onClick={() => navigator.sendToDashboard()}
                                 >
                                     Cancel
                                 </Button>

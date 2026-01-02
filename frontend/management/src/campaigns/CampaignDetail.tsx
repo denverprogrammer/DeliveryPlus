@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Table, Alert, Button } from 'react-bootstrap';
 import { AgGridReact } from 'ag-grid-react';
 import { getCampaign } from '../services/api';
 import type { Campaign } from '../types/api';
-import { TABLE_CAPTION_STYLE, ROUTES, NOT_AVAILABLE } from '../constants/ui';
+import { TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
 import { isNonEmptyArray } from '../utils/typeGuards';
 import { useParsedParam } from '../utils/params';
 import { defaultColDef, getRowClass } from '../components/DataTable';
+import { useNavigator } from '../utils/routes';
 
 const CampaignDetail = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [campaignId] = useParsedParam('id');
     const [campaign, setCampaign] = useState<Campaign | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -61,7 +61,7 @@ const CampaignDetail = () => {
                     <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}/edit`)}
+                        onClick={() => navigator.sendToEditCampaign(campaign.id)}
                         className="me-2"
                     >
                         Edit
@@ -69,7 +69,7 @@ const CampaignDetail = () => {
                     <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => navigate(ROUTES.CAMPAIGNS)}
+                        onClick={() => navigator.sendToCampaigns()}
                     >
                         Back to List
                     </Button>

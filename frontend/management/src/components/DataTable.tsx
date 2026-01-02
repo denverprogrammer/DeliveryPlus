@@ -67,6 +67,7 @@ export interface DataTableProps<T = any> {
     paginationPageSizeSelector?: number[];
     noRowsMessage?: string;
     onGridReady?: (params: { api: GridApi<T> }) => void;
+    refreshTrigger?: number;
 }
 
 const DataTable = <T,>({
@@ -78,6 +79,7 @@ const DataTable = <T,>({
     paginationPageSizeSelector = [5, 10, 20, 50, 100],
     noRowsMessage = 'No data found.',
     onGridReady: onGridReadyProp,
+    refreshTrigger,
 }: DataTableProps<T>) => {
     const { gridTheme } = useGridTheme();
     const gridRef = useRef<AgGridReact<T>>(null);
@@ -166,6 +168,17 @@ const DataTable = <T,>({
             loadData(pagination, api);
         }
     }, [loadData, getPaginationParams]);
+
+    // Refresh data when refreshTrigger changes
+    useEffect(() => {
+        if (refreshTrigger !== undefined && refreshTrigger > 0) {
+            const api = gridRef.current?.api;
+            if (api) {
+                const pagination = getPaginationParams(api);
+                loadData(pagination, api);
+            }
+        }
+    }, [refreshTrigger, loadData, getPaginationParams]);
 
     // Cleanup timeout on unmount
     useEffect(() => {

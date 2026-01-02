@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert } from 'react-bootstrap';
 import { getCurrentUser, updateUser } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { ROUTES } from '../constants/ui';
 import type { UserUpdatePayload } from '../types/api';
+import { useNavigator } from '../utils/routes';
 
 interface ProfileFormData {
     username: string;
@@ -21,7 +20,7 @@ interface PasswordFormData {
 }
 
 const Profile = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const { user: currentUser, setUser } = useAuth();
     const { theme, colorScheme, iconSet, setTheme, setColorScheme, setIconSet } = useTheme();
     const [profileData, setProfileData] = useState<ProfileFormData>({
@@ -123,7 +122,7 @@ const Profile = () => {
             const updatedUser = await updateUser(userId, payload);
             setUser(updatedUser);
             
-            navigate(ROUTES.DASHBOARD);
+            navigator.sendToDashboard();
         } catch (err: unknown) {
             if (err && typeof err === 'object' && 'response' in err) {
                 const axiosError = err as { response?: { data?: { errors?: Record<string, string[]> } } };
@@ -210,7 +209,7 @@ const Profile = () => {
         <div>
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h3>My Profile</h3>
-                <Button variant="secondary" onClick={() => navigate(ROUTES.DASHBOARD)}>
+                <Button variant="secondary" onClick={() => navigator.sendToDashboard()}>
                     Back to Dashboard
                 </Button>
             </div>
@@ -291,7 +290,7 @@ const Profile = () => {
                         <Button variant="primary" type="submit" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save Profile'}
                         </Button>
-                        <Button variant="secondary" onClick={() => navigate(ROUTES.DASHBOARD)}>
+                        <Button variant="secondary" onClick={() => navigator.sendToDashboard()}>
                             Cancel
                         </Button>
                     </div>

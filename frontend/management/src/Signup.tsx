@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { signup } from './services/api';
 import { useAuth } from './contexts/AuthContext';
 import type { SignupPayload } from './types/api';
+import { useNavigator } from './utils/routes';
 
 interface SignupFormData {
     username: string;
@@ -14,7 +14,7 @@ interface SignupFormData {
 }
 
 const Signup = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const { checkAuth } = useAuth();
     const [formData, setFormData] = useState<SignupFormData>({
         username: '',
@@ -57,7 +57,7 @@ const Signup = () => {
             if (response.success) {
                 // Re-check auth state after signup
                 await checkAuth();
-                navigate('/dashboard');
+                navigator.sendToDashboard();
             }
         } catch (err) {
             if (err && typeof err === 'object' && 'response' in err) {
@@ -186,7 +186,7 @@ const Signup = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/login')}
+                                    onClick={() => navigator.sendToLogin()}
                                 >
                                     Back to Login
                                 </Button>

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getUser, createUser, updateUser } from '../services/api';
 import { useParsedParam } from '../utils/params';
 import type { UserCreatePayload, UserUpdatePayload } from '../types/api';
+import { useNavigator } from '../utils/routes';
 
 interface UserFormData {
     username: string;
@@ -16,7 +16,7 @@ interface UserFormData {
 }
 
 const UserForm = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [userId] = useParsedParam('id');
     const isEdit = userId !== null;
     const [formData, setFormData] = useState<UserFormData>({
@@ -102,7 +102,7 @@ const UserForm = () => {
                 };
                 await createUser(data);
             }
-            navigate('/users');
+            navigator.sendToUsers();
         } catch (err: any) {
             if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
@@ -230,7 +230,7 @@ const UserForm = () => {
                         <Button type="submit" variant="primary" disabled={isLoading}>
                             {isLoading ? 'Saving...' : 'Save'}
                         </Button>
-                        <Button type="button" variant="secondary" onClick={() => navigate('/users')}>
+                        <Button type="button" variant="secondary" onClick={() => navigator.sendToUsers()}>
                             Cancel
                         </Button>
                     </div>

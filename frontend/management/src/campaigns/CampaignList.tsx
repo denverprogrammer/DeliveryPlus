@@ -1,17 +1,16 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { GridApi } from 'ag-grid-community';
 import { Button, Alert } from 'react-bootstrap';
 import { getCampaigns, deleteCampaign } from '../services/api';
 import type { Campaign } from '../types/api';
-import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
+import { TABLE_CAPTION_STYLE } from '../constants/ui';
 import DataTable from '../components/DataTable';
 import type { PaginationParams } from '../types/api';
-import { useActionHandlers } from '../utils/listHandlers';
+import { useNavigator } from '../utils/routes';
 import { useColumnDefs } from '../hooks/useColumnDefs';
 
 const CampaignList = () => {
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -29,15 +28,27 @@ const CampaignList = () => {
         }
     }, []);
 
-    const { handleView, handleEdit, handleDelete } = useActionHandlers<Campaign>({
-        baseRoute: ROUTES.CAMPAIGNS,
-        onDelete: deleteCampaign,
-        onDeleteSuccess: async () => {
+    const handleView = useCallback((campaign: Campaign) => {
+        navigator.sendToCampaign(campaign.id);
+    }, [navigator]);
+
+    const handleEdit = useCallback((campaign: Campaign) => {
+        navigator.sendToEditCampaign(campaign.id);
+    }, [navigator]);
+
+    const handleDelete = useCallback(async (campaign: Campaign) => {
+        if (!window.confirm('Are you sure you want to delete this campaign?')) {
+            return;
+        }
+        try {
+            await deleteCampaign(campaign.id);
             const response = await getCampaigns();
             setCampaigns(response.results);
-        },
-        deleteConfirmMessage: 'Are you sure you want to delete this campaign?',
-    });
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete campaign');
+            throw err;
+        }
+    }, []);
 
     const columnDefs = useColumnDefs<Campaign>('campaignList', { view: handleView, edit: handleEdit, delete: handleDelete });
 
@@ -47,7 +58,7 @@ const CampaignList = () => {
             <div className="p-0 fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
                 <div className="d-flex justify-content-between align-items-center">
                     <span>Campaigns</span>
-                    <Button variant="primary" size="sm" onClick={() => navigate(`${ROUTES.CAMPAIGNS}/add`)}>
+                    <Button variant="primary" size="sm" onClick={() => navigator.sendToAddCampaign()}>
                         Add Campaign
                     </Button>
                 </div>

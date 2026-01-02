@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Breadcrumb } from 'react-bootstrap';
-import { getCampaign, getUser, getTrackingRecord } from '../services/api';
+import { getCampaign, getUser, getTrackingDetail } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { BreadcrumbItem } from '../types';
 
@@ -84,7 +84,7 @@ const Breadcrumbs = () => {
                                             breadcrumbs.push({ label: 'Add Tracking', path: `${trackingPath}/add` });
                                         } else if (!isNaN(Number(segments[3]))) {
                                             try {
-                                                const tracking = await getTrackingRecord(parseInt(segments[3]));
+                                                const tracking = await getTrackingDetail(parseInt(segments[3]));
                                                 const trackingDetailPath = `${trackingPath}/${segments[3]}`;
                                                 const label = tracking.recipient?.full_name || `Tracking #${segments[3]}`;
                                                 breadcrumbs.push({ label, path: trackingDetailPath });

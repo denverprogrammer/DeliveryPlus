@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, Button, Alert, Card } from 'react-bootstrap';
 import { getRecipient, createRecipient, updateRecipient } from '../services/api';
 import { useParsedParam } from '../utils/params';
+import { useNavigator } from '../utils/routes';
 
 interface RecipientFormData {
     first_name: string;
@@ -14,7 +14,7 @@ interface RecipientFormData {
 
 const RecipientForm = () => {
     const [recipientId] = useParsedParam('id');
-    const navigate = useNavigate();
+    const navigator = useNavigator();
     const isEditing = recipientId !== null;
 
     const [formData, setFormData] = useState<RecipientFormData>({
@@ -72,7 +72,7 @@ const RecipientForm = () => {
             } else {
                 await createRecipient(formData);
             }
-            navigate('/recipients');
+            navigator.sendToRecipients();
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to save recipient');
         } finally {
@@ -165,7 +165,7 @@ const RecipientForm = () => {
                                 <Button 
                                     type="button" 
                                     variant="secondary" 
-                                    onClick={() => navigate('/recipients')}
+                                    onClick={() => navigator.sendToRecipients()}
                                 >
                                     Cancel
                                 </Button>

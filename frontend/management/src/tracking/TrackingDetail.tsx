@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Alert } from 'react-bootstrap';
 import { GridApi } from 'ag-grid-community';
-import { getTrackingRecord, getRequestDataList, getTokenList, disableToken, reactivateToken, createToken } from '../services/api';
+import { getTrackingDetail, getRequestDataList, getTokenList, disableToken, reactivateToken, createToken } from '../services/api';
 import type { TrackingDetail, Token, RequestData } from '../types/api';
 import RequestDataModal from '../RequestDataModal';
 import { TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
@@ -22,39 +22,37 @@ const TrackingDetail = () => {
     const [requestData, setRequestData] = useState<RequestData[]>([]);
     const [requestDataLoading, setRequestDataLoading] = useState(false);
     const [requestDataError, setRequestDataError] = useState<string | null>(null);
-    const [rowCount, setRowCount] = useState(0);
     
     // Token state
     const [tokens, setTokens] = useState<Token[]>([]);
     const [tokensLoading, setTokensLoading] = useState(false);
     const [tokensError, setTokensError] = useState<string | null>(null);
+    const [tokensRefreshTrigger, setTokensRefreshTrigger] = useState(0);
 
-    useEffect(() => {
-        if (trackingId !== null) {
-            loadTracking();
-        } else {
+    const loadTracking = useCallback(async () => {
+        if (trackingId === null) {
             setError('Invalid tracking ID');
             setIsLoading(false);
-        }
-    }, [trackingId]);
-
-    const loadTracking = async () => {
-        if (trackingId === null) {
             return;
         }
+
         try {
             setIsLoading(true);
-            const tracking = await getTrackingRecord(trackingId);
+            const tracking = await getTrackingDetail(trackingId);
             setTracking(tracking);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load tracking');
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [trackingId]);
+
+    useEffect(() => {
+        loadTracking();
+    }, [loadTracking]);
 
     const loadRequestData = useCallback(async (pagination: PaginationParams, _api: GridApi<RequestData>): Promise<void> => {
-        if (trackingId === null) {
+        if (!tracking || !tracking.id) {
             return;
         }
 
@@ -63,62 +61,29 @@ const TrackingDetail = () => {
             setRequestDataError(null);
 
             const response = await getRequestDataList({
-                tracking_id: trackingId,
+                tracking_id: tracking.id,
                 ...(pagination.filters || {}),
                 ...pagination,
             });
             
             setRequestData(response.results);
-            setRowCount(response.count);
         } catch (err) {
             setRequestDataError(err instanceof Error ? err.message : 'Failed to load request data');
             setRequestData([]);
-            setRowCount(0);
         } finally {
             setRequestDataLoading(false);
         }
-    }, [trackingId]);
+    }, [tracking]);
 
     const handleViewRequestData = useCallback((requestData: RequestData) => {
         setSelectedRequestDataId(requestData.id);
         setShowModal(true);
     }, []);
 
-    const handleDisableToken = useCallback(async (token: Token) => {
-        if (!window.confirm('Are you sure you want to disable this token?')) {
-            return;
-        }
-        try {
-            await disableToken(token.id);
-            loadTracking(); // Reload tracking to refresh tokens
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to disable token');
-        }
-    }, [loadTracking]);
-
-    const handleReactivateToken = useCallback(async (token: Token) => {
-        try {
-            await reactivateToken(token.id);
-            loadTracking(); // Reload tracking to refresh tokens
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to reactivate token');
-        }
-    }, [loadTracking]);
-
-    const handleCreateToken = async () => {
-        if (trackingId === null) return;
-        try {
-            await createToken(trackingId);
-            loadTracking(); // Reload tracking to refresh tokens
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create token');
-        }
-    };
-
     const requestDataColumnDefs = useColumnDefs<RequestData>('requestData', { view: handleViewRequestData });
 
     const loadTokens = useCallback(async (pagination: PaginationParams, _api: GridApi<Token>): Promise<void> => {
-        if (trackingId === null) {
+        if (!tracking || !tracking.id) {
             return;
         }
 
@@ -127,7 +92,7 @@ const TrackingDetail = () => {
             setTokensError(null);
 
             const response = await getTokenList({
-                tracking_id: trackingId,
+                tracking_id: tracking.id,
                 ...pagination,
             });
             
@@ -138,7 +103,38 @@ const TrackingDetail = () => {
         } finally {
             setTokensLoading(false);
         }
-    }, [trackingId]);
+    }, [tracking]);
+
+    const handleDisableToken = useCallback(async (token: Token) => {
+        if (!window.confirm('Are you sure you want to disable this token?')) {
+            return;
+        }
+        try {
+            await disableToken(token.id);
+            setTokensRefreshTrigger(prev => prev + 1);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to disable token');
+        }
+    }, []);
+
+    const handleReactivateToken = useCallback(async (token: Token) => {
+        try {
+            await reactivateToken(token.id);
+            setTokensRefreshTrigger(prev => prev + 1);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to reactivate token');
+        }
+    }, []);
+
+    const handleCreateToken = async () => {
+        if (trackingId === null) return;
+        try {
+            await createToken(trackingId);
+            setTokensRefreshTrigger(prev => prev + 1);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to create token');
+        }
+    };
 
     const tokenColumnDefs = useColumnDefs<Token>('token', { disable: handleDisableToken, reactivate: handleReactivateToken });
 
@@ -165,9 +161,6 @@ const TrackingDetail = () => {
                     <p><strong>Campaign:</strong> {tracking.campaign?.name || NOT_AVAILABLE}</p>
                     <p><strong>Recipient:</strong> {tracking.recipient?.full_name || NOT_AVAILABLE}</p>
                 </div>
-                <div className="col-md-6">
-                    <p><strong>Request Count:</strong> {tracking.count_requests || 0}</p>
-                </div>
             </div>
 
             {/* Tokens Section */}
@@ -191,6 +184,7 @@ const TrackingDetail = () => {
                         isLoading={tokensLoading}
                         loadData={loadTokens}
                         noRowsMessage="No tokens found."
+                        refreshTrigger={tokensRefreshTrigger}
                     />
                 </div>
             </div>
@@ -198,7 +192,7 @@ const TrackingDetail = () => {
             {/* Request Data Section */}
             <div>
                 <div className="fw-bold mb-2" style={TABLE_CAPTION_STYLE}>
-                    Request Data {rowCount > 0 && `(${rowCount} total)`}
+                    Request Data
                 </div>
 
                 {requestDataError && (
