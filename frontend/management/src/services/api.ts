@@ -216,7 +216,7 @@ export const deleteTracking = async (id: number): Promise<void> => {
 };
 
 // Recipient management functions
-export const getRecipients = async (): Promise<PaginatedResponse<Recipient>> => {
+export async function getRecipients(): Promise<PaginatedResponse<Recipient>> {
     const response = await api.get<Recipient[] | PaginatedResponse<Recipient>>('/api/management/recipients/');
     const data = response.data;
     // Always return PaginatedResponse format
@@ -228,8 +228,8 @@ export const getRecipients = async (): Promise<PaginatedResponse<Recipient>> => 
             results: data,
         };
     }
-    return data;
-};
+    return data as PaginatedResponse<Recipient>;
+}
 
 export const getRecipient = async (id: number): Promise<Recipient> => {
     const response = await api.get<Recipient>(`/api/management/recipients/${id}/`);

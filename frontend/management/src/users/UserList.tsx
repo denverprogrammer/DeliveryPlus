@@ -1,13 +1,14 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { GridApi } from 'ag-grid-community';
 import { Button, Alert } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../services/api';
 import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
 import type { User } from '../types/api';
 import DataTable from '../components/DataTable';
 import type { PaginationParams } from '../types/api';
-import 'bootstrap-icons/font/bootstrap-icons.css';
+import { useActionHandlers } from '../utils/listHandlers';
+import { useColumnDefs } from '../hooks/useColumnDefs';
 
 const UserList = () => {
     const navigate = useNavigate();
@@ -28,81 +29,17 @@ const UserList = () => {
         }
     }, []);
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('Are you sure you want to delete this user?')) {
-            return;
-        }
-        try {
-            await deleteUser(id);
-            // Reload data after delete
+    const { handleView, handleEdit, handleDelete } = useActionHandlers<User>({
+        baseRoute: ROUTES.USERS,
+        onDelete: deleteUser,
+        onDeleteSuccess: async () => {
             const response = await getUsers();
             setUsers(response.results);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete user');
-        }
-    };
+        },
+        deleteConfirmMessage: 'Are you sure you want to delete this user?',
+    });
 
-    const ActionsCellRenderer = (params: ICellRendererParams<User>) => {
-        const user = params.data;
-        if (!user) return null;
-        
-        return (
-            <div className="d-flex gap-2">
-                <i
-                    className="bi bi-eye text-info"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}`)}
-                    title="View"
-                />
-                <i
-                    className="bi bi-pencil text-primary"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => navigate(`${ROUTES.USERS}/${user.id}/edit`)}
-                    title="Edit"
-                />
-                <i
-                    className="bi bi-trash text-danger"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => handleDelete(user.id)}
-                    title="Delete"
-                />
-            </div>
-        );
-    };
-
-    const columnDefs: ColDef<User>[] = useMemo(() => [
-        { field: 'username', headerName: 'Username', sortable: true, filter: true },
-        { field: 'email', headerName: 'Email', sortable: true, filter: true },
-        {
-            headerName: 'Name',
-            valueGetter: (params) => `${params.data?.first_name || ''} ${params.data?.last_name || ''}`.trim(),
-            sortable: true,
-            filter: true,
-        },
-        {
-            field: 'is_active',
-            headerName: 'Active',
-            valueGetter: (params) => params.data?.is_active ? 'Yes' : 'No',
-            sortable: true,
-            filter: true,
-        },
-        {
-            field: 'is_staff',
-            headerName: 'Staff',
-            valueGetter: (params) => params.data?.is_staff ? 'Yes' : 'No',
-            sortable: true,
-            filter: true,
-        },
-        {
-            headerName: 'Actions',
-            cellRenderer: ActionsCellRenderer,
-            sortable: false,
-            filter: false,
-            pinned: 'right',
-            width: 120,
-            suppressSizeToFit: true,
-        },
-    ], []);
+    const columnDefs = useColumnDefs<User>('userList', { view: handleView, edit: handleEdit, delete: handleDelete });
 
     return (
         <div>

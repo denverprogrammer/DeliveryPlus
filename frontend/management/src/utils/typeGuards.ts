@@ -22,3 +22,41 @@ export const isNonEmptyArray = <T>(value: T[] | undefined | null): value is T[] 
     return _.isArray(value) && !_.isEmpty(value);
 };
 
+/**
+ * Token status type
+ */
+export type TokenStatus = 'active' | 'inactive' | 'deleted';
+
+/**
+ * Recipient status type
+ */
+export type RecipientStatus = 'active' | 'inactive';
+
+/**
+ * Type guard to check if a value is a valid TokenStatus
+ */
+export const isTokenStatus = (status: string | undefined | null): status is TokenStatus => {
+    return status === 'active' || status === 'inactive' || status === 'deleted';
+};
+
+/**
+ * Type guard to check if a value is a valid RecipientStatus
+ */
+export const isRecipientStatus = (status: string | undefined | null): status is RecipientStatus => {
+    return status === 'active' || status === 'inactive';
+};
+
+/**
+ * Type guard to check if a status is 'active'
+ */
+export const isActiveStatus = (status: string | undefined | null): status is 'active' => {
+    return status === 'active';
+};
+
+/**
+ * Type guard to check if a status is 'inactive' (disabled)
+ */
+export const isInactiveStatus = (status: string | undefined | null): status is 'inactive' => {
+    return status === 'inactive';
+};
+

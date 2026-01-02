@@ -1,13 +1,14 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { GridApi } from 'ag-grid-community';
 import { Button, Alert } from 'react-bootstrap';
 import { getCampaigns, deleteCampaign } from '../services/api';
 import type { Campaign } from '../types/api';
 import { TABLE_CAPTION_STYLE, ROUTES } from '../constants/ui';
 import DataTable from '../components/DataTable';
 import type { PaginationParams } from '../types/api';
-import 'bootstrap-icons/font/bootstrap-icons.css';
+import { useActionHandlers } from '../utils/listHandlers';
+import { useColumnDefs } from '../hooks/useColumnDefs';
 
 const CampaignList = () => {
     const navigate = useNavigate();
@@ -28,63 +29,17 @@ const CampaignList = () => {
         }
     }, []);
 
-    const handleDelete = async (id: number) => {
-        if (!window.confirm('Are you sure you want to delete this campaign?')) {
-            return;
-        }
-        try {
-            await deleteCampaign(id);
-            // Reload data after delete
+    const { handleView, handleEdit, handleDelete } = useActionHandlers<Campaign>({
+        baseRoute: ROUTES.CAMPAIGNS,
+        onDelete: deleteCampaign,
+        onDeleteSuccess: async () => {
             const response = await getCampaigns();
             setCampaigns(response.results);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete campaign');
-        }
-    };
-
-    const ActionsCellRenderer = (params: ICellRendererParams<Campaign>) => {
-        const campaign = params.data;
-        if (!campaign) return null;
-        
-        return (
-            <div className="d-flex gap-2">
-                <i
-                    className="bi bi-eye text-info"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}`)}
-                    title="View"
-                />
-                <i
-                    className="bi bi-pencil text-primary"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => navigate(`${ROUTES.CAMPAIGNS}/${campaign.id}/edit`)}
-                    title="Edit"
-                />
-                <i
-                    className="bi bi-trash text-danger"
-                    style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                    onClick={() => handleDelete(campaign.id)}
-                    title="Delete"
-                />
-            </div>
-        );
-    };
-
-    const columnDefs: ColDef<Campaign>[] = useMemo(() => [
-        { field: 'name', headerName: 'Name', sortable: true, filter: true },
-        { field: 'campaign_type', headerName: 'Type', sortable: true, filter: true },
-        { field: 'description', headerName: 'Description', sortable: true, filter: true },
-        { field: 'landing_page_url', headerName: 'Landing Page', sortable: true, filter: true },
-        {
-            headerName: 'Actions',
-            cellRenderer: ActionsCellRenderer,
-            sortable: false,
-            filter: false,
-            pinned: 'right',
-            width: 120,
-            suppressSizeToFit: true,
         },
-    ], []);
+        deleteConfirmMessage: 'Are you sure you want to delete this campaign?',
+    });
+
+    const columnDefs = useColumnDefs<Campaign>('campaignList', { view: handleView, edit: handleEdit, delete: handleDelete });
 
     return (
         <div>

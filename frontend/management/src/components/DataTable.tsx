@@ -212,5 +212,29 @@ export const DateTimeCellRenderer = <T,>(params: ICellRendererParams<T>): React.
     return <><span>{dateTime[0]}</span>, <span>{dateTime[1]}</span></>;
 };
 
+/**
+ * Creates an Actions cell renderer from a renderActions function.
+ * The renderActions function should take a row item and return an array of React nodes.
+ * 
+ * @param renderActions - Function that takes a row item and returns an array of action components
+ * @returns A cell renderer function for ag-grid
+ */
+export const createActionsCellRenderer = <T,>(
+    renderActions: (item: T) => React.ReactNode[]
+): ((params: ICellRendererParams<T>) => React.ReactNode) => {
+    return (params: ICellRendererParams<T>) => {
+        const item = params.data;
+        if (!item) return null;
+        
+        const actions = renderActions(item);
+        
+        return (
+            <div className="d-flex gap-2">
+                {actions}
+            </div>
+        );
+    };
+};
+
 export default DataTable;
 

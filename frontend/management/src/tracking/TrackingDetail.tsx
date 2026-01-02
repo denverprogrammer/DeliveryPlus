@@ -1,15 +1,14 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Alert } from 'react-bootstrap';
-import { ColDef, ICellRendererParams, GridApi } from 'ag-grid-community';
+import { GridApi } from 'ag-grid-community';
 import { getTrackingRecord, getRequestDataList, getTokenList, disableToken, reactivateToken, createToken } from '../services/api';
 import type { TrackingDetail, Token, RequestData } from '../types/api';
 import RequestDataModal from '../RequestDataModal';
 import { TABLE_CAPTION_STYLE, NOT_AVAILABLE } from '../constants/ui';
 import { useParsedParam } from '../utils/params';
-import DataTable, { DateTimeCellRenderer } from '../components/DataTable';
+import DataTable from '../components/DataTable';
 import type { PaginationParams } from '../types/api';
-import 'bootstrap-icons/font/bootstrap-icons.css';
-import { formatDate } from '../utils/formatting';
+import { useColumnDefs } from '../hooks/useColumnDefs';
 
 const TrackingDetail = () => {
     const [trackingId] = useParsedParam('id');
@@ -80,42 +79,31 @@ const TrackingDetail = () => {
         }
     }, [trackingId]);
 
-    const ViewCellRenderer = (params: ICellRendererParams<RequestData>) => {
-        const req = params.data;
-        if (!req) return null;
-        return (
-            <i
-                className="bi bi-eye text-info"
-                style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                onClick={() => {
-                    setSelectedRequestDataId(req.id);
-                    setShowModal(true);
-                }}
-                title="View"
-            />
-        );
-    };
+    const handleViewRequestData = useCallback((requestData: RequestData) => {
+        setSelectedRequestDataId(requestData.id);
+        setShowModal(true);
+    }, []);
 
-    const handleDisableToken = async (tokenId: number) => {
+    const handleDisableToken = useCallback(async (token: Token) => {
         if (!window.confirm('Are you sure you want to disable this token?')) {
             return;
         }
         try {
-            await disableToken(tokenId);
+            await disableToken(token.id);
             loadTracking(); // Reload tracking to refresh tokens
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to disable token');
         }
-    };
+    }, [loadTracking]);
 
-    const handleReactivateToken = async (tokenId: number) => {
+    const handleReactivateToken = useCallback(async (token: Token) => {
         try {
-            await reactivateToken(tokenId);
+            await reactivateToken(token.id);
             loadTracking(); // Reload tracking to refresh tokens
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to reactivate token');
         }
-    };
+    }, [loadTracking]);
 
     const handleCreateToken = async () => {
         if (trackingId === null) return;
@@ -127,94 +115,7 @@ const TrackingDetail = () => {
         }
     };
 
-    const TokenActionsCellRenderer = (params: ICellRendererParams<Token>) => {
-        const token = params.data;
-        if (!token) return null;
-        
-        const isActive = token.status === 'active';
-        const isInactive = token.status === 'inactive';
-        
-        return (
-            <div className="d-flex gap-2">
-                {isActive && (
-                    <i
-                        className="bi bi-x-circle text-warning"
-                        style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                        onClick={() => handleDisableToken(token.id)}
-                        title="Disable"
-                    />
-                )}
-                {isInactive && (
-                    <i
-                        className="bi bi-arrow-clockwise text-success"
-                        style={{ cursor: 'pointer', fontSize: '1.2rem' }}
-                        onClick={() => handleReactivateToken(token.id)}
-                        title="Reactivate"
-                    />
-                )}
-            </div>
-        );
-    };
-
-    const columnDefs: ColDef<RequestData>[] = useMemo(() => [
-        {
-            field: 'server_timestamp',
-            headerName: 'Server Timestamp',
-            cellRenderer: DateTimeCellRenderer,
-            sortable: true,
-            filter: 'agDateColumnFilter',
-            filterParams: {
-                comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
-                    if (!cellValue) return 0;
-                    const cellDate = new Date(cellValue);
-                    if (cellDate < filterLocalDateAtMidnight) {
-                        return -1;
-                    } else if (cellDate > filterLocalDateAtMidnight) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                },
-            },
-        },
-        { field: 'data_type', headerName: 'Type', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
-        { field: 'http_method', headerName: 'Method', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
-        { field: 'ip_address', headerName: 'IP Address', sortable: true, filter: 'agTextColumnFilter', width: 130, suppressSizeToFit: true },
-        { field: 'os', headerName: 'OS', sortable: true, filter: 'agTextColumnFilter' },
-        { field: 'browser', headerName: 'Browser', sortable: true, filter: 'agTextColumnFilter', width: 120, suppressSizeToFit: true },
-        { field: 'platform', headerName: 'Platform', sortable: true, filter: 'agTextColumnFilter', width: 120, suppressSizeToFit: true },
-        { field: 'locale', headerName: 'Locale', sortable: true, filter: 'agTextColumnFilter', width: 100, suppressSizeToFit: true },
-        {
-            field: 'client_time',
-            headerName: 'Client Timestamp',
-            cellRenderer: DateTimeCellRenderer,
-            sortable: true,
-            filter: 'agDateColumnFilter',
-            filterParams: {
-                comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
-                    if (!cellValue) return 0;
-                    const cellDate = new Date(cellValue);
-                    if (cellDate < filterLocalDateAtMidnight) {
-                        return -1;
-                    } else if (cellDate > filterLocalDateAtMidnight) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                },
-            },
-        },
-        {
-            headerName: 'Actions',
-            cellRenderer: ViewCellRenderer,
-            sortable: false,
-            filter: false,
-            pinned: 'right',
-            width: 100,
-            suppressSizeToFit: true,
-        },
-    ], []);
-
+    const requestDataColumnDefs = useColumnDefs<RequestData>('requestData', { view: handleViewRequestData });
 
     const loadTokens = useCallback(async (pagination: PaginationParams, _api: GridApi<Token>): Promise<void> => {
         if (trackingId === null) {
@@ -239,41 +140,7 @@ const TrackingDetail = () => {
         }
     }, [trackingId]);
 
-    const tokenColumnDefs: ColDef<Token>[] = useMemo(() => [
-        { field: 'value', headerName: 'Value', sortable: true, filter: true },
-        { field: 'status', headerName: 'Status', sortable: true, filter: true, width: 100, suppressSizeToFit: true },
-        {
-            field: 'created_on',
-            headerName: 'Created',
-            valueGetter: (params) => formatDate(params?.data?.created_on) ?? NOT_AVAILABLE,
-            sortable: true,
-            filter: true,
-        },
-        {
-            field: 'last_used',
-            headerName: 'Last Used',
-            valueGetter: (params) => formatDate(params?.data?.last_used) ?? NOT_AVAILABLE,
-            sortable: true,
-            filter: true,
-        },
-        {
-            headerName: 'Used',
-            valueGetter: (params) => params.data?.used || 0,
-            sortable: true,
-            filter: true,
-            width: 80,
-            suppressSizeToFit: true,
-        },
-        {
-            headerName: 'Actions',
-            cellRenderer: TokenActionsCellRenderer,
-            sortable: false,
-            filter: false,
-            pinned: 'right',
-            width: 100,
-            suppressSizeToFit: true,
-        },
-    ], [tracking?.count_requests]);
+    const tokenColumnDefs = useColumnDefs<Token>('token', { disable: handleDisableToken, reactivate: handleReactivateToken });
 
 
     if (isLoading) {
@@ -340,7 +207,7 @@ const TrackingDetail = () => {
 
                 <div style={{ height: '600px', width: '100%' }}>
                     <DataTable<RequestData>
-                        columnDefs={columnDefs}
+                        columnDefs={requestDataColumnDefs}
                         data={requestData}
                         isLoading={requestDataLoading}
                         loadData={loadRequestData}
